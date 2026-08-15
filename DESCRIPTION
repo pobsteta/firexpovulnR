@@ -14,19 +14,24 @@ Description: Reproducible processing chain combining fire weather danger
 License: GPL-3
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.1.0
 Depends:
     R (>= 4.2)
 Imports:
     cffdrs,
     cli,
+    grDevices,
+    graphics,
     rlang,
     sf,
+    stats,
     terra (>= 1.7),
     tools,
+    utils,
     yaml
 Suggests:
+    ecmwfr (>= 2.0.3),
     fireexposuR,
+    happign,
     httptest2,
     httr2,
     knitr,
@@ -38,3 +43,4 @@ Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://github.com/pobsteta/firexpovulnR
 BugReports: https://github.com/pobsteta/firexpovulnR/issues
+Config/roxygen2/version: 8.1.0
