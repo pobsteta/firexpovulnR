@@ -19,8 +19,8 @@ fev_stack_read(file)
 \code{fev_stack_read()} returns a \code{fev_stack}.
 }
 \description{
-\code{terra} rasters hold a C++ pointer, so a plain \code{\link[=saveRDS]{saveRDS()}} of a \code{fev_stack}
-writes an object whose layers are unusable when reloaded. These two
+\code{terra} rasters hold a C++ pointer, so a plain \code{\link[base:saveRDS]{base::saveRDS()}} of a
+\code{fev_stack} writes an object whose layers are unusable when reloaded. These two
 functions wrap the layers with \code{\link[terra:wrap]{terra::wrap()}} first, so the object -- and
 the provenance record travelling with it -- survives a round trip to disk.
 }

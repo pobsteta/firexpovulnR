@@ -31,7 +31,7 @@ parameters it used.
 Layers are \strong{not} required to share a grid. Fire danger from ERA5 is
 kilometric while fuel-derived exposure is decametric, and forcing them onto
 one grid at construction time would hide a resampling step that has to be
-explicit. Use \code{\link[=fev_align]{fev_align()}} when layers must be combined.
+explicit. Use \code{fev_align()} when layers must be combined.
 
 All layers must, however, share a CRS. Mixing CRS in one object makes every
 downstream extent comparison wrong in a way that is hard to see.

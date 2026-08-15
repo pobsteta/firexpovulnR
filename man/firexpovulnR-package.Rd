@@ -24,7 +24,7 @@ late as possible; the primary source never is.}
 vintages, calibration period and the full set of parameters used.
 \code{\link[=fev_provenance]{fev_provenance()}} exports the record as YAML.}
 \item{Explicit scale changes}{Resampling between kilometric danger and
-decametric exposure goes through \code{\link[=fev_align]{fev_align()}}, which warns and logs.
+decametric exposure goes through \code{fev_align()}, which warns and logs.
 There is no implicit alignment anywhere else.}
 }
 }

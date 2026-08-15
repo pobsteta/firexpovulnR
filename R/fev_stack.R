@@ -18,7 +18,12 @@
 #' Layers are **not** required to share a grid. Fire danger from ERA5 is
 #' kilometric while fuel-derived exposure is decametric, and forcing them onto
 #' one grid at construction time would hide a resampling step that has to be
-#' explicit. Use [fev_align()] when layers must be combined.
+#' explicit. Use `fev_align()` when layers must be combined.
+#'
+# Written as inline code rather than a \link{} because fev_align() lands in
+# phase 7; a link to a topic that does not exist yet is an R CMD check
+# WARNING on a package that otherwise checks clean. Restore the [fev_align()]
+# link once the function is documented.
 #'
 #' All layers must, however, share a CRS. Mixing CRS in one object makes every
 #' downstream extent comparison wrong in a way that is hard to see.
@@ -265,8 +270,8 @@ fev_stack_set <- function(x, name, value, step = NULL, params = list()) {
 
 #' Save and reload a `fev_stack`
 #'
-#' `terra` rasters hold a C++ pointer, so a plain [saveRDS()] of a `fev_stack`
-#' writes an object whose layers are unusable when reloaded. These two
+#' `terra` rasters hold a C++ pointer, so a plain [base::saveRDS()] of a
+#' `fev_stack` writes an object whose layers are unusable when reloaded. These two
 #' functions wrap the layers with [terra::wrap()] first, so the object -- and
 #' the provenance record travelling with it -- survives a round trip to disk.
 #'

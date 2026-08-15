@@ -15,7 +15,7 @@
 #'     vintages, calibration period and the full set of parameters used.
 #'     [fev_provenance()] exports the record as YAML.}
 #'   \item{Explicit scale changes}{Resampling between kilometric danger and
-#'     decametric exposure goes through [fev_align()], which warns and logs.
+#'     decametric exposure goes through `fev_align()`, which warns and logs.
 #'     There is no implicit alignment anywhere else.}
 #' }
 #'
