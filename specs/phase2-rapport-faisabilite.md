@@ -95,11 +95,50 @@ retenue. Il est également absent des pages IGN consultées
 à indiquer que la base est « un assemblage de millésimes de 2007 à 2018 »,
 élaborée par couverture départementale.
 
+**Vérifié aussi dans les projets existants de l'auteur**, sur indication
+explicite : `foretaccess/inst/datasources/FR.json` déclare `bdforet_v2` avec
+seulement `service`, `typename` et `description` — pas de champ millésime ;
+`grep -rniE "millesime|vintage"` sur `foretaccess/R/` et `foretaccess/inst/`
+ne renvoie rien. Dans `nemeton`, la notion de `millesime` existe bien, mais
+**uniquement pour l'IFN** (`R/ifn_source.R`, `R/ifn_tables.R`), pas pour la
+BD Forêt. Aucun des projets nemeton ne porte donc cette table.
+
 Conformément à la consigne du brief — aller chercher cette table, ne pas la
 reconstituer — **elle n'est pas reconstituée ici**. Le contrôle de biais
 temporel de `fev_validate()` est donc bloqué sur sa donnée d'entrée, et le
 package doit se comporter honnêtement en son absence : voir « Décisions à
 prendre » plus bas.
+
+### 2 ter. Acquisition WFS — patron à réutiliser, et un piège à éviter
+
+`foretaccess::acquire_foret()` (projet local de l'auteur) confirme
+indépendamment la voie WFS retenue ici, et fournit un patron d'acquisition
+mûr, directement transposable aux exigences de provenance du brief :
+
+- **tuilage de l'emprise** avec chevauchement de 5 % entre tuiles, puis
+  déduplication (`.fetch_wfs()`, `.tuiles_bbox()`, `.dedupe_features()`), via
+  `happign::get_wfs()` qui gère la pagination du serveur IGN ;
+- **cache avec provenance et politique explicite** : `.provenance_ecrire()`,
+  `cache_utilisable()`, et un argument `politique_cache` à quatre valeurs
+  (`"reacquerir"`, `"avertir"`, `"echouer"`, `"ignorer"`) qui traite le cas
+  d'un cache produit avec d'autres paramètres.
+
+À l'inverse, `nemetonshiny:::download_ign_bdforet()` construit l'URL WFS à la
+main avec `COUNT=10000` **sans pagination** : au-delà de 10 000 entités, la
+troncature est silencieuse. Sur le seul massif des Maures, une emprise de
+120 × 120 km renvoie `numberMatched = 49069`. Ce plafond ne doit pas être
+reproduit ici.
+
+**Piège sémantique à ne pas hériter.** `acquire_foret()` exclut par défaut
+(`exclure_landes = TRUE`) les codes `LA4` (landes ligneuses) et `LA6` (landes
+herbacées), conformément au masque forêt d'ACCESSFOR, au motif qu'« une lande
+n'est pas une ressource à mobiliser ». Pour une chaîne de risque incendie,
+**c'est exactement le contraire qu'il faut** : `LA4` recouvre le maquis et la
+garrigue, parmi les combustibles les plus inflammables du bassin
+méditerranéen, et `LA6` porte la strate herbacée qui gouverne la propagation
+de surface. La sémantique « forêt exploitable » et la sémantique
+« combustible » sont ici opposées. Réutiliser cette fonction telle quelle
+retirerait silencieusement du masque le combustible le plus dangereux.
 
 ---
 
@@ -250,11 +289,40 @@ comparable à une climatologie EWDS.
 
 ---
 
-## 7. Nomenclature BD Forêt v2 (TFV) — PARTIEL mais exploitable
+## 7. Nomenclature BD Forêt v2 (TFV) — RÉSOLU
 
-La table officielle complète n'a **pas** été localisée en ligne. En revanche
-la nomenclature est lisible **dans les données elles-mêmes** : chaque entité
-porte `code_tfv`, son libellé `tfv` et son regroupement `tfv_g11`. Une requête
+**La table complète des 32 postes existe déjà dans les projets de l'auteur** :
+`nemeton/inst/extdata/bdforet_v2_mapping.csv`, 32 lignes, exposée par
+`nemeton::bdforet_v2_mapping()`. Le compte correspond exactement aux « 32
+postes » annoncés par cartes.gouv.fr. Colonnes : `tfv_code`, `label_fr`,
+`species_class`, `context_key`, `confidence` (`"clear"` / `"ambiguous"`),
+`alt_context_key`, `notes_fr`, `label_key`.
+
+C'est de surcroît le patron exact que le brief demande pour les tables de
+correspondance du module combustible : une justification par ligne
+(`notes_fr`), un marqueur de confiance explicite (`confidence`), une
+alternative pour les cas ambigus (`alt_context_key`), et une surcharge
+utilisateur par argument `file`.
+
+Codes relevés :
+
+```
+FF0  FF1-00  FF1G01-01  FF1G06-06  FF1-09-09  FF1-10-10  FF1-14-14
+FF1-49-49  FF1-00-00  FF2-00  FF2-51-51  FF2-52-52  FF2G53-53  FF2-57-57
+FF2G58-58  FF2-81-81  FF2-80-80  FF2G61-61  FF2-63-63  FF2-64-64  FF2-91-91
+FF2-90-90  FF2-00-00  FF31  FF32  FO0  FO1  FO2  FO3  FP  LA4  LA6
+```
+
+La table de correspondance combustible de `firexpovulnR` reprendra cette
+liste de codes — **mais pas ses valeurs cibles** : `species_class` et
+`context_key` encodent une sémantique sylvicole (structure de peuplement,
+coefficient de variation d'échantillonnage) sans rapport avec l'inflammabilité.
+La colonne cible sera reconstruite de zéro, avec sa propre justification par
+ligne, et re-vérifiée contre le WFS.
+
+Confirmation indépendante par la donnée elle-même : la nomenclature est aussi
+lisible **dans les attributs servis** — chaque entité porte `code_tfv`, son
+libellé `tfv` et son regroupement `tfv_g11`. Une requête
 `GetFeature` avec `PROPERTYNAME=code_tfv,tfv,tfv_g11,essence` sur le
 Var/Maures (5 000 entités sur 49 069 correspondantes, 1,2 s) a livré 25 codes
 distincts, dont ceux qui comptent en contexte méditerranéen :
@@ -296,7 +364,7 @@ ce que la propagation de surface demanderait.
 | 4 | EFFIS burnt areas | ✅ résolu | `ms:modis.ba.poly` en SHAPEZIP. **Couverture 2016+, pas 2006.** CRS à forcer. |
 | 5 | Rayons Beverly | ⚠️ partiel | 2010 sourcé ; **2021 et 2023 non lus**. |
 | 6 | Seuils FWI EFFIS | ✅ résolu | 6 classes officielles. Pas de « Very Low ». |
-| 7 | Nomenclature TFV | ⚠️ partiel | Extractible des données elles-mêmes, script versionné en `data-raw/`. |
+| 7 | Nomenclature TFV | ✅ résolu | 32 postes dans `nemeton::bdforet_v2_mapping()`, recoupés avec le WFS. |
 
 ---
 
@@ -318,6 +386,12 @@ ce que la propagation de surface demanderait.
 3. **Beverly 2021 / 2023.** Si un accès à ces articles est disponible, les
    rayons par type de combustible en seront tirés. Sinon, le package ne citera
    que 2010 et les défauts `fireexposuR`, et le dira.
+4. **Dépendance à `happign`.** Le tuilage WFS de `foretaccess` s'appuie sur
+   `happign::get_wfs()` pour la pagination. Soit `firexpovulnR` prend la même
+   dépendance, soit il réimplémente la pagination sur `httr2` avec
+   `STARTINDEX`/`COUNT`. Le brief autorise les dépendances GitHub et ne
+   contraint pas la taille : réutiliser `happign` évite de réécrire une
+   pagination déjà éprouvée, et c'est la voie recommandée.
 
 ---
 
