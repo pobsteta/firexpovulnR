@@ -92,6 +92,29 @@ fev_crs <- function(x) {
   ))
 }
 
+#' Is this CRS actually usable for reprojection?
+#'
+#' `is.na(sf::st_crs(x))` is not enough. Writing an object with no CRS to a
+#' shapefile makes GDAL substitute
+#' `ENGCRS["Undefined Cartesian SRS with unknown unit"]`, so reading it back
+#' gives a CRS that is *not* NA but cannot be transformed — `st_transform()`
+#' fails with "OGRCreateCoordinateTransformation(): transformation not
+#' available". Any file that has been through a shapefile round trip can carry
+#' one, which makes this a realistic input, not a corner case.
+#'
+#' The reliable discriminant is `proj4string`: `NA` for such engineering CRS,
+#' populated for real geographic and projected ones.
+#'
+#' @noRd
+fev_crs_usable <- function(x) {
+  crs <- fev_crs(x)
+  if (is.na(crs)) {
+    return(FALSE)
+  }
+  p4 <- suppressWarnings(crs$proj4string)
+  !is.null(p4) && !is.na(p4)
+}
+
 #' Does this CRS exist, and is it projected (i.e. not lon/lat)?
 #'
 #' Returns `NA` when the CRS is missing, so callers can tell "absent" from
@@ -99,11 +122,10 @@ fev_crs <- function(x) {
 #'
 #' @noRd
 fev_is_projected <- function(x) {
-  crs <- fev_crs(x)
-  if (is.na(crs)) {
+  if (!fev_crs_usable(x)) {
     return(NA)
   }
-  isTRUE(!sf::st_is_longlat(crs))
+  isTRUE(!sf::st_is_longlat(fev_crs(x)))
 }
 
 #' Short human label for a CRS, for messages and provenance
