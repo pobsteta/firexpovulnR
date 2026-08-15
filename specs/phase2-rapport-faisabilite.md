@@ -1,0 +1,335 @@
+# Phase 2 — Rapport de faisabilité des sources externes
+
+**Date de vérification : 2026-08-15.** Toutes les valeurs ci-dessous ont été
+constatées à leur source ce jour-là, soit par appel réseau réel depuis la
+machine de développement, soit par lecture de la documentation officielle,
+soit par lecture du code source du package concerné. La colonne « Constaté
+comment » précise laquelle de ces trois voies a servi.
+
+Ce document est la référence de traçabilité des constantes du package. Toute
+valeur codée en dur ailleurs que dans un défaut d'argument documenté est un
+bug. Toute valeur qui change côté fournisseur doit être re-vérifiée ici, et la
+date ci-dessus mise à jour.
+
+---
+
+## 1. CEMS fire danger / EWDS — RÉSOLU
+
+**`ecmwfr` supporte bien l'EWDS.** Pas besoin du client `httr2` de repli
+qu'envisageait le brief.
+
+| Élément | Valeur vérifiée | Constaté comment |
+|---|---|---|
+| Version CRAN d'`ecmwfr` | `2.0.3` | `available.packages()` |
+| Identifiant de service EWDS | `"cems"` | code source, `R/wf_datasets.R:29` : `service = c("cds","ads","cems")` |
+| URL de l'API | `https://ewds.climate.copernicus.eu/api` | code source, `R/zzz.R:22` : `cems_url <- "https://ewds.climate.copernicus.eu/api"` |
+| Identifiant du dataset | `cems-fire-historical-v1` | page dataset EWDS + user guide ECMWF |
+| Couverture temporelle | 1940 à aujourd'hui, pas de temps journalier | page dataset EWDS |
+| Résolution | 0,25° (réanalyse) / 0,5° (membres d'ensemble) | page dataset EWDS |
+
+Noms de variables exacts pour le système canadien FWI (user guide ECMWF) :
+
+```
+fine_fuel_moisture_code   duff_moisture_code       drought_code
+initial_spread_index      build_up_index           fire_weather_index
+fire_daily_severity_index
+```
+
+Autres clés de requête relevées dans les exemples du user guide :
+`product_type = 'reanalysis'`, `dataset_type = 'consolidated_dataset'`,
+`system_version = '4_1'`, `grid = '0.5/0.5'`, `format = 'grib'`.
+
+**Réserves.**
+
+- La page de présentation du dataset annonce 0,25° pour la réanalyse, alors que
+  les exemples du user guide utilisent `grid = '0.5/0.5'`. Divergence non
+  résolue : `grid` doit rester un argument explicite, jamais un défaut caché.
+- Aucun appel réel n'a été effectué : l'EWDS exige une clé API personnelle,
+  et le brief interdit toute manipulation de token de mon côté. Le client
+  devra donc être testé par mock `httptest2` et par un test d'intégration
+  `skip_if_offline()` + `skip_if(is.na(Sys.getenv("ECMWF_KEY", NA)))`.
+- `system_version = '4_1'` est un numéro de version de système susceptible de
+  changer. Argument explicite obligatoire.
+
+---
+
+## 2. BD Forêt v2 — RÉSOLU, sauf les millésimes
+
+**L'ancienne voie Géoservices est morte.**
+`https://geoservices.ign.fr/documentation/donnees/vecteur/bdforet` répond
+`301 Moved Permanently` vers `https://cartes.gouv.fr/rechercher-une-donnee/search`.
+La page d'aide cartes.gouv.fr ne documente ni URL de téléchargement, ni
+endpoint, ni nomenclature, ni millésime.
+
+**Mais le WFS de la Géoplateforme expose BD Forêt v2 directement, sans
+authentification.** C'est une bien meilleure voie que le téléchargement
+département par département envisagé par le brief : on filtre par emprise
+côté serveur, donc on ne télécharge que l'AOI.
+
+| Élément | Valeur vérifiée |
+|---|---|
+| Endpoint | `https://data.geopf.fr/wfs/ows` |
+| Couche | `LANDCOVER.FORESTINVENTORY.V2:formation_vegetale` |
+| Attributs | `id`, `code_tfv`, `tfv`, `tfv_g11`, `essence`, `geom` |
+| Authentification | aucune |
+| Ordre des axes du BBOX | **easting-first** en `EPSG:2154` |
+| Formats | `application/json` (GeoJSON) confirmé |
+
+Constaté par appel réel : `DescribeFeatureType` pour le schéma, puis
+`GetFeature` sur une emprise de 10 × 10 km dans le massif des Maures →
+`numberMatched = 755`. L'ordre des axes a été déterminé expérimentalement :
+`BBOX=970000,6243000,982000,6253000,EPSG:2154` renvoie 755 entités, l'ordre
+inverse en renvoie 0. À ne pas déduire de la spécification WFS 2.0, qui
+prescrit l'inverse pour les CRS projetés — **le serveur ne la respecte pas**.
+
+CORINE Land Cover est exposé sur le **même** endpoint :
+`LANDCOVER.CLC18_FR:clc18_fr`, attributs `id`, `code_18`, `area_ha`, `remark`,
+`shape_leng`, `shape_area`, `geom`. Voir le point 3.
+
+### 2 bis. Millésimes par département — NON TROUVÉ, blocage
+
+Le millésime **n'est pas un attribut de la couche WFS**. Il est absent du
+schéma `DescribeFeatureType`, donc indisponible par la voie d'acquisition
+retenue. Il est également absent des pages IGN consultées
+(cartes.gouv.fr/aide, inventaire-forestier.ign.fr article 646), qui se bornent
+à indiquer que la base est « un assemblage de millésimes de 2007 à 2018 »,
+élaborée par couverture départementale.
+
+Conformément à la consigne du brief — aller chercher cette table, ne pas la
+reconstituer — **elle n'est pas reconstituée ici**. Le contrôle de biais
+temporel de `fev_validate()` est donc bloqué sur sa donnée d'entrée, et le
+package doit se comporter honnêtement en son absence : voir « Décisions à
+prendre » plus bas.
+
+---
+
+## 3. CORINE Land Cover — CONTOURNÉ pour la France
+
+L'accès CLMS avec authentification manuelle qu'anticipait le brief **n'est pas
+nécessaire pour la France métropolitaine** : la Géoplateforme rediffuse CORINE
+sur le WFS déjà utilisé pour la BD Forêt, sans authentification.
+
+| Élément | Valeur vérifiée |
+|---|---|
+| Endpoint | `https://data.geopf.fr/wfs/ows` |
+| Couche CLC 2018 France | `LANDCOVER.CLC18_FR:clc18_fr` |
+| Attribut de classe | `code_18` (nomenclature CORINE niveau 3) |
+| Autres millésimes | `CLC90_FR`, `CLC00_FR`, `CLC06_FR`, `CLC12_FR`, `CLC18_FR` (+ variantes `_DOM` et révisées `R`) |
+| Couches de changement | `CHA00_FR`, `CHA06_FR`, `CHA12_FR`, `CHA18_FR` |
+
+Conséquence sur l'API : `fev_fetch_corine()` peut être un vrai client pour la
+France, et non l'assistant guidé de validation de fichier local qu'envisageait
+le brief. **Pour une étude multi-pays, en revanche, la voie CLMS reste
+nécessaire et n'a pas été vérifiée.** Le mode « fichier local validé » doit
+donc exister quand même, en repli documenté.
+
+---
+
+## 4. Aires brûlées EFFIS/GWIS — RÉSOLU, avec une réserve de couverture
+
+Le WFS EFFIS fonctionne, mais pas comme le suggéraient les recherches
+initiales : la couche s'appelle `ms:modis.ba.poly`, et non `nrt.ba.poly`.
+Les couches `nrt.ba.*` existent en **WMS uniquement** (rendu image) et ne sont
+pas interrogeables en WFS. Le WFS de `ies-ows.jrc.ec.europa.eu/gwis` n'expose
+que des couches administratives et FWI par région GADM, pas les aires brûlées.
+
+```
+https://maps.effis.emergency.copernicus.eu/effis
+  ?service=WFS&version=1.1.0&request=getfeature
+  &typename=ms:modis.ba.poly
+  &outputformat=SHAPEZIP
+  &bbox=<xmin>,<ymin>,<xmax>,<ymax>
+```
+
+Constaté par téléchargement réel sur le Var (`bbox=6.0,43.0,7.0,43.7`) :
+`HTTP 200`, 415 630 octets, 0,52 s, archive ZIP valide contenant
+`modis.ba.poly.{shp,shx,dbf,prj}`, relue avec succès par `sf` → 63 entités.
+
+Attributs (`DescribeFeatureType`) :
+
+```
+id  FIREDATE  FINALDATE  LASTUPDATE  COUNTRY  PROVINCE  COMMUNE  AREA_HA
+BROADLEA  CONIFER  MIXED  SCLEROPH  TRANSIT  OTHERNATLC  AGRIAREAS
+ARTIFSURF  OTHERLC  PERCNA2K  CLASS
+```
+
+`FIREDATE` est la donnée qui rend possible le contrôle de biais temporel
+demandé par le brief — à condition d'avoir les millésimes en face (point 2 bis).
+`PERCNA2K` (pourcentage Natura 2000) et la ventilation par occupation du sol
+sont un bonus directement exploitable côté vulnérabilité.
+
+**Deux réserves à traiter dans le code, pas seulement à documenter.**
+
+1. **Couverture temporelle réelle : 2016 → 2026**, pas 2006. Sur l'échantillon
+   du Var, `min(FIREDATE) = 2016-07-18`. Le workflow cible du brief demande
+   `period = c("2006", "2023")` : **cette période n'est pas servie par
+   l'endpoint public**. La documentation EFFIS le confirme : « For any request
+   of data which is not available through the EFFIS Web services (e.g. historic
+   data, extracts of the fire database, or raw burned area perimeters) we
+   kindly ask you to use our DATA REQUEST FORM. » `fev_fetch_burnt()` doit
+   donc comparer la période demandée à la période réellement retournée et
+   avertir chiffré, sans quoi l'utilisateur croira valider sur 18 ans alors
+   qu'il valide sur 10.
+2. **Le `.prj` livré déclare `GCS_unknown`** :
+   `GEOGCS["GCS_unknown",DATUM["D_WGS_1984",...]]`. `sf::st_crs()` renvoie
+   `unknown`. C'est du WGS84 géographique non déclaré : le CRS devra être
+   forcé explicitement à `EPSG:4326` et l'opération journalisée dans la
+   provenance, jamais appliquée en silence.
+
+---
+
+## 5. Rayons d'exposition Beverly et al. — PARTIEL
+
+**Beverly et al. 2010**, *Assessing the exposure of the built environment to
+potential ignition sources generated from vegetative fuel*, Int. J. Wildland
+Fire 19:299–313. Distances de transmission par processus d'allumage :
+
+| Processus | Distance |
+|---|---|
+| Chaleur radiante | 0,1 – 30 m |
+| Brandons courte portée | 0,1 – 100 m |
+| Brandons longue portée | 100,1 – 500 m |
+
+Terrain : quatre communautés de l'Alberta, Canada.
+
+**`fireexposuR` 1.2.0**, valeurs par défaut relevées directement sur les
+signatures du package installé :
+
+```r
+fire_exp(hazard, t_dist = 500, no_burn, tdist)
+fire_exp_dir(exposure, value, t_lengths = c(5000, 5000, 5000),
+             interval = 1, thresh_exp = 0.6, thresh_viable = 0.8,
+             table = FALSE)
+fire_exp_validate(burnableexposure, fires, aoi,
+                  class_breaks = c(0.2, 0.4, 0.6, 0.8, 1),
+                  samplesize = 0.005)
+```
+
+**Non vérifié : Beverly et al. 2021** (*A simple metric of landscape fire
+exposure*, Landscape Ecology) — l'article est derrière l'authentification
+Springer. Les distances par type de combustible qu'il définit n'ont donc
+**pas** été lues à la source. Beverly et al. 2023 n'a pas été localisé de
+façon certaine. Tant que ces deux références ne sont pas lues, les seuls
+rayons que le package peut citer avec une source sont ceux de 2010 et les
+défauts de `fireexposuR` — et c'est ce qu'il doit dire.
+
+Rappel du brief, à faire porter par un message `cli` au premier appel de
+`fev_exposure()` : ces rayons proviennent de combustibles boréaux et
+conifériens canadiens ; sur chêne vert, garrigue ou maquis ils doivent être
+justifiés ou recalibrés.
+
+---
+
+## 6. Classes de danger FWI EFFIS — RÉSOLU
+
+Relevé sur la page officielle EFFIS *Fire Danger Forecast* :
+
+| Classe | Bornes FWI |
+|---|---|
+| Low | < 11,2 |
+| Moderate | 11,2 – 21,3 |
+| High | 21,3 – 38,0 |
+| Very High | 38,0 – 50,0 |
+| Extreme | 50,0 – 70,0 |
+| Very Extreme | > 70,0 |
+
+La classe *Very Extreme* a été introduite en juin 2021 pour discriminer à
+l'intérieur des vastes zones classées *Extreme* en Méditerranée l'été.
+
+**Point de vigilance.** Une valeur de seuil « Very Low < 5,2 » circule
+largement dans la littérature et les sites tiers. **Elle n'apparaît pas sur la
+page EFFIS actuelle**, qui ne définit que six classes à partir de *Low*. Le
+défaut du package suit la page officielle ; le seuil 5,2 ne doit pas être
+ajouté au motif qu'il est répandu.
+
+EFFIS fait tourner deux modèles météo déterministes : ECMWF à ~8 km (prévision
+1 à 9 jours) et Météo-France à ~10 km (jusqu'à 3 jours). À rapprocher des
+0,25°/0,5° du produit historique EWDS du point 1 : **ce ne sont pas les mêmes
+résolutions**, et une carte opérationnelle EFFIS n'est donc pas directement
+comparable à une climatologie EWDS.
+
+---
+
+## 7. Nomenclature BD Forêt v2 (TFV) — PARTIEL mais exploitable
+
+La table officielle complète n'a **pas** été localisée en ligne. En revanche
+la nomenclature est lisible **dans les données elles-mêmes** : chaque entité
+porte `code_tfv`, son libellé `tfv` et son regroupement `tfv_g11`. Une requête
+`GetFeature` avec `PROPERTYNAME=code_tfv,tfv,tfv_g11,essence` sur le
+Var/Maures (5 000 entités sur 49 069 correspondantes, 1,2 s) a livré 25 codes
+distincts, dont ceux qui comptent en contexte méditerranéen :
+
+| `code_tfv` | `tfv_g11` | `tfv` |
+|---|---|---|
+| `FF1G06-06` | Forêt fermée feuillus | Forêt fermée de chênes sempervirents purs |
+| `FF1G01-01` | Forêt fermée feuillus | Forêt fermée de chênes décidus purs |
+| `FF2-57-57` | Forêt fermée conifères | Forêt fermée de pin d'Alep pur |
+| `FF2-51-51` | Forêt fermée conifères | Forêt fermée de pin maritime pur |
+| `FF2G53-53` | Forêt fermée conifères | Forêt fermée de pin laricio ou pin noir pur |
+| `LA4` | Lande | Lande |
+| `LA6` | Formation herbacée | Formation herbacée |
+| `FO1` / `FO2` / `FO3` | Forêt ouverte … | Forêt ouverte feuillus / conifères / mixte |
+| `FF0` / `FO0` | … sans couvert arboré | Forêt fermée / ouverte sans couvert arboré |
+
+Cette extraction **n'est pas une reconstitution** : les libellés sont ceux que
+le producteur sert avec la donnée. La table complète (annoncée à 32 postes par
+cartes.gouv.fr) sera construite en `data-raw/` par balayage de la France
+entière, avec le script d'extraction versionné à côté — donc reproductible et
+vérifiable, ce qui est l'exigence du brief.
+
+La distinction *forêt fermée* / *forêt ouverte* est directement pertinente pour
+le combustible : `FO*` correspond à un couvert arboré de 10 à 40 %, donc à une
+strate herbacée ou arbustive continue sous les arbres. C'est l'information la
+plus proche du sous-étage que la base contienne — et elle reste très en deçà de
+ce que la propagation de surface demanderait.
+
+---
+
+## Synthèse
+
+| # | Point | État | Effet sur l'architecture |
+|---|---|---|---|
+| 1 | CEMS / EWDS | ✅ résolu | `ecmwfr` retenu, `service = "cems"`. Pas de client `httr2` maison. Non testé en réel (clé requise). |
+| 2 | BD Forêt v2 | ✅ résolu | WFS Géoplateforme filtré par AOI. **Meilleur** que le téléchargement départemental prévu. |
+| 2b | Millésimes | ❌ **bloqué** | Contrôle de biais temporel sans donnée d'entrée. |
+| 3 | CORINE | ✅ contourné (France) | Vrai client possible, pas seulement un assistant. Multi-pays non vérifié. |
+| 4 | EFFIS burnt areas | ✅ résolu | `ms:modis.ba.poly` en SHAPEZIP. **Couverture 2016+, pas 2006.** CRS à forcer. |
+| 5 | Rayons Beverly | ⚠️ partiel | 2010 sourcé ; **2021 et 2023 non lus**. |
+| 6 | Seuils FWI EFFIS | ✅ résolu | 6 classes officielles. Pas de « Very Low ». |
+| 7 | Nomenclature TFV | ⚠️ partiel | Extractible des données elles-mêmes, script versionné en `data-raw/`. |
+
+---
+
+## Décisions à prendre avant la Phase 3
+
+1. **Millésimes BD Forêt.** Sans cette table, `fev_validate(max_lag_years=)`
+   ne peut pas produire l'avertissement chiffré demandé. Trois options, par
+   ordre de préférence décroissante : (a) fournir la table nous-mêmes si elle
+   existe hors ligne, dans la doc produit livrée avec les données ; (b) exposer
+   `millesime` comme argument obligatoire de `fev_fuel_source()`, sans défaut,
+   de sorte que l'utilisateur qui ne le renseigne pas obtienne un refus
+   explicite et non un résultat faux ; (c) désactiver le contrôle temporel et
+   émettre un avertissement à chaque appel. L'option (c) est la pire : elle
+   rend la fonction silencieusement inutile sur le point que le brief juge
+   important.
+2. **Période de validation.** Le workflow cible demande 2006–2023 ; l'accès
+   public sert 2016+. Soit on réduit la période cible, soit on prévoit un
+   chemin d'import d'un fichier obtenu par le formulaire de demande EFFIS.
+3. **Beverly 2021 / 2023.** Si un accès à ces articles est disponible, les
+   rayons par type de combustible en seront tirés. Sinon, le package ne citera
+   que 2010 et les défauts `fireexposuR`, et le dira.
+
+---
+
+## Sources
+
+- [Fire danger indices historical data (CEMS) — EWDS](https://ewds.climate.copernicus.eu/datasets/cems-fire-historical-v1?tab=overview)
+- [User Guide — Fire danger indices historical data (CEMS), ECMWF Confluence](https://confluence.ecmwf.int/display/CEMS/User+Guide+for++Fire+danger+indices+historical+data+from+the+Copernicus+Emergency+Management+Service)
+- [ecmwfr — Interface to ECMWF and CDS Data Web Services](https://bluegreen-labs.github.io/ecmwfr/) (et code source CRAN 2.0.3)
+- [BD Forêt v2 — aide cartes.gouv.fr](https://cartes.gouv.fr/aide/fr/partenaires/ign/referentiels-description-territoire/foret/bd-foret-v2/)
+- [BD Forêt® — data.gouv.fr](https://www.data.gouv.fr/datasets/bd-foret-r)
+- [BD Forêt version 2 — Inventaire forestier IGN](https://inventaire-forestier.ign.fr/spip.php?article646)
+- [EFFIS — Fire Danger Forecast](https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast)
+- [EFFIS — Data and Services](https://forest-fire.emergency.copernicus.eu/applications/data-and-services)
+- [Beverly et al. 2010, Int. J. Wildland Fire 19:299–313](https://www.publish.csiro.au/wf/fulltext/wf09071)
+- [Beverly et al. 2021, Landscape Ecology — non lu (accès restreint)](https://link.springer.com/article/10.1007/s10980-020-01173-8)
