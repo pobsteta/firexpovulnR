@@ -1,0 +1,49 @@
+# R
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.Rapp.history
+*.Rproj
+.Renviron
+.Rprofile
+
+# Build artefacts
+*.tar.gz
+*.Rcheck/
+src/*.o
+src/*.so
+src/*.dll
+inst/doc
+
+# Vignette / knitr
+*_cache/
+*_files/
+vignettes/*.html
+vignettes/*.pdf
+
+# pkgdown
+docs/
+
+# Data caches — never commit downloaded source data
+inst/extdata/cache/
+data-raw/downloads/
+*.tif
+*.tiff
+*.gpkg
+*.shp
+*.shx
+*.dbf
+*.prj
+*.cpg
+*.zip
+*.7z
+
+# Secrets
+*.key
+*.pem
+.env
+
+# OS
+.DS_Store
+Thumbs.db

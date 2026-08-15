@@ -1,0 +1,40 @@
+Package: firexpovulnR
+Title: Fire Danger, Exposure and Vulnerability Assessment for European Forests
+Version: 0.0.0.9000
+Authors@R:
+    person("Pascal", "Obstétar", email = "pascal.obstetar@gmail.com",
+           role = c("aut", "cre"))
+Description: Reproducible processing chain combining fire weather danger
+    (Fire Weather Index calibrated on regional percentiles), fuel-based fire
+    exposure metrics, and vulnerability of exposed assets into a composite
+    risk index, for European forest study areas with metropolitan France as
+    the primary field. Every imported threshold is an explicit, documented
+    and overridable parameter, and every analysis carries a full provenance
+    record. Intended for internal research use, not for CRAN submission.
+License: GPL-3
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.1.0
+Depends:
+    R (>= 4.2)
+Imports:
+    cffdrs,
+    cli,
+    rlang,
+    sf,
+    terra (>= 1.7),
+    tools,
+    yaml
+Suggests:
+    fireexposuR,
+    httptest2,
+    httr2,
+    knitr,
+    medfate,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+URL: https://github.com/pobsteta/firexpovulnR
+BugReports: https://github.com/pobsteta/firexpovulnR/issues
