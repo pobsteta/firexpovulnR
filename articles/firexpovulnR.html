@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -96,8 +96,25 @@ chênaie verte au centre, du maquis à l’est, de l’eau au nord-ouest.</p>
 <span><span class="va">aoi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_as_sf.html" class="external-link">st_as_sf</a></span><span class="op">(</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/sfc.html" class="external-link">st_sfc</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/graphics/rect.html" class="external-link">rect</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">5000</span>, <span class="fl">0</span>, <span class="fl">5000</span><span class="op">)</span>, crs <span class="op">=</span> <span class="fl">2154</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>En production, ces deux couches viennent des services :</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">bdforet</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_fetch_bdforet.html">fev_fetch_bdforet</a></span><span class="op">(</span><span class="va">aoi</span>, millesime <span class="op">=</span> <span class="fl">2014</span>, dept <span class="op">=</span> <span class="st">"83"</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">bdforet</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_fetch_bdforet.html">fev_fetch_bdforet</a></span><span class="op">(</span><span class="va">aoi</span>, millesime <span class="op">=</span> <span class="st">"auto"</span>, dept <span class="op">=</span> <span class="st">"83"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">corine</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_fetch_corine.html">fev_fetch_corine</a></span><span class="op">(</span><span class="va">aoi</span>, year <span class="op">=</span> <span class="fl">2018</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p><code>millesime = "auto"</code> n’est pas une devinette. L’IGN
+définit la date de validité de la BD Forêt v2 comme <strong>celle de la
+prise de vue de la BD ORTHO</strong> sur laquelle elle a été
+photo-interprétée, et ces dates de vol sont publiées dans le graphe de
+mosaïquage archivé. <code><a href="../reference/fev_bdforet_millesime.html">fev_bdforet_millesime()</a></code> va les chercher
+:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/fev_bdforet_millesime.html">fev_bdforet_millesime</a></span><span class="op">(</span><span class="va">aoi</span><span class="op">)</span></span>
+<span><span class="co">#&gt; dep  pva   date_vol year n_polygons pct_area</span></span>
+<span><span class="co">#&gt;  83 2008 2008-06-23 2008          2     43.8</span></span>
+<span><span class="co">#&gt;  83 2014 2014-07-17 2014          6     56.2</span></span></code></pre></div>
+<p>Un département étant revolé tous les cinq ans environ, la fenêtre
+2007-2018 en contient souvent deux, et l’IGN ne publie pas laquelle a
+servi. La fonction rend donc les candidats plutôt que d’en inventer un ;
+<code>strategy = "oldest"</code> prend le plus ancien, qui maximise
+l’écart rapporté en section 7 — on penche du côté de signaler le biais
+plutôt que de le masquer.</p>
 </div>
 <div class="section level2">
 <h2 id="combustible">2. Combustible<a class="anchor" aria-label="anchor" href="#combustible"></a>
@@ -106,7 +123,7 @@ chênaie verte au centre, du maquis à l’est, de l’eau au nord-ouest.</p>
 résolution qui est un paramètre explicite. Le millésime de la BD Forêt
 est <strong>obligatoire</strong> : sans lui, le contrôle de biais
 temporel de la section 7 ne peut pas tourner.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">primaire</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_source.html">fev_fuel_source</a></span><span class="op">(</span><span class="va">bdforet</span>, type <span class="op">=</span> <span class="st">"bdforet_v2"</span>, res <span class="op">=</span> <span class="fl">25</span>,</span>
 <span>                            aoi <span class="op">=</span> <span class="va">aoi</span>, millesime <span class="op">=</span> <span class="fl">2014</span><span class="op">)</span></span>
 <span><span class="va">auxiliaire</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_source.html">fev_fuel_source</a></span><span class="op">(</span><span class="va">corine</span>, type <span class="op">=</span> <span class="st">"clc_2018"</span>, res <span class="op">=</span> <span class="fl">25</span>,</span>
@@ -130,7 +147,7 @@ temporel de la section 7 ne peut pas tourner.</p>
 sa classe. Sans elle, un pixel de 25 m issu de la BD Forêt et un pixel
 rééchantillonné depuis une unité CORINE de 25 ha se ressemblent et ne
 veulent pas dire la même chose.</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rspatial.github.io/terra/reference/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fuel</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">──</span> <span style="font-weight: bold;">fev_fuel_source summary: bdforet_v2+clc_2018</span> <span style="color: #00BBBB;">────────────────────────────────</span></span></span>
@@ -142,7 +159,7 @@ veulent pas dire la même chose.</p>
 <p>Les tables de correspondance sont justifiées ligne par ligne, et 4
 des 32 lignes de la BD Forêt comme 17 des 44 de CORINE sont marquées
 ambiguës :</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">clc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_lookup.html">fev_fuel_lookup</a></span><span class="op">(</span><span class="st">"clc"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/headtail.html" class="external-link">head</a></span><span class="op">(</span><span class="va">clc</span><span class="op">[</span><span class="va">clc</span><span class="op">$</span><span class="va">confidence</span> <span class="op">==</span> <span class="st">"ambiguous"</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"code"</span>, <span class="st">"label"</span>, <span class="st">"notes"</span><span class="op">)</span><span class="op">]</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    code                      label</span></span>
@@ -156,11 +173,11 @@ ambiguës :</p>
 <p>De là viennent le masque brûlable et la disponibilité pondérée.
 <strong>Les poids ne sont sourcés nulle part</strong> : ce sont une
 convention du package, et la fonction le dit à chaque appel.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">brulable</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_binary.html">fev_fuel_binary</a></span><span class="op">(</span><span class="va">fuel</span><span class="op">)</span></span>
 <span><span class="va">poids</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_weights.html">fev_fuel_weights</a></span><span class="op">(</span>quiet <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span>   <span class="co"># quiet ici seulement : voir ?fev_fuel_weights</span></span>
 <span><span class="va">dispo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_availability.html">fev_fuel_availability</a></span><span class="op">(</span><span class="va">fuel</span>, weights <span class="op">=</span> <span class="va">poids</span><span class="op">)</span></span></code></pre></div>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">brulable</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Brûlable"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">dispo</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Disponibilité"</span><span class="op">)</span></span></code></pre></div>
@@ -173,7 +190,7 @@ convention du package, et la fonction le dit à chaque appel.</p>
 <code><a href="https://docs.ropensci.org/fireexposuR/reference/fire_exp.html" class="external-link">fireexposuR::fire_exp()</a></code>, cellule évaluée exclue. Les rayons
 viennent de travaux canadiens ; la métrique a été validée au Portugal,
 le rayon ne l’est pas sur chêne vert ou maquis.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">brulable</span>, radius <span class="op">=</span> <span class="fl">500</span>, type <span class="op">=</span> <span class="st">"ember"</span>, quiet <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="va">expo</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -182,13 +199,13 @@ le rayon ne l’est pas sur chêne vert ou maquis.</p>
 <span><span class="co">#&gt; • Units: <span style="color: #0000BB;">"proportion of surrounding fuel, 0-1"</span></span></span>
 <span><span class="co">#&gt; • Range: <span style="color: #0000BB;">0</span> and <span style="color: #0000BB;">1</span></span></span>
 <span><span class="co">#&gt; • Mapped: <span style="color: #0000BB;">35.5</span>% of cells</span></span></code></pre></div>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">expo</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Exposition, rayon 500 m"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="firexpovulnR_files/figure-html/plot-expo-1.png" class="r-plt" alt="" width="672"></p>
 <p>Depuis un enjeu ponctuel, <code><a href="../reference/fev_directional.html">fev_directional()</a></code> répond à une
 autre question : d’où un feu pourrait-il arriver.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">maison</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2500</span>, <span class="fl">2500</span><span class="op">)</span></span>
 <span><span class="va">dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_directional.html">fev_directional</a></span><span class="op">(</span><span class="va">expo</span>, point <span class="op">=</span> <span class="va">maison</span>,</span>
 <span>                       seg_lengths <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">600</span>, <span class="fl">600</span>, <span class="fl">600</span><span class="op">)</span>, interval <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
@@ -213,7 +230,7 @@ autre question : d’où un feu pourrait-il arriver.</p>
 <p>Le cœur méthodologique est la calibration en percentiles : un seuil
 FWI absolu redessine surtout la climatologie, alors qu’un rang
 percentile dit la même chose dans le Var et en Bretagne.</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Série journalière synthétique sur une grille kilométrique.</span></span>
 <span><span class="va">grille_meteo</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span>nrows <span class="op">=</span> <span class="fl">5</span>, ncols <span class="op">=</span> <span class="fl">5</span>, xmin <span class="op">=</span> <span class="fl">0</span>, xmax <span class="op">=</span> <span class="fl">5000</span>,</span>
 <span>                     ymin <span class="op">=</span> <span class="fl">0</span>, ymax <span class="op">=</span> <span class="fl">5000</span>, crs <span class="op">=</span> <span class="st">"EPSG:2154"</span>, nlyr <span class="op">=</span> <span class="fl">730</span><span class="op">)</span></span>
@@ -222,15 +239,15 @@ percentile dit la même chose dans le Var et en Bretagne.</p>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/time.html" class="external-link">time</a></span><span class="op">(</span><span class="va">grille_meteo</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2019-01-01"</span><span class="op">)</span>, by <span class="op">=</span> <span class="st">"day"</span>, length.out <span class="op">=</span> <span class="fl">730</span><span class="op">)</span></span></code></pre></div>
 <p>En production, la série vient du produit historique CEMS :</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fwi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fetch_fwi.html">fev_fetch_fwi</a></span><span class="op">(</span><span class="va">aoi</span>, period <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1991-01-01"</span>, <span class="st">"2020-12-31"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fwi</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fetch_fwi.html">fev_fetch_fwi</a></span><span class="op">(</span><span class="va">aoi</span>, period <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"1991-01-01"</span>, <span class="st">"2020-12-31"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">danger_pct</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fwi_percentile.html">fev_fwi_percentile</a></span><span class="op">(</span><span class="va">grille_meteo</span>, ref_period <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2020</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">danger_pct</span></span></code></pre></div>
 <p>Les deux jeux de seuils publiés diffèrent d’un facteur trois, et une
 carte classée ne dit pas lequel l’a produite — c’est pourquoi
 <code><a href="../reference/fev_danger_class.html">fev_danger_class()</a></code> l’inscrit dans la provenance.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/fev_fwi_classes.html">fev_fwi_classes</a></span><span class="op">(</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"lower"</span>, <span class="st">"upper"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;          class lower upper</span></span>
 <span><span class="co">#&gt; 1          Low  -Inf  11.2</span></span>
@@ -254,7 +271,7 @@ carte classée ne dit pas lequel l’a produite — c’est pourquoi
 <p>Le danger est ici kilométrique et l’exposition décamétrique. C’est le
 point le plus conséquent de toute la chaîne, et il passe par une seule
 fonction, qui avertit et journalise.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">dernier_jour</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">[[</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">nlyr</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">pile</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_align.html">fev_align</a></span><span class="op">(</span>danger <span class="op">=</span> <span class="va">dernier_jour</span>, disponibilite <span class="op">=</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">dispo</span><span class="op">)</span>,</span>
 <span>                  exposition <span class="op">=</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">expo</span><span class="op">)</span><span class="op">)</span></span>
@@ -277,7 +294,7 @@ fonction, qui avertit et journalise.</p>
 package autorisée à changer une grille. Toutes les autres refusent des
 entrées de grilles différentes et y renvoient. Le rapport d’échelle part
 dans la provenance :</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">etapes</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_provenance.html">fev_provenance</a></span><span class="op">(</span><span class="va">pile</span><span class="op">)</span><span class="op">$</span><span class="va">steps</span></span>
 <span><span class="va">etapes</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">etapes</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">params</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"scale_ratio"</span>, <span class="st">"cells_per_coarse_cell"</span>,</span>
 <span>                                  <span class="st">"direction"</span>, <span class="st">"methods"</span><span class="op">)</span><span class="op">]</span></span>
@@ -298,7 +315,7 @@ dans la provenance :</p>
 </h2>
 <p>Aucune source d’enjeux n’est imposée. Ici, une densité bâtie et un
 habitat protégé, tous deux synthétiques.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">gabarit</span> <span class="op">&lt;-</span> <span class="va">pile</span><span class="op">$</span><span class="va">exposition</span></span>
 <span></span>
 <span><span class="va">population</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/rast.html" class="external-link">rast</a></span><span class="op">(</span><span class="va">gabarit</span><span class="op">)</span></span>
@@ -320,7 +337,7 @@ habitat protégé, tous deux synthétiques.</p>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Shown once per session; recorded in the provenance every time.</span></span></code></pre></div>
 <p>Le danger composite croise météo et combustible ; le risque croise
 danger et vulnérabilité.</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">danger</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_danger_index.html">fev_danger_index</a></span><span class="op">(</span><span class="va">pile</span><span class="op">$</span><span class="va">danger</span>, <span class="va">pile</span><span class="op">$</span><span class="va">disponibilite</span>,</span>
 <span>                           normalise <span class="op">=</span> <span class="st">"percentile"</span><span class="op">)</span></span>
 <span></span>
@@ -329,12 +346,12 @@ danger et vulnérabilité.</p>
 réellement le workflow CLIMAAX : il rend un <strong>ensemble</strong>,
 pas un score — les cellules qu’on ne peut améliorer sur une dimension
 sans dégrader l’autre.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">front</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_risk.html">fev_risk</a></span><span class="op">(</span><span class="va">danger</span>, <span class="va">vuln</span>, method <span class="op">=</span> <span class="st">"pareto"</span>, normalise <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/global.html" class="external-link">global</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">front</span><span class="op">)</span>, <span class="st">"sum"</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt;       sum</span></span>
 <span><span class="co">#&gt; risk 1640</span></span></code></pre></div>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">risque</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Risque (effis_mean)"</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">front</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Front de Pareto"</span><span class="op">)</span></span></code></pre></div>
@@ -346,16 +363,19 @@ sans dégrader l’autre.</p>
 <p>C’est ici que le millésime sert. Chaque feu est comparé à la date du
 combustible, et la fonction dit avec un chiffre quelle part de la
 surface brûlée postdate ce millésime.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">feux</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://r-spatial.github.io/sf/reference/sf.html" class="external-link">st_sf</a></span><span class="op">(</span></span>
 <span>  FIREDATE <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2016-08-02"</span>, <span class="st">"2022-07-14"</span><span class="op">)</span>,</span>
 <span>  geometry <span class="op">=</span> <span class="fu"><a href="https://r-spatial.github.io/sf/reference/sfc.html" class="external-link">st_sfc</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/graphics/rect.html" class="external-link">rect</a></span><span class="op">(</span><span class="fl">200</span>, <span class="fl">2200</span>, <span class="fl">200</span>, <span class="fl">1400</span><span class="op">)</span>,</span>
 <span>                    <span class="fu"><a href="https://rdrr.io/r/graphics/rect.html" class="external-link">rect</a></span><span class="op">(</span><span class="fl">3600</span>, <span class="fl">4900</span>, <span class="fl">2200</span>, <span class="fl">3400</span><span class="op">)</span>, crs <span class="op">=</span> <span class="fl">2154</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>En production :</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">feux</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_fetch_burnt.html">fev_fetch_burnt</a></span><span class="op">(</span><span class="va">aoi</span>, period <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2016"</span>, <span class="st">"2023"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">feux</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_fetch_burnt.html">fev_fetch_burnt</a></span><span class="op">(</span><span class="va">aoi</span>, period <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"2016"</span>, <span class="st">"2023"</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Et le millésime n’a pas à être redonné du tout si la couche vient de
+la chaîne avec <code>millesime = "auto"</code> : il voyage dans la
+provenance depuis <code><a href="../reference/fev_fuel_source.html">fev_fuel_source()</a></code>.</p>
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_validate.html">fev_validate</a></span><span class="op">(</span><span class="va">risque</span>, <span class="va">feux</span>, millesime <span class="op">=</span> <span class="fl">2014</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: 39.4% of the burnt area in this sample postdates the fuel vintage (2014) by</span></span>
 <span><span class="co">#&gt; more than 5 years.</span></span>
@@ -383,7 +403,7 @@ surface brûlée postdate ce millésime.</p>
 de la chaîne : il voyage dans la provenance depuis
 <code><a href="../reference/fev_fuel_source.html">fev_fuel_source()</a></code>. Et si on veut écarter les feux qui
 postdatent trop le combustible :</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val_filtre</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_validate.html">fev_validate</a></span><span class="op">(</span><span class="va">risque</span>, <span class="va">feux</span>, millesime <span class="op">=</span> <span class="fl">2014</span>, max_lag_years <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: 39.4% of the burnt area in this sample postdates the fuel vintage (2014) by</span></span>
 <span><span class="co">#&gt; more than 5 years.</span></span>
@@ -394,7 +414,7 @@ postdatent trop le combustible :</p>
 <span><span class="co">#&gt; 1 &lt;= 0 (fire before the vintage)       0       0      0.0</span></span>
 <span><span class="co">#&gt; 2                         1 to 5       1     240     60.6</span></span>
 <span><span class="co">#&gt; 3                            &gt; 5       1     156     39.4</span></span></code></pre></div>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">val</span><span class="op">)</span></span></code></pre></div>
 <p><img src="firexpovulnR_files/figure-html/plot-validate-1.png" class="r-plt" alt="" width="672"></p>
 </div>
@@ -404,11 +424,11 @@ postdatent trop le combustible :</p>
 <p>Tout ce qui précède est rejouable parce que chaque paramètre utilisé
 — y compris ceux qui n’ont jamais été tapés — est écrit au moment où il
 sert.</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">prov</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_provenance.html">fev_provenance</a></span><span class="op">(</span><span class="va">pile</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="va">prov</span><span class="op">$</span><span class="va">steps</span>, <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="va">s</span><span class="op">$</span><span class="va">fun</span>, <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "fev_align" "fev_stack"</span></span></code></pre></div>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/fev_provenance.html">fev_provenance</a></span><span class="op">(</span><span class="va">pile</span>, file <span class="op">=</span> <span class="st">"provenance.yml"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -494,7 +514,7 @@ largeur honnête d’un chronométrage unique. Le débit mesuré tourne autour
 de 170 millions d’opérations pondérées par seconde.</p>
 <p>Un département tient donc en une minute environ, en écrivant le
 résultat par blocs :</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">brulable</span>, radius <span class="op">=</span> <span class="fl">500</span>,</span>
 <span>                     filename <span class="op">=</span> <span class="st">"exposition_var.tif"</span>,</span>
 <span>                     wopt <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>progress <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>

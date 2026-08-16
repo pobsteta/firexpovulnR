@@ -46,9 +46,31 @@ En production, ces deux couches viennent des services :
 
 ``` r
 
-bdforet <- fev_data(fev_fetch_bdforet(aoi, millesime = 2014, dept = "83"))
+bdforet <- fev_data(fev_fetch_bdforet(aoi, millesime = "auto", dept = "83"))
 corine  <- fev_data(fev_fetch_corine(aoi, year = 2018))
 ```
+
+`millesime = "auto"` n’est pas une devinette. L’IGN définit la date de
+validité de la BD Forêt v2 comme **celle de la prise de vue de la BD
+ORTHO** sur laquelle elle a été photo-interprétée, et ces dates de vol
+sont publiées dans le graphe de mosaïquage archivé.
+[`fev_bdforet_millesime()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdforet_millesime.md)
+va les chercher :
+
+``` r
+
+fev_bdforet_millesime(aoi)
+#> dep  pva   date_vol year n_polygons pct_area
+#>  83 2008 2008-06-23 2008          2     43.8
+#>  83 2014 2014-07-17 2014          6     56.2
+```
+
+Un département étant revolé tous les cinq ans environ, la fenêtre
+2007-2018 en contient souvent deux, et l’IGN ne publie pas laquelle a
+servi. La fonction rend donc les candidats plutôt que d’en inventer un ;
+`strategy = "oldest"` prend le plus ancien, qui maximise l’écart
+rapporté en section 7 — on penche du côté de signaler le biais plutôt
+que de le masquer.
 
 ## 2. Combustible
 
@@ -375,6 +397,10 @@ En production :
 
 feux <- fev_data(fev_fetch_burnt(aoi, period = c("2016", "2023")))
 ```
+
+Et le millésime n’a pas à être redonné du tout si la couche vient de la
+chaîne avec `millesime = "auto"` : il voyage dans la provenance depuis
+[`fev_fuel_source()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_source.md).
 
 ``` r
 

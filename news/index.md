@@ -1,5 +1,44 @@
 # Changelog
 
+## firexpovulnR 0.8.0 (2026-08-16)
+
+Le dernier blocage du rapport de faisabilité tombe. Le millésime de la
+BD Forêt v2 est récupérable, et pas par un contournement.
+
+759 tests hors ligne, aucun échec. `R CMD check` sans erreur,
+avertissement ni note. Tests d’intégration passés contre le service IGN
+réel.
+
+#### Le millésime BD Forêt v2, retrouvé
+
+- **L’IGN définit le millésime comme la date de la prise de vue.**
+  *Descriptif de contenu BD Forêt® Version 2*, septembre 2014, §2.3 : «
+  La date de validation est celle de la prise de vues de la BD ORTHO®
+  servant à la production des données. » Ce n’est donc pas un proxy : la
+  base décrit le peuplement tel que le photo-interprète l’a vu sur
+  l’image infrarouge, et la date du vol est la date de l’état de paysage
+  enregistré.
+- [`fev_bdforet_millesime()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdforet_millesime.md)
+  va chercher ces dates dans le graphe de mosaïquage de la BD ORTHO,
+  dont l’IGN archive des tranches par période. Le champ `date_vol` y est
+  une vraie date, par polygone, avec le département et la campagne.
+- `fev_fetch_bdforet(millesime = "auto")` enchaîne le tout.
+- **La réserve est réelle et elle est portée par le code.** Un
+  département est revolé tous les cinq ans environ, donc la fenêtre
+  2007-2018 en contient généralement deux — le Var a 2008 et 2014 — et
+  l’IGN ne publie pas laquelle a alimenté quelle production. La fonction
+  rend les candidats avec la part de surface de chacun et **refuse de
+  trancher**. `strategy = "oldest"` donne la lecture conservatrice :
+  supposer la campagne la plus ancienne maximise l’écart que
+  [`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+  rapporte, ce qui penche du côté de signaler le biais plutôt que de le
+  masquer.
+- Le schéma WFS de la BD Forêt v2 a été revérifié : aucun champ de date,
+  ce qui confirme le constat de phase 2 et fait du graphe de mosaïquage
+  la seule voie qui ne relève pas de la conjecture.
+- `specs/phase2-rapport-faisabilite.md` passe le point 2 bis de « bloqué
+  » à « résolu », en addendum daté — le constat d’origine reste lisible.
+
 ## firexpovulnR 0.7.0 (2026-08-16)
 
 Dernière phase du brief. La chaîne cible s’exécute désormais de bout en

@@ -186,6 +186,8 @@ différents ne peuvent pas se confondre.
   : Fetch CORINE Land Cover (auxiliary fuel source)
 - [`fev_fetch_burnt()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.md)
   : Fetch EFFIS burnt area perimeters
+- [`fev_bdforet_millesime()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdforet_millesime.md)
+  : BD Forêt v2 vintage, from the imagery it was photo-interpreted on
 - [`fev_cache_info()`](https://pobsteta.github.io/firexpovulnR/reference/fev_cache_info.md)
   : Inspect the cache
 - [`fev_cache_clear()`](https://pobsteta.github.io/firexpovulnR/reference/fev_cache_clear.md)

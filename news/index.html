@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,25 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.0" id="firexpovulnr-080-2026-08-16">firexpovulnR 0.8.0 (2026-08-16)<a class="anchor" aria-label="anchor" href="#firexpovulnr-080-2026-08-16"></a></h2>
+<p>Le dernier blocage du rapport de faisabilité tombe. Le millésime de la BD Forêt v2 est récupérable, et pas par un contournement.</p>
+<p>759 tests hors ligne, aucun échec. <code>R CMD check</code> sans erreur, avertissement ni note. Tests d’intégration passés contre le service IGN réel.</p>
+<div class="section level4">
+<h4 id="le-millésime-bd-forêt-v2-retrouvé-0-8-0">Le millésime BD Forêt v2, retrouvé<a class="anchor" aria-label="anchor" href="#le-mill%C3%A9sime-bd-for%C3%AAt-v2-retrouv%C3%A9-0-8-0"></a></h4>
+<ul><li>
+<strong>L’IGN définit le millésime comme la date de la prise de vue.</strong> <em>Descriptif de contenu BD Forêt® Version 2</em>, septembre 2014, §2.3 : « La date de validation est celle de la prise de vues de la BD ORTHO® servant à la production des données. » Ce n’est donc pas un proxy : la base décrit le peuplement tel que le photo-interprète l’a vu sur l’image infrarouge, et la date du vol est la date de l’état de paysage enregistré.</li>
+<li>
+<code><a href="../reference/fev_bdforet_millesime.html">fev_bdforet_millesime()</a></code> va chercher ces dates dans le graphe de mosaïquage de la BD ORTHO, dont l’IGN archive des tranches par période. Le champ <code>date_vol</code> y est une vraie date, par polygone, avec le département et la campagne.</li>
+<li>
+<code>fev_fetch_bdforet(millesime = "auto")</code> enchaîne le tout.</li>
+<li>
+<strong>La réserve est réelle et elle est portée par le code.</strong> Un département est revolé tous les cinq ans environ, donc la fenêtre 2007-2018 en contient généralement deux — le Var a 2008 et 2014 — et l’IGN ne publie pas laquelle a alimenté quelle production. La fonction rend les candidats avec la part de surface de chacun et <strong>refuse de trancher</strong>. <code>strategy = "oldest"</code> donne la lecture conservatrice : supposer la campagne la plus ancienne maximise l’écart que <code><a href="../reference/fev_validate.html">fev_validate()</a></code> rapporte, ce qui penche du côté de signaler le biais plutôt que de le masquer.</li>
+<li>Le schéma WFS de la BD Forêt v2 a été revérifié : aucun champ de date, ce qui confirme le constat de phase 2 et fait du graphe de mosaïquage la seule voie qui ne relève pas de la conjecture.</li>
+<li>
+<code>specs/phase2-rapport-faisabilite.md</code> passe le point 2 bis de « bloqué » à « résolu », en addendum daté — le constat d’origine reste lisible.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.0" id="firexpovulnr-070-2026-08-16">firexpovulnR 0.7.0 (2026-08-16)<a class="anchor" aria-label="anchor" href="#firexpovulnr-070-2026-08-16"></a></h2>
 <p>Dernière phase du brief. La chaîne cible s’exécute désormais de bout en bout, et la vignette la déroule sans réseau.</p>
