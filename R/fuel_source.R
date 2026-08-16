@@ -284,8 +284,8 @@ fev_check_millesime <- function(type, millesime, explicit) {
          a stand that burnt after it was mapped cannot be detected.",
     i = "Pass {.code millesime = 2014} (the year for your department), or \\
          {.code millesime = NA} to state explicitly that it is unknown.",
-    i = "The WFS does not serve it and no per-department table was found; \\
-         see the phase 2 report, section 2 bis."
+    i = "{.fn fev_bdforet_millesime} derives it from the BD ORTHO survey \\
+         dates, which is how IGN defines the validity date of BD For\\u00eat v2."
   ), class = "fev_millesime_required")
 }
 

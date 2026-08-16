@@ -143,3 +143,40 @@ test_that("EFFIS coverage still starts around 2016, as recorded in phase 2", {
     class = "fev_period_truncated"
   )
 })
+
+test_that("the BD ORTHO mosaicking graph still serves date_vol", {
+  skip_unless_network()
+  # The whole vintage recovery rests on this field existing and being a date.
+  # If IGN ever drops it, fev_bdforet_millesime() has no route left and the
+  # phase 2 blocker comes back -- so it is checked against the live service.
+  # The Var has two campaigns in the window, so this warns; the ambiguity has
+  # its own test below.
+  tab <- suppressWarnings(fev_bdforet_millesime(maures_aoi(), cache = FALSE))
+  expect_s3_class(tab, "fev_millesime")
+  expect_gt(nrow(tab), 0L)
+  expect_true(all(c("dep", "pva", "date_vol", "year", "pct_area") %in%
+                    names(tab)))
+  expect_true(all(tab$year >= 2007 & tab$year <= 2018))
+  # The Maures sit in the Var.
+  expect_true("83" %in% tab$dep)
+  expect_equal(sum(tab$pct_area), 100, tolerance = 0.5)
+})
+
+test_that("the Var's BD ORTHO campaigns are the ones recorded in phase 7", {
+  skip_unless_network()
+  # Observed 2026-08-16: 2008 and 2014 inside the BD Forêt v2 window. Pinned
+  # so a change in the archived graphs is noticed rather than silently
+  # changing every vintage the package derives.
+  tab <- suppressWarnings(fev_bdforet_millesime(maures_aoi(), cache = FALSE))
+  expect_setequal(unique(tab$year), c(2008L, 2014L))
+})
+
+test_that("millesime = auto reaches fev_fetch_bdforet", {
+  skip_unless_network()
+  bdf <- suppressWarnings(
+    fev_fetch_bdforet(maures_aoi(), millesime = "auto", cache = FALSE)
+  )
+  rec <- fev_source_info(bdf)
+  expect_false(all(is.na(rec$millesime)))
+  expect_true(rec$millesime %in% 2007:2018)
+})

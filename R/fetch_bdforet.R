@@ -60,6 +60,17 @@ fev_fetch_bdforet <- function(aoi,
                               cache = TRUE,
                               layer = .FEV_LAYERS$bdforet_v2) {
   aoi <- fev_as_aoi(aoi, crs = crs_work)
+
+  # "auto" resolves the vintage from the imagery the database was drawn on,
+  # which is IGN's own definition of it. Conservative by default: the oldest
+  # campaign in the window maximises the lag fev_validate() will report.
+  if (identical(millesime, "auto")) {
+    millesime <- as.integer(
+      fev_bdforet_millesime(aoi, strategy = "oldest", crs_work = crs_work,
+                            cache = cache)
+    )
+  }
+
   key <- fev_cache_key("bdforet_v2",
                        list(aoi = aoi, layer = layer, crs = crs_work))
 
@@ -136,8 +147,10 @@ fev_fetch_bdforet <- function(aoi,
       "BD For\u00eat v2 vintage is unknown: the WFS does not serve it.",
       i = "BD For\u00eat v2 was built department by department between 2007 \\
            and 2018, so a national assembly is not a snapshot.",
-      i = "Supply {.arg millesime} to enable the temporal-bias check in \\
-           {.fn fev_validate}."
+      i = "Pass {.code millesime = \"auto\"} to derive it from the BD ORTHO \\
+           survey dates, or supply the year yourself.",
+      i = "Without it the temporal-bias check in {.fn fev_validate} cannot \\
+           run."
     ), class = "fev_millesime_missing")
   }
 

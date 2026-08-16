@@ -40,6 +40,35 @@
   effis_ba   = "ms:modis.ba.poly"
 )
 
+# BD ORTHO mosaicking graphs, period-sliced and archived.
+#
+# These are what makes the BD For\u00eat v2 vintage recoverable at all. IGN's own
+# content description (DC_BDFORET_v2.pdf, September 2014, section 2.3) states:
+# "La date de validation est celle de la prise de vues de la BD ORTHO servant a
+# la production des donnees." The vintage IS the aerial survey date, and the
+# mosaicking graph carries that date per polygon in `date_vol`, with the
+# department in `dep` and the campaign in `pva`.
+#
+# Schema verified by DescribeFeatureType on 2026-08-16:
+#   dep (string), pva (int), res (int), echelle (int), date_vol (date)
+#
+# Note the axis order: this WFS wants BBOX easting-first even in EPSG:4326.
+# Requesting lat-first returns zero features with HTTP 200 -- the same silent
+# empty result documented for the other layers in phase 2.
+.FEV_ORTHO_GRAPHS <- list(
+  `2000-2005` = "ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2000-2005:graphe_bdortho",
+  `2006-2010` = "ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2006-2010:graphe_bdortho",
+  `2011-2015` = "ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2011-2015:graphe_bdortho",
+  `2016-2020` = "ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2016-2020:graphe_bdortho",
+  `2021-2023` = "ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2021-2023:graphe_bdortho"
+)
+
+# BD For\u00eat v2 was built department by department across this window, stated
+# by IGN on cartes.gouv.fr. The content description adds that full metropolitan
+# coverage was planned for early 2016, so a survey flown after that cannot have
+# fed the initial production of any department -- only an update.
+.FEV_BDFORET_V2_WINDOW <- c(2007L, 2018L)
+
 #' Data source registry
 #'
 #' Returns the endpoints and layer names the package contacts, so they can be

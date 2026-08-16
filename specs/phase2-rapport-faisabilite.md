@@ -86,7 +86,12 @@ CORINE Land Cover est exposé sur le **même** endpoint :
 `LANDCOVER.CLC18_FR:clc18_fr`, attributs `id`, `code_18`, `area_ha`, `remark`,
 `shape_leng`, `shape_area`, `geom`. Voir le point 3.
 
-### 2 bis. Millésimes par département — NON TROUVÉ, blocage
+### 2 bis. Millésimes par département — NON TROUVÉ en phase 2, RÉSOLU en phase 7
+
+> **Mise à jour du 2026-08-16.** Ce point n'est plus un blocage : l'IGN définit
+> le millésime comme la date de prise de vue de la BD ORTHO, et cette date est
+> publiée dans le graphe de mosaïquage archivé. Voir l'addendum (2) en fin de
+> document. Le constat d'origine est conservé tel quel ci-dessous.
 
 Le millésime **n'est pas un attribut de la couche WFS**. Il est absent du
 schéma `DescribeFeatureType`, donc indisponible par la voie d'acquisition
@@ -359,7 +364,7 @@ ce que la propagation de surface demanderait.
 |---|---|---|---|
 | 1 | CEMS / EWDS | ✅ résolu | `ecmwfr` retenu, `service = "cems"`. Pas de client `httr2` maison. Non testé en réel (clé requise). |
 | 2 | BD Forêt v2 | ✅ résolu | WFS Géoplateforme filtré par AOI. **Meilleur** que le téléchargement départemental prévu. |
-| 2b | Millésimes | ❌ **bloqué** | Contrôle de biais temporel sans donnée d'entrée. |
+| 2b | Millésimes | ✅ résolu en phase 7 | Le millésime **est** la date de prise de vue BD ORTHO, dit par l'IGN. Récupérable par le graphe de mosaïquage archivé. Voir l'addendum du 2026-08-16 (2). |
 | 3 | CORINE | ✅ contourné (France) | Vrai client possible, pas seulement un assistant. Multi-pays non vérifié. |
 | 4 | EFFIS burnt areas | ✅ résolu | `ms:modis.ba.poly` en SHAPEZIP. **Couverture 2016+, pas 2006.** CRS à forcer. |
 | 5 | Rayons Beverly | ✅ résolu en phase 6 | Distances 2021 et paramètres 2023 constatés via la doc `fireexposuR` ; validation portugaise trouvée. Voir l'addendum du 2026-08-16. |
@@ -392,6 +397,69 @@ ce que la propagation de surface demanderait.
    `STARTINDEX`/`COUNT`. Le brief autorise les dépendances GitHub et ne
    contraint pas la taille : réutiliser `happign` évite de réécrire une
    pagination déjà éprouvée, et c'est la voie recommandée.
+
+---
+
+## Addendum du 2026-08-16 (2) — point 2 bis résolu : le millésime est la date de prise de vue
+
+Le point 2 bis était le blocage le plus gênant du rapport : sans millésime par
+département, le contrôle de biais temporel de `fev_validate()` n'avait pas de
+donnée d'entrée. Il tombe, et pas par un contournement.
+
+**L'IGN définit le millésime comme la date de la prise de vue.** *Descriptif de
+contenu BD Forêt® Version 2*, septembre 2014, §2.3 « Actualité et mise à jour »,
+lu le 2026-08-16 :
+
+> « La réalisation de la BD Forêt® version 2 est prévue pour une couverture
+> complète du territoire métropolitain début 2016. **La date de validation est
+> celle de la prise de vues de la BD ORTHO® servant à la production des
+> données.** »
+
+Ce n'est donc pas un proxy. La base décrit le peuplement tel que le
+photo-interprète l'a vu sur l'image infrarouge ; la date du vol est la date de
+l'état de paysage enregistré — ce que le contrôle de biais temporel demande, et
+sans doute mieux qu'une date de publication ne le donnerait.
+
+**Et cette date est publiée, par polygone.** Le graphe de mosaïquage de la
+BD ORTHO porte un champ `date_vol`, et l'IGN en archive des tranches par
+période. Schéma constaté par `DescribeFeatureType` le 2026-08-16 :
+
+```
+dep (string)  pva (int)  res (int)  echelle (int)  date_vol (date)  geom
+```
+
+| Couche | Ce qu'elle couvre |
+|---|---|
+| `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2006-2010:graphe_bdortho` | tranche 2006-2010 |
+| `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2011-2015:graphe_bdortho` | tranche 2011-2015 |
+| `ORTHOIMAGERY.ORTHOPHOTOS.GRAPHE.2016-2020:graphe_bdortho` | tranche 2016-2020 |
+
+Les trois recouvrent la fenêtre de construction 2007-2018. Constaté par
+`GetFeature` réel sur le Var (bbox `6.0,43.0,7.0,43.7`) :
+
+| Département | Campagnes dans la fenêtre |
+|---|---|
+| 83 (Var) | 2008, 2014 |
+| 06 (Alpes-Maritimes) | 2009, 2014 |
+| 04 (Alpes-de-Haute-Provence) | 2009, 2015 |
+
+**Réserve, et elle est réelle.** Un département est revolé tous les cinq ans
+environ, donc la fenêtre 2007-2018 en contient généralement deux, et **l'IGN ne
+publie pas laquelle a alimenté la production de quel département**.
+`fev_bdforet_millesime()` rend donc les candidats avec la part de surface que
+chacun couvre, et refuse de trancher. `strategy = "oldest"` donne la lecture
+conservatrice : supposer la campagne la plus ancienne maximise l'écart que
+`fev_validate()` rapportera, ce qui penche du côté de signaler le biais plutôt
+que de le masquer.
+
+Le schéma WFS de la BD Forêt v2 a été revérifié au passage : `id`, `code_tfv`,
+`tfv`, `tfv_g11`, `essence`, `geom`. **Aucun champ de date**, ce qui confirme
+le constat de phase 2 et fait du graphe de mosaïquage la seule voie qui ne
+relève pas de la conjecture.
+
+Piège rencontré : ces couches veulent un BBOX **en longitude d'abord** même en
+EPSG:4326. Demander latitude d'abord rend zéro entité avec un HTTP 200 — le
+même résultat vide silencieux que la phase 2 avait documenté ailleurs.
 
 ---
 
@@ -471,3 +539,5 @@ sorties à 1e-4, tolérance qui est exactement l'arrondi à quatre décimales de
 - [Vitolo et al. 2018, PLoS ONE 13(1):e0189419](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0189419)
 - [caliver — get_fire_danger_levels.R](https://github.com/ecmwf/caliver/blob/master/R/get_fire_danger_levels.R)
 - [WMO Guidelines on the Calculation of Climate Normals, WMO-No. 1203](https://library.wmo.int/records/item/55797-wmo-guidelines-on-the-calculation-of-climate-normals)
+- [BD Forêt® Version 2 — Descriptif de contenu (septembre 2014)](https://inventaire-forestier.ign.fr/IMG/pdf/DC_BDFORET_v2.pdf)
+- [BD Forêt v2 — documentation cartes.gouv.fr](https://ignf.github.io/cartes.gouv.fr-documentation/fr/partenaires/ign/referentiels-description-territoire/foret/bd-foret-v2/)
