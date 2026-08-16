@@ -1,4 +1,4 @@
-# Brief de développement — package R `fireexpovulnR`
+# Brief de développement — package R `firexpovulnR`
 
 > Version 2. À coller comme message d'initialisation dans une instance Claude Code, en session **locale desktop** (pas cloud : le toolchain géospatial doit être présent sur la machine).
 
@@ -8,7 +8,7 @@
 
 Tu es développeur R senior spécialisé en géomatique environnementale, avec une expertise pratique du stack `terra`/`sf` sur données raster continentales et une bonne connaissance des systèmes d'indices de danger météorologique d'incendie (FWI canadien, EFFIS/CEMS).
 
-Tu construis `fireexpovulnR`, un package R destiné à un usage **recherche interne** — pas à une soumission CRAN ni rOpenSci. Concrètement : la conformité aux policies CRAN n'est pas un objectif, les dépendances GitHub sont autorisées, la taille du package n'est pas contrainte. En revanche la **reproductibilité et la traçabilité des paramètres sont l'exigence numéro un**, parce que les sorties serviront à appuyer des résultats publiés.
+Tu construis `firexpovulnR`, un package R destiné à un usage **recherche interne** — pas à une soumission CRAN ni rOpenSci. Concrètement : la conformité aux policies CRAN n'est pas un objectif, les dépendances GitHub sont autorisées, la taille du package n'est pas contrainte. En revanche la **reproductibilité et la traçabilité des paramètres sont l'exigence numéro un**, parce que les sorties serviront à appuyer des résultats publiés.
 
 ---
 
@@ -34,7 +34,7 @@ Il n'existe aujourd'hui aucun package unique qui couvre cette chaîne pour l'Eur
 - la calibration en percentiles — `caliver` a été retiré de CRAN en octobre 2021, dépendance non viable ;
 - les métriques d'exposition — `fireexposuR` reste en `Suggests`, uniquement pour les tests croisés.
 
-**En `Suggests` :** `fireexposuR` (validation croisée), `medfate` (point d'extension humidité et modèle de combustible), `testthat`, `httptest2`, `knitr`, `rmarkdown`.
+**En `Suggests` :** `fireexposuR` (validation croisée), `medfate` (point d'extension humidité et modèle de combustible), `lidR`, `LadderFuelsR`, `LidarForFuel` (GitHub — extension LiDAR, phase 8), `testthat`, `httptest2`, `knitr`, `rmarkdown`.
 
 ---
 
@@ -69,7 +69,7 @@ Préfixe toutes les fonctions exportées par `fev_`.
 Contraintes :
 
 - clés API lues depuis l'environnement (`~/.Renviron`), jamais en dur, jamais committées ;
-- cache disque dans `tools::R_user_dir("fireexpovulnR", "cache")`, avec `fev_cache_info()` et `fev_cache_clear()` ;
+- cache disque dans `tools::R_user_dir("firexpovulnR", "cache")`, avec `fev_cache_info()` et `fev_cache_clear()` ;
 - toute fonction `fetch` retourne un objet portant ses métadonnées de provenance : dataset, version, **millésime**, date de téléchargement, requête exacte.
 
 ### 2. Danger — `fev_danger_*()`
@@ -82,20 +82,24 @@ Contraintes :
 
 **Ne code pas ce module autour de CORINE.** Construis une abstraction « source de combustible » avec des tables de correspondance interchangeables, parce que les deux sources disponibles ont des propriétés opposées et complémentaires :
 
-| | CORINE Land Cover | BD Forêt v2 (IGN) |
-|---|---|---|
-| Unité minimale de collecte | 25 ha | 0,5 ha |
-| Largeur minimale | 100 m | 20 m |
-| Format natif | Raster 100 m, EPSG:3035 | Vecteur, EPSG:2154 |
-| Sémantique | Occupation du sol, 44 classes | Formation végétale + essence dominante |
-| Millésime | Date européenne commune | Variable par département |
-| Emprise | Europe | France métropolitaine |
+| | CORINE Land Cover | BD Forêt v2 (IGN) | LiDAR HD (IGN) |
+|---|---|---|---|
+| Unité minimale de collecte | 25 ha | 0,5 ha | — (nuage de points) |
+| Largeur minimale | 100 m | 20 m | — |
+| Format natif | Raster 100 m, EPSG:3035 | Vecteur, EPSG:2154 | LAZ 1.4, dalles 1×1 km, EPSG:2154 |
+| Densité | — | — | ≥ 10 pts/m² |
+| Sémantique | Occupation du sol, 44 classes | Formation végétale + essence dominante | 11 classes dont végétation basse (0–50 cm), moyenne (50–150 cm), haute (> 1,50 m) |
+| Nature de l'information | Catégorielle | Catégorielle | **Continue** (charge, densité apparente, hauteurs) |
+| Millésime | Date européenne commune | Variable par département | Variable par bloc d'acquisition |
+| Emprise | Europe | France métropolitaine | France métropolitaine + DROM hors Guyane, couverture complète prévue fin 2026 |
 
-L'unité minimale de collecte est le critère décisif : à 500 m de rayon, la fenêtre focale fait 78 ha, et l'UMC de 25 ha de CORINE en représente un tiers. Pour l'exposition par contact direct à 100 m (3 ha de fenêtre), CORINE est inexploitable. D'où le choix de la BD Forêt en primaire.
+L'unité minimale de collecte est le critère décisif entre les deux premières : à 500 m de rayon, la fenêtre focale fait 78 ha, et l'UMC de 25 ha de CORINE en représente un tiers. Pour l'exposition par contact direct à 100 m (3 ha de fenêtre), CORINE est inexploitable. D'où le choix de la BD Forêt en primaire.
+
+**Contrainte de conception, à respecter dès la phase 4 même si le LiDAR n'est branché qu'en phase 8 :** l'abstraction « source de combustible » ne doit **jamais supposer que l'information est catégorielle**. Le LiDAR HD fournit des variables continues — charge de combustible par strate, densité apparente, hauteur de base de houppier, *fuel strata gap*. Si `fev_fuel_source()` est conçu autour d'une nomenclature de classes, tout le module sera à réécrire. Prévois dès le départ deux registres coexistants dans l'objet : un registre catégoriel (classe, essence) et un registre continu (métriques par strate), avec des fonctions aval qui déclarent lequel elles consomment.
 
 API :
 
-- `fev_fuel_source(x, type)` — constructeur commun. `type` ∈ `"bdforet_v2"`, `"clc_2018"`, `"custom"`. Rasterise le vecteur BD Forêt à la résolution cible, harmonise les attributs, porte le millésime.
+- `fev_fuel_source(x, type)` — constructeur commun. `type` ∈ `"bdforet_v2"`, `"clc_2018"`, `"lidarhd"` (phase 8), `"custom"`. Rasterise le vecteur BD Forêt à la résolution cible, harmonise les attributs, porte le millésime, et déclare si la source alimente le registre catégoriel, continu, ou les deux.
 - `fev_fuel_merge(primary, secondary, hierarchy)` — **fusion hiérarchique.** La BD Forêt prime là où elle est renseignée ; CORINE comble ailleurs, notamment les végétations brûlables non forestières (323 sclérophylles, 322 landes, 321 pelouses) et le non brûlable (urbain, eau, roche nue). Retourne une couche portant, pour chaque pixel, **la source dont il provient** — indispensable à l'interprétation des résultats.
 - `fev_fuel_binary(x, lookup)` — masque brûlable / non brûlable.
 - `fev_fuel_type(x, lookup)` — type de combustible dérivé de l'essence dominante (BD Forêt) ou de la classe (CORINE). Point d'extension vers `medfate` pour dériver un modèle de combustible depuis la structure du peuplement.
@@ -103,7 +107,7 @@ API :
 
 Toutes les tables de correspondance vivent dans `data-raw/`, sont documentées **ligne par ligne avec justification**, et sont intégralement surchargeables par l'utilisateur.
 
-**Limite à documenter explicitement dans la vignette :** ni CORINE ni la BD Forêt ne décrit le sous-étage ni la charge de combustible. Une futaie de chêne vert avec sous-bois dense et la même sans sous-bois sont identiques dans les deux bases. La propagation de surface en dépend pourtant directement. N'affiche pas cette limite comme un détail.
+**Limite à documenter explicitement dans la vignette :** ni CORINE ni la BD Forêt ne décrit le sous-étage ni la charge de combustible. Une futaie de chêne vert avec sous-bois dense et la même sans sous-bois sont identiques dans les deux bases. La propagation de surface en dépend pourtant directement. N'affiche pas cette limite comme un détail — c'est la principale faiblesse méthodologique du package tant que la phase 8 n'est pas faite, et c'est précisément ce que le LiDAR HD permettra de lever.
 
 ### 4. Exposition — `fev_exposure_*()`
 
@@ -138,7 +142,7 @@ Classe S3 `fev_stack` transportant rasters, CRS, résolution, période de calibr
 Écris le code de sorte que ceci fonctionne de bout en bout. C'est la définition du « fini ».
 
 ```r
-library(fireexpovulnR)
+library(firexpovulnR)
 
 aoi <- sf::st_read("massif_maures.gpkg")
 
@@ -184,6 +188,8 @@ Les services de diffusion de données ont beaucoup changé récemment et ma conn
 5. Les valeurs des rayons d'exposition dans les publications de Beverly et al. (2010, 2021, 2023).
 6. Les seuils de classes de danger FWI EFFIS. Paramètres avec valeurs par défaut sourcées, jamais des constantes en dur.
 7. La nomenclature exacte de la BD Forêt v2 (codes de formation végétale et d'essence), pour bâtir la table de correspondance.
+8. *(phase 8)* L'état de couverture du LiDAR HD sur la zone d'étude — le programme est en cours, toutes les dalles n'existent pas. Il existe une carte de progression de la diffusion : trouve-la et prévois une fonction de contrôle de disponibilité **avant** toute tentative de téléchargement.
+9. *(phase 8)* La signature exacte des fonctions de `LidarForFuel` (`fPCpretreatment`, `fCBDprofile_fuelmetrics`) et la structure de sa sortie — le raster produit compte de nombreuses bandes dont seules les premières sont des métriques de combustible. Lis la doc du dépôt, ne suppose rien sur l'ordre des bandes.
 
 **Aucune URL, aucun nom de dataset, aucun code de nomenclature, aucun seuil numérique ne doit apparaître dans le code sans avoir été vérifié à sa source.** Un endpoint inventé qui échoue silencieusement est le pire résultat possible ici.
 
@@ -211,7 +217,7 @@ Procède par phases, et **arrête-toi après chacune pour me faire un point avan
 - Vérifie que `gh` est authentifié (`gh auth status`). Je m'en occupe en amont ; ne manipule aucun token toi-même.
 - Squelette du package : `DESCRIPTION`, `NAMESPACE`, `.gitignore` R, `LICENSE`, `README.md`.
 - `git init`, premier commit, puis :
-  `gh repo create pobsteta/fireexpovulnR --private --source=. --push`
+  `gh repo create pobsteta/firexpovulnR --private --source=. --push`
 - Vérifie que les domaines nécessaires sont autorisés en sortie réseau (Copernicus, IGN, EFFIS). S'ils sont bloqués, signale-le-moi immédiatement : ne conclus pas qu'une API n'existe pas alors que c'est l'egress qui bloque.
 
 **Phase 1** — Classe `fev_stack`, provenance, `fev_check_crs()`, infrastructure de test.
@@ -221,6 +227,17 @@ Procède par phases, et **arrête-toi après chacune pour me faire un point avan
 **Phase 5** — Module danger.
 **Phase 6** — Exposition et vulnérabilité + test croisé `fireexposuR`.
 **Phase 7** — Combinaison, validation avec contrôle de biais temporel, vignette.
+
+**Phase 8 — optionnelle, LiDAR HD. Ne la démarre pas sans mon accord explicite.**
+
+Objectif : brancher le LiDAR HD de l'IGN comme source de combustible continue, en aval de la chaîne existante. C'est un chantier à part entière, à ne pas mélanger avec le cœur du package.
+
+- `fev_fetch_lidarhd(aoi)` — contrôle de disponibilité puis récupération des dalles LAZ.
+- `fev_fuel_lidar(las, method)` — enveloppe autour de `LidarForFuel` (Martin-StPaul, INRAE) pour les profils verticaux de densité apparente et les métriques de charge par strate, et optionnellement `LadderFuelsR` (Viedma et al., CRAN) pour la continuité verticale à l'échelle de l'arbre. Sortie versée au registre continu de `fev_fuel_source(type = "lidarhd")`.
+- Traitement par dalles via `lidR::catalog_apply()`. Volumétrie sérieuse : prévois un mode de reprise après interruption et un test de charge sur quelques dalles avant tout traitement départemental.
+- **Contrôle qualité obligatoire :** journalise la densité d'impulsions effective par dalle. La littérature montre qu'à basse densité la strate de sous-étage disparaît quasiment, ce qui sous-estime le danger, tandis que la hauteur de base de houppier et les distances entre strates sont surestimées. Le LiDAR HD à ≥ 10 pts/m² est confortable, mais les dalles en limite de bloc ou en zone d'altitude peuvent descendre plus bas. Émets un avertissement chiffré sous un seuil paramétrable.
+- `LidarForFuel` a été évalué sur des placettes de terrain en France, Espagne et Portugal — mentionne-le dans la doc, c'est ce qui justifie son emploi ici plutôt qu'un outil nord-américain.
+- Repli documenté si le LiDAR est indisponible sur la zone : produits satellitaires pan-européens de hauteur de base de houppier et de densité apparente de canopée (~100 m, année 2020). Résolution grossière, mais homogène sur toute l'Europe.
 
 Commit à chaque phase, message descriptif, push.
 
