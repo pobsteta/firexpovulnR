@@ -35,9 +35,11 @@ publiés.
 - **Provenance systématique.** Tout objet `fev_stack` transporte ses sources,
   millésimes, période de calibration et l'intégralité des paramètres utilisés.
   `fev_provenance()` exporte le tout en YAML.
-- **Décalage d'échelle explicite.** Le rééchantillonnage entre danger
-  kilométrique et exposition décamétrique passe obligatoirement par
-  `fev_align()`, qui avertit et journalise. Aucun alignement implicite ailleurs.
+- **Décalage d'échelle explicite.** `fev_align()` est la seule fonction du
+  package autorisée à changer une grille ; toutes les autres refusent des
+  entrées de grilles différentes et y renvoient. Le rapport d'échelle entre
+  danger kilométrique et exposition décamétrique part dans un avertissement et
+  dans la provenance. Aucun alignement implicite ailleurs.
 - **Combustible catégoriel *et* continu.** Un objet `fev_fuel_source` porte
   deux registres : un registre catégoriel (classe TFV ou CORINE) et un
   registre continu (charge par strate, densité apparente, hauteur de base de
@@ -52,10 +54,17 @@ et méditerranéen. Ils sont utilisables, mais leur transposition n'est pas
 validée :
 
 - Les **rayons d'exposition** par défaut proviennent de travaux sur
-  combustibles boréaux et conifériens canadiens. Sur chêne vert, garrigue ou
-  maquis, ils doivent être justifiés ou recalibrés.
-- Les **classes de danger FWI** sont des seuils de service opérationnel, pas
-  des constantes physiques.
+  combustibles boréaux et conifériens canadiens. La métrique elle-même a été
+  validée au Portugal continental (Khan et al. 2025), donc elle transpose à un
+  contexte ibérique ; le rayon, lui, n'est pas calibré sur chêne vert, garrigue
+  ou maquis. Point de départ défendable, pas valeur calibrée.
+- Les **classes de danger FWI** ne sont pas des constantes physiques. Le
+  package livre deux jeux de seuils publiés — EFFIS, opérationnels, et ceux
+  dérivés d'une réanalyse par Vitolo et al. 2018 — qui diffèrent d'un facteur
+  trois : un FWI de 40 est « Very High » chez l'un et « Extreme » chez l'autre.
+  `fev_danger_class()` inscrit dans la provenance lequel a produit la carte, et
+  `fev_fwi_thresholds()` permet de les dériver de votre propre série plutôt que
+  de les importer.
 - Ni CORINE ni la BD Forêt v2 ne décrivent le **sous-étage** ni la charge de
   combustible. Deux peuplements de structure verticale radicalement différente
   y sont identiques, alors que la propagation de surface en dépend directement.

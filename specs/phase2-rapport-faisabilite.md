@@ -362,7 +362,7 @@ ce que la propagation de surface demanderait.
 | 2b | Millésimes | ❌ **bloqué** | Contrôle de biais temporel sans donnée d'entrée. |
 | 3 | CORINE | ✅ contourné (France) | Vrai client possible, pas seulement un assistant. Multi-pays non vérifié. |
 | 4 | EFFIS burnt areas | ✅ résolu | `ms:modis.ba.poly` en SHAPEZIP. **Couverture 2016+, pas 2006.** CRS à forcer. |
-| 5 | Rayons Beverly | ⚠️ partiel | 2010 sourcé ; **2021 et 2023 non lus**. |
+| 5 | Rayons Beverly | ✅ résolu en phase 6 | Distances 2021 et paramètres 2023 constatés via la doc `fireexposuR` ; validation portugaise trouvée. Voir l'addendum du 2026-08-16. |
 | 6 | Seuils FWI EFFIS | ✅ résolu | 6 classes officielles. Pas de « Very Low ». |
 | 7 | Nomenclature TFV | ✅ résolu | 32 postes dans `nemeton::bdforet_v2_mapping()`, recoupés avec le WFS. |
 
@@ -395,6 +395,64 @@ ce que la propagation de surface demanderait.
 
 ---
 
+## Addendum du 2026-08-16 — point 5 résolu, et une réserve du brief levée
+
+Le point 5 était marqué **⚠️ partiel** : Beverly et al. 2021 derrière
+authentification Springer, 2023 non localisé, donc aucun rayon citable au-delà
+de 2010. Trois vérifications faites en phase 6 changent cet état.
+
+**Beverly et al. 2021 — distances confirmées par source secondaire.** L'article
+reste payant et n'a **pas** été lu. Mais les trois distances y figurant sont
+énoncées explicitement dans la documentation de référence de `fireexposuR`
+1.2.0, paquet relu par rOpenSci et écrit par la même équipe :
+
+| Processus | Distance | Constaté comment |
+|---|---|---|
+| Chaleur radiante | 30 m | `docs.ropensci.org/fireexposuR/reference/fire_exp.html` |
+| Brandons courte portée | 100 m | idem |
+| Brandons longue portée | 500 m | idem |
+
+C'est une source secondaire, et le package la nomme comme telle. Le critère de
+combustible dangereux de Beverly 2021 (une teneur en conifères) n'a **pas** été
+constaté à sa source et n'est donc pas repris.
+
+**Beverly et Forbes 2023 — localisé et paramétré.** *Assessing directional
+vulnerability to wildfire*, Natural Hazards 117:831-849. Paramètres relevés dans
+la même documentation : transects tous les 1°, trois segments de 5000 m,
+`thresh_exp = 0,6` parce que les feux observés brûlaient préférentiellement
+au-delà de 60 % d'exposition, `thresh_viable = 0,8` parce que les couloirs
+brûlés recoupaient les taches de forte exposition antérieure à 80 % en moyenne.
+Ce sont des valeurs mesurées, pas des conventions.
+
+**Khan et al. 2025 — une validation méditerranéenne existe.** *Validating a
+landscape metric to map fire exposure to hazardous fuels in Portugal*, Natural
+Hazards 121:16273-16295, DOI 10.1007/s11069-025-07424-8. Résumé lu le
+2026-08-16. La métrique canadienne a été appliquée au Portugal continental sur
+1995-2018, grille 100 m, et validée sur cinq années de feux : environ 80 % des
+surfaces brûlées se trouvaient en exposition ≥ 80 %. Les auteurs concluent que
+la métrique « aligned well with wildfires modulated by Portuguese climate and
+vegetation ».
+
+Conséquence sur le brief. Celui-ci affirme que les rayons « doivent être
+justifiés ou recalibrés » sur chêne vert, garrigue ou maquis. Ce n'est plus
+exact tel quel : la **métrique** transpose à un contexte ibérique. Ce que
+Khan et al. ne règlent pas, c'est le **rayon** — leur résumé donne la résolution
+de grille, pas la distance de transmission — ni le passage du pin maritime et de
+l'eucalyptus atlantiques au chêne vert et au maquis provençaux. La formulation
+retenue dans `fev_exposure_radii()` et dans le message de premier appel de
+`fev_exposure()` est donc : point de départ défendable, avec une validation
+méditerranéenne derrière lui, pas une valeur calibrée pour le Var.
+
+**Géométrie de la fenêtre — vérifiée par le code.** `fireexposuR::fire_exp()`
+utilise un anneau allant d'une cellule au rayon de transmission, la cellule
+évaluée étant exclue, avec des poids normalisés, et impose `res <= t_dist / 3`.
+Constaté par lecture du source du paquet installé. `fev_exposure()` reproduit
+cette géométrie ; un test compare les deux fenêtres cellule par cellule et les
+sorties à 1e-4, tolérance qui est exactement l'arrondi à quatre décimales de
+`fire_exp()`.
+
+---
+
 ## Sources
 
 - [Fire danger indices historical data (CEMS) — EWDS](https://ewds.climate.copernicus.eu/datasets/cems-fire-historical-v1?tab=overview)
@@ -407,3 +465,9 @@ ce que la propagation de surface demanderait.
 - [EFFIS — Data and Services](https://forest-fire.emergency.copernicus.eu/applications/data-and-services)
 - [Beverly et al. 2010, Int. J. Wildland Fire 19:299–313](https://www.publish.csiro.au/wf/fulltext/wf09071)
 - [Beverly et al. 2021, Landscape Ecology — non lu (accès restreint)](https://link.springer.com/article/10.1007/s10980-020-01173-8)
+- [fireexposuR — fire_exp reference](https://docs.ropensci.org/fireexposuR/reference/fire_exp.html)
+- [fireexposuR — fire_exp_dir reference](https://docs.ropensci.org/fireexposuR/reference/fire_exp_dir.html)
+- [Khan et al. 2025, Natural Hazards 121:16273-16295](https://doi.org/10.1007/s11069-025-07424-8)
+- [Vitolo et al. 2018, PLoS ONE 13(1):e0189419](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0189419)
+- [caliver — get_fire_danger_levels.R](https://github.com/ecmwf/caliver/blob/master/R/get_fire_danger_levels.R)
+- [WMO Guidelines on the Calculation of Climate Normals, WMO-No. 1203](https://library.wmo.int/records/item/55797-wmo-guidelines-on-the-calculation-of-climate-normals)

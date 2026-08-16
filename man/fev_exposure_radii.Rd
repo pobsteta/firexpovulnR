@@ -4,12 +4,20 @@
 \alias{fev_exposure_radii}
 \title{Fire exposure transmission distances}
 \source{
-Beverly, J.L., Bothwell, P., Conner, J.C.R., Herd, E.P.K. (2010).
-Assessing the exposure of the built environment to potential ignition
-sources generated from vegetative fuel. \emph{International Journal of Wildland
-Fire} 19(3): 299-313. \doi{10.1071/WF09071}
+Beverly, J.L., Bothwell, P., Conner, J.C.R., Herd, E.P.K. (2010). Assessing
+the exposure of the built environment to potential ignition sources
+generated from vegetative fuel. \emph{International Journal of Wildland Fire}
+19(3): 299-313. \doi{10.1071/WF09071}
 
-Cross-check values from \code{fireexposuR} 1.2.0 defaults (\code{fire_exp(t_dist = 500)}), read from the installed package on 2026-08-15.
+Beverly, J.L., McLoughlin, N., Chapman, E. (2021). A simple metric of
+landscape fire exposure. \emph{Landscape Ecology} 36: 785-801. Not read directly;
+distances verified through the \code{fireexposuR} 1.2.0 reference documentation
+on 2026-08-16.
+
+Khan, S.I., Colaço, M.C., Sequeira, A.C., Rego, F.C., Beverly, J.L. (2025).
+Validating a landscape metric to map fire exposure to hazardous fuels in
+Portugal. \emph{Natural Hazards} 121: 16273-16295.
+\doi{10.1007/s11069-025-07424-8}. Read at abstract level on 2026-08-16.
 }
 \usage{
 fev_exposure_radii()
@@ -19,31 +27,57 @@ A data frame with columns \code{type}, \code{min_m}, \code{max_m}, \code{process
 \code{source}.
 }
 \description{
-Default radii for the focal exposure metrics, with the source of each.
+Default radii for the focal exposure metrics, with the source of each and
+the process it stands for.
 }
-\section{These are Canadian values, and that matters}{
+\section{Where these come from}{
 
-The distances come from Beverly et al. (2010), derived on four communities
-in Alberta — boreal and coniferous fuels. Their transposition to holm oak,
-garrigue or maquis is \strong{not established}. Ember transport distance depends
-on firebrand mass, plume dynamics and canopy structure, none of which are
-comparable between a black spruce stand and a Mediterranean shrubland.
+The three distances are the ones the exposure literature uses throughout:
+30 m for radiant heat, 100 m for short-range embers, 500 m for long-range
+embers. They originate in Beverly et al. (2010), derived on four Alberta
+communities, and are carried forward unchanged in Beverly et al. (2021),
+which is the landscape-scale formulation this package implements.
 
-Use them as a documented starting point, not as a validated parameter. If
-your study area is Mediterranean, either justify them explicitly or
-recalibrate against local burnt-area data. \code{fev_exposure()} emits a warning
-on first use for exactly this reason.
+Beverly et al. (2021) is paywalled and \strong{has not been read directly}. The
+distances above were instead verified on 2026-08-16 against the reference
+documentation of \code{fireexposuR} 1.2.0 — an rOpenSci peer-reviewed package
+written by the same group — which states them explicitly and cites both
+papers. That is a secondary source, and it is named as one.
 }
 
-\section{What is not sourced here}{
+\section{On transposing them to Mediterranean fuels}{
 
-Beverly et al. (2021), \emph{A simple metric of landscape fire exposure}
-(Landscape Ecology), defines transmission distances per fuel type. That
-article is behind a paywall and \strong{has not been read}, so no per-fuel-type
-radii are shipped. Do not infer them from the 2010 values.
+The brief that governs this package assumed these radii were unvalidated
+outside boreal and coniferous Canadian fuels. That is no longer quite true,
+and the change is worth stating precisely.
+
+Khan et al. (2025) applied the metric to mainland Portugal over 1995–2018 on
+a 100 m grid and validated it against burned area in five fire years:
+roughly 80\% of burned area fell in sites with exposure of 80\% or more, and
+the authors conclude the Canadian metric "aligned well with wildfires
+modulated by Portuguese climate and vegetation". So the \strong{metric}
+transposes to an Iberian Mediterranean-Atlantic context.
+
+What that paper does not settle is the \strong{radius}: its abstract states the
+grid resolution but not the transmission distance used, and it was read at
+abstract level only. Nor does Portugal — maritime pine, eucalyptus, Atlantic
+shrubland — stand in for holm oak, garrigue and maquis. Treat 500 m as a
+defensible starting point with one Mediterranean validation behind it, not
+as a calibrated value for the Var. \code{\link[=fev_exposure]{fev_exposure()}} says so on first use.
+}
+
+\section{What is still not sourced}{
+
+No radius \strong{per fuel type} is shipped. Beverly et al. (2021) is reported to
+define hazardous fuel by conifer content, but the criterion was not read at
+its source, so nothing is derived from it here. Do not infer per-fuel-type
+distances from the three values below.
 }
 
 \examples{
 fev_exposure_radii()
 
+}
+\seealso{
+\code{\link[=fev_exposure]{fev_exposure()}}, which consumes these.
 }

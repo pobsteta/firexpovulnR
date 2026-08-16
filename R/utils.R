@@ -213,6 +213,37 @@ fev_all_na <- function(x) {
   all(as.numeric(cnt[[1]]) == 0)
 }
 
+#' Package-local state, for warnings that should fire once per session
+#'
+#' Some caveats have to be seen but would be noise on every call inside a loop
+#' -- the provenance of the exposure radii is the case the brief calls for.
+#' They are emitted on first use and recorded in provenance every time, which
+#' is the combination that keeps them both visible and readable.
+#'
+#' @noRd
+.fev_state <- new.env(parent = emptyenv())
+
+#' @noRd
+fev_once <- function(key, expr) {
+  if (isTRUE(.fev_state[[key]])) {
+    return(invisible(FALSE))
+  }
+  .fev_state[[key]] <- TRUE
+  force(expr)
+  invisible(TRUE)
+}
+
+#' Forget which once-per-session messages have fired
+#'
+#' Only useful in tests, and in a session where you want to see a first-use
+#' caveat again.
+#'
+#' @noRd
+fev_reset_once <- function() {
+  rm(list = ls(.fev_state, all.names = TRUE), envir = .fev_state)
+  invisible(TRUE)
+}
+
 #' Level table of a categorical layer, or NULL
 #'
 #' `terra::levels()` returns a list whose element is `""` — an empty character

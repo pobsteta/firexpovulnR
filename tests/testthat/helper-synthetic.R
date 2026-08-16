@@ -252,3 +252,54 @@ warning_classes <- function(expr) {
   )
   seen
 }
+
+#' A landscape for the exposure tests, with a solid burnable block
+#'
+#' Sized so that even a 500 m window fits with room to spare: fireexposuR
+#' refuses a hazard layer less than twice the window across, and so does this
+#' package, so an undersized fixture would fail for the wrong reason.
+#'
+#' @param nrow,ncol Grid size.
+#' @param res Cell size in metres.
+#' @param patch Row/column bounds of the burnable block, or NULL for none.
+synth_exposure_landscape <- function(nrow = 60, ncol = 60, res = 25,
+                                     patch = c(15, 45, 15, 45)) {
+  r <- terra::rast(nrows = nrow, ncols = ncol, xmin = 0, xmax = ncol * res,
+                   ymin = 0, ymax = nrow * res, crs = "EPSG:2154")
+  terra::values(r) <- 0
+  if (!is.null(patch)) {
+    # Clamped to the grid, so a smaller fixture does not fail on its patch
+    # bounds instead of on the behaviour under test.
+    patch <- c(pmin(patch[1:2], nrow), pmin(patch[3:4], ncol))
+    m <- matrix(0, nrow = nrow, ncol = ncol)
+    m[patch[1]:patch[2], patch[3]:patch[4]] <- 1
+    terra::values(r) <- as.vector(t(m))
+  }
+  names(r) <- "burnable"
+  r
+}
+
+#' An exposure surface with a high-exposure block on one side
+#'
+#' Used by the directional tests: the answer is known by construction, so a
+#' bearing convention error -- compass versus mathematical angles -- shows up
+#' as the block appearing on the wrong side rather than as a plausible map.
+#'
+#' @param side Which side carries the high-exposure block.
+#' @param value Exposure value inside the block.
+synth_directional_landscape <- function(side = c("north", "east"), value = 0.9) {
+  side <- match.arg(side)
+  r <- terra::rast(nrows = 60, ncols = 60, xmin = 0, xmax = 6000,
+                   ymin = 0, ymax = 6000, crs = "EPSG:2154")
+  terra::values(r) <- 0
+  if (value > 0) {
+    # Row 1 is the top of a terra raster, i.e. the north.
+    if (identical(side, "north")) {
+      r[1:29, ] <- value
+    } else {
+      r[, 32:60] <- value
+    }
+  }
+  names(r) <- "exposure"
+  r
+}

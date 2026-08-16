@@ -36,6 +36,7 @@ Suggests:
     httr2,
     knitr,
     medfate,
+    MultiscaleDTM,
     rmarkdown,
     testthat (>= 3.0.0),
     withr

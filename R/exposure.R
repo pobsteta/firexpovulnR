@@ -1,0 +1,524 @@
+# Fire exposure: how much burnable fuel surrounds a place, and from which
+# direction it can reach it.
+#
+# Reimplemented rather than depended on -- fireexposuR stays in Suggests for
+# the cross-check in tests/testthat/test-crosscheck-fireexposuR.R. The window
+# geometry below reproduces theirs exactly (an annulus from one cell out to the
+# transmission distance, focal cell excluded), because a cross-check that
+# tolerated a different window would be checking nothing.
+
+#' Fire exposure from surrounding fuel
+#'
+#' The proportion of burnable fuel within a transmission distance of each cell:
+#' how much of the surrounding landscape could carry fire to it.
+#'
+#' @section What the window is:
+#' An **annulus**, from one cell out to `radius`. The assessment cell itself is
+#' excluded, because the metric asks what can reach a place, not what is
+#' already there. A value of 0.5 means half the cells in that ring are
+#' burnable. Values run 0 to 1.
+#'
+#' The grid must be at least three times finer than the radius — below that the
+#' ring is a handful of cells and the proportion is quantised into a few
+#' values. That constraint comes from `fireexposuR` and is enforced here too.
+#'
+#' @section The radii are Canadian, with one Mediterranean validation:
+#' 30 m for radiant heat, 100 m for short-range embers, 500 m for long-range
+#' embers, from Beverly et al. (2010, 2021) on Alberta fuels. Khan et al.
+#' (2025) validated the metric over mainland Portugal — about 80% of burned
+#' area fell where exposure was 80% or more — so it does transpose to an
+#' Iberian context. It has not been calibrated on holm oak, garrigue or maquis,
+#' and Portugal is not the Var. See [fev_exposure_radii()] for what exactly is
+#' sourced. A message says this on first use in a session; the radius used is
+#' recorded in the provenance every time.
+#'
+#' @section Graded exposure:
+#' Passing a [fev_fuel_availability()] layer instead of a binary mask gives a
+#' weighted exposure: each surrounding cell contributes its availability rather
+#' than a flat 1. That is a departure from the published metric, which is
+#' binary, so it is not the default and the record says which was used.
+#'
+#' @param fuel A `fev_fuel_source` (reduced with [fev_fuel_binary()]), a
+#'   `fev_fuel_layer`, or a `SpatRaster` with values in `[0, 1]`.
+#' @param radius Transmission distance in CRS units. `NULL` takes it from
+#'   `type`.
+#' @param type `"ember"` (500 m, the default), `"ember_short"` (100 m) or
+#'   `"radiant"` (30 m). Ignored when `radius` is given.
+#' @param no_burn Optional `SpatRaster` of cells that cannot burn — water,
+#'   rock, sealed surface — masked out of the **result**, not the window. Must
+#'   contain only 1 and `NA`.
+#' @param lookup Correspondence table, when `fuel` is a `fev_fuel_source`.
+#' @param na_rm Ignore `NA` cells inside the window rather than propagating
+#'   them. `FALSE` matches `fireexposuR`; `TRUE` is more forgiving at the edges
+#'   of a study area, at the cost of computing a proportion over fewer cells
+#'   than the ring contains.
+#' @param quiet Suppress the first-use note about the radii.
+#'
+#' @return A `fev_exposure_layer` holding a `SpatRaster` named `exposure`.
+#'
+#' @seealso [fev_directional()] for the same landscape seen from one point,
+#'   [fev_exposure_radii()] for the sources.
+#'
+#' @source
+#' Beverly, J.L., Bothwell, P., Conner, J.C.R., Herd, E.P.K. (2010).
+#' \doi{10.1071/WF09071}. Beverly, J.L., McLoughlin, N., Chapman, E. (2021),
+#' *Landscape Ecology* 36: 785-801. Khan, S.I. et al. (2025), *Natural Hazards*
+#' 121: 16273-16295, \doi{10.1007/s11069-025-07424-8}. Window geometry checked
+#' against `fireexposuR` 1.2.0 on 2026-08-16.
+#'
+#' @examples
+#' fuel <- terra::rast(nrows = 40, ncols = 40, xmin = 0, xmax = 1000,
+#'                     ymin = 0, ymax = 1000, crs = "EPSG:2154")
+#' terra::values(fuel) <- 0
+#' fuel[10:30, 10:30] <- 1
+#' e <- fev_exposure(fuel, radius = 100, quiet = TRUE)
+#' terra::global(fev_data(e), "max", na.rm = TRUE)
+#'
+#' @export
+fev_exposure <- function(fuel,
+                         radius = NULL,
+                         type = c("ember", "ember_short", "radiant"),
+                         no_burn = NULL,
+                         lookup = NULL,
+                         na_rm = FALSE,
+                         quiet = FALSE) {
+  type <- match.arg(type)
+  radii <- fev_exposure_radii()
+  radius <- radius %||% radii$max_m[match(type, radii$type)]
+
+  resolved <- fev_exposure_input(fuel, lookup)
+  haz <- resolved$raster
+  prov <- resolved$provenance %||% fev_prov_new(crs_work = NA)
+
+  if (!is.numeric(radius) || length(radius) != 1L || is.na(radius) ||
+      radius <= 0) {
+    fev_abort("{.arg radius} must be a single positive number, in CRS units.")
+  }
+
+  res <- terra::res(haz)[1]
+  if (res > radius / 3) {
+    fev_abort(c(
+      "Cell size {.val {signif(res, 6)}} is too coarse for a radius of \\
+       {.val {radius}}.",
+      i = "The ring would be a handful of cells and the proportion quantised \\
+           into a few values.",
+      i = "Needs {.code res <= radius / 3}: either a finer fuel grid, or a \\
+           radius of at least {.val {signif(res * 3, 6)}}.",
+      i = "Same constraint as {.pkg fireexposuR}."
+    ), class = "fev_res_too_coarse", .envir = environment())
+  }
+
+  w <- fev_annulus_window(res, radius)
+  n_ring <- sum(!is.na(w))
+  if (terra::nrow(w) * 2 >= terra::nrow(haz) ||
+      terra::ncol(w) * 2 >= terra::ncol(haz)) {
+    fev_abort(c(
+      "The fuel layer is too small for a radius of {.val {radius}}.",
+      x = "Window is {nrow(w)} x {ncol(w)} cells; the layer is \\
+           {terra::nrow(haz)} x {terra::ncol(haz)}.",
+      i = "Most of the result would be edge effect. Fetch a larger AOI than \\
+           the one you intend to report on -- a buffer of at least the radius."
+    ), class = "fev_extent_too_small", .envir = environment())
+  }
+
+  if (!isTRUE(quiet)) {
+    fev_once("exposure_radii", fev_inform(c(
+      "Exposure radii come from Canadian work (Beverly et al. 2010, 2021).",
+      i = "The metric was validated over mainland Portugal by Khan et al. \\
+           (2025), so it does transpose to an Iberian Mediterranean context.",
+      i = "It has not been calibrated on holm oak, garrigue or maquis. Justify \\
+           {.val {radius}} m for your fuels, or recalibrate against local \\
+           burnt-area data.",
+      i = "Shown once per session; the radius is in the provenance every time. \\
+           See {.fn fev_exposure_radii}."
+    ), class = "fev_unvalidated_radius", .envir = environment()))
+  }
+
+  weights <- w / n_ring
+  exposure <- terra::focal(haz, w = weights, fun = "sum", na.rm = na_rm)
+  # A sum of n weights of 1/n does not land exactly on 1 in floating point: a
+  # fully burnable window comes back as 1 + 7e-16. The result is a proportion
+  # by construction, so the excess is noise -- but it is enough to trip the
+  # 0-1 checks in fev_danger_index() and fev_directional() further down the
+  # chain. fireexposuR hides the same thing by rounding to four decimals.
+  exposure <- terra::clamp(exposure, 0, 1, values = TRUE)
+  names(exposure) <- "exposure"
+
+  if (!is.null(no_burn)) {
+    exposure <- fev_apply_no_burn(exposure, no_burn)
+  }
+
+  prov <- fev_prov_add_step(
+    prov, fun = "fev_exposure",
+    params = list(radius = radius, type = if (is.null(radius)) type else type,
+                  res = signif(res, 6), window_cells = n_ring,
+                  window_shape = "annulus, focal cell excluded",
+                  input = resolved$role, graded = resolved$graded,
+                  na_rm = na_rm, no_burn = !is.null(no_burn),
+                  radius_source = radii$source[match(type, radii$type)]),
+    notes = if (isTRUE(resolved$graded))
+      "graded exposure: window cells contribute availability, not 0/1" else NULL
+  )
+
+  new_fev_layer(exposure, role = "exposure", provenance = prov,
+                units = "proportion of surrounding fuel, 0-1",
+                class = "fev_exposure_layer")
+}
+
+#' An annulus weight matrix, matching fireexposuR cell for cell
+#'
+#' Reproduces `MultiscaleDTM::annulus_window(c(res, radius), "map", res)`: an
+#' odd-sided matrix of distances from its centre, 1 where the distance falls in
+#' `[res, radius]` and `NA` elsewhere. Rebuilt here rather than depended on, so
+#' that `MultiscaleDTM` is not pulled into Imports for nine lines of geometry.
+#'
+#' @noRd
+fev_annulus_window <- function(res, radius) {
+  n <- floor((radius / res) * 2 + 1)
+  if (n %% 2 == 0) {
+    n <- n + 1
+  }
+  offsets <- (seq_len(n) - (n + 1) / 2) * res
+  x <- matrix(offsets, nrow = n, ncol = n, byrow = TRUE)
+  y <- matrix(offsets, nrow = n, ncol = n, byrow = FALSE)
+  d <- sqrt(x^2 + y^2)
+  w <- matrix(NA_real_, nrow = n, ncol = n)
+  w[d >= res & d <= radius] <- 1
+  w
+}
+
+#' Reduce whatever was passed to a 0-1 hazard raster
+#' @noRd
+fev_exposure_input <- function(fuel, lookup) {
+  if (inherits(fuel, "fev_fuel_source")) {
+    b <- fev_fuel_binary(fuel, lookup = lookup)
+    return(list(raster = b$data, provenance = b$provenance,
+                role = "fev_fuel_source -> binary", graded = FALSE))
+  }
+  if (inherits(fuel, "fev_layer")) {
+    r <- fuel$data
+    graded <- identical(fuel$role, "availability")
+    fev_check_unit_range(r, "fuel")
+    return(list(raster = r[[1]], provenance = fuel$provenance,
+                role = fuel$role, graded = graded))
+  }
+  if (inherits(fuel, "fev_source")) {
+    fuel <- fuel$data
+  }
+  if (!inherits(fuel, "SpatRaster")) {
+    fev_abort(c(
+      "{.arg fuel} must be a {.cls fev_fuel_source}, a {.cls fev_layer} or a \\
+       {.cls SpatRaster}.",
+      x = "Got {.cls {class(fuel)[1]}}.",
+      i = "Build a mask with {.fn fev_fuel_binary}."
+    ))
+  }
+  if (!is.null(fev_cat_levels(fuel))) {
+    fev_abort(c(
+      "{.arg fuel} is a categorical layer.",
+      i = "Exposure is computed on a burnable mask, not on class codes. \\
+           Reduce it with {.fn fev_fuel_binary} first."
+    ), class = "fev_categorical_input")
+  }
+  fev_check_unit_range(fuel, "fuel")
+  list(raster = fuel[[1]], provenance = NULL, role = "SpatRaster",
+       graded = FALSE)
+}
+
+#' @noRd
+fev_check_unit_range <- function(r, arg) {
+  rng <- terra::global(r[[1]], fun = "range", na.rm = TRUE)
+  lo <- as.numeric(rng[[1]][1])
+  hi <- as.numeric(rng[[2]][1])
+  if (!is.finite(lo)) {
+    fev_abort(c(
+      "{.arg {arg}} is entirely {.val NA}.",
+      i = "Usually a disjoint AOI, or a lookup that matched nothing."
+    ), class = "fev_all_na", .envir = environment())
+  }
+  if (lo < 0 || hi > 1) {
+    fev_abort(c(
+      "{.arg {arg}} must lie in {.val {c(0, 1)}}.",
+      x = "Range is {.val {signif(c(lo, hi), 4)}}."
+    ), class = "fev_bad_range", .envir = environment())
+  }
+  invisible(TRUE)
+}
+
+#' @noRd
+fev_apply_no_burn <- function(exposure, no_burn) {
+  if (!inherits(no_burn, "SpatRaster")) {
+    fev_abort("{.arg no_burn} must be a {.cls SpatRaster}.")
+  }
+  vals <- unique(terra::values(no_burn[[1]]))
+  if (!all(vals %in% c(1, NA, NaN))) {
+    fev_abort(c(
+      "{.arg no_burn} must contain only {.val 1} and {.val NA}.",
+      i = "1 marks a cell that cannot burn; NA marks one that can."
+    ), class = "fev_bad_no_burn")
+  }
+  if (!isTRUE(terra::compareGeom(exposure, no_burn, stopOnError = FALSE))) {
+    fev_abort(c(
+      "{.arg no_burn} is not on the fuel grid.",
+      i = "Align it first with {.fn fev_align}."
+    ), class = "fev_grid_mismatch")
+  }
+  terra::mask(exposure, no_burn[[1]], inverse = TRUE)
+}
+
+# --- directional vulnerability ----------------------------------------------
+
+#' Directional vulnerability from a point
+#'
+#' Draws transects outward from a value in every direction and reports which
+#' bearings offer a continuous high-exposure pathway to it. The answer to
+#' "where would a fire come from" rather than "how much fuel is around".
+#'
+#' @section Method:
+#' Follows Beverly and Forbes (2023). From the value, a transect is drawn at
+#' every `interval` degrees. Each transect is cut into consecutive segments —
+#' by default three of 5 km — and a segment counts as **viable** when at least
+#' `thresh_viable` of the ground it crosses has exposure of at least
+#' `thresh_exp`. A direction with all three segments viable is a continuous
+#' corridor of hazardous fuel reaching the value from that bearing.
+#'
+#' Bearings are compass bearings: 0 and 360 are north, increasing clockwise.
+#'
+#' @section The two thresholds are measured, not conventional:
+#' `thresh_exp = 0.6` because observed fires burned preferentially where
+#' exposure exceeded 60%; `thresh_viable = 0.8` because observed burned
+#' pathways intersected pre-fire high-exposure patches by 80% on average. Both
+#' from Canadian landscapes — see [fev_directional_defaults()].
+#'
+#' @param exposure A `fev_exposure_layer` from [fev_exposure()], or a
+#'   `SpatRaster` of exposure values in `[0, 1]`.
+#' @param point The value at risk: an `sf`, `sfc`, `SpatVector` of one point,
+#'   or a length-2 numeric `c(x, y)` in the exposure layer's CRS.
+#' @param seg_lengths Segment lengths outward from the point, in CRS units.
+#' @param interval Degrees between transects.
+#' @param n_wedges Alternative to `interval`: number of evenly spaced
+#'   directions, so `interval = 360 / n_wedges`.
+#' @param max_dist Total transect length. When given, overrides `seg_lengths`
+#'   by splitting it into three equal segments.
+#' @param thresh_exp Exposure at or above which ground counts as hazardous.
+#' @param thresh_viable Share of a segment that must be hazardous for it to be
+#'   viable.
+#' @param step Sampling interval along a transect. Defaults to the cell size.
+#'
+#' @return An object of class `fev_directional`: a list with `table` (one row
+#'   per bearing, one logical column per segment plus `viable` for all
+#'   segments), the parameters used, and a provenance record.
+#'
+#' @seealso [fev_exposure()], [fev_directional_defaults()].
+#'
+#' @source
+#' Beverly, J.L., Forbes, A.M. (2023). Assessing directional vulnerability to
+#' wildfire. *Natural Hazards* 117: 831-849. Parameters verified against the
+#' `fireexposuR` 1.2.0 reference documentation on 2026-08-16.
+#'
+#' @examples
+#' r <- terra::rast(nrows = 60, ncols = 60, xmin = 0, xmax = 6000,
+#'                  ymin = 0, ymax = 6000, crs = "EPSG:2154")
+#' terra::values(r) <- 0
+#' r[1:30, ] <- 0.9          # a high-exposure block to the north
+#' d <- fev_directional(r, point = c(3000, 3000), seg_lengths = c(500, 500, 500),
+#'                      interval = 45)
+#' d$table
+#'
+#' @export
+fev_directional <- function(exposure,
+                            point,
+                            seg_lengths = c(5000, 5000, 5000),
+                            interval = 1,
+                            n_wedges = NULL,
+                            max_dist = NULL,
+                            thresh_exp = 0.6,
+                            thresh_viable = 0.8,
+                            step = NULL) {
+  prov <- fev_layer_prov(exposure)
+  r <- fev_as_raster(exposure, "exposure")[[1]]
+  fev_check_unit_range(r, "exposure")
+
+  if (!is.null(n_wedges)) {
+    if (!is.numeric(n_wedges) || length(n_wedges) != 1L || n_wedges < 1) {
+      fev_abort("{.arg n_wedges} must be a single positive number.")
+    }
+    interval <- 360 / n_wedges
+  }
+  if (!is.null(max_dist)) {
+    seg_lengths <- rep(max_dist / 3, 3)
+  }
+  if (any(seg_lengths <= 0)) {
+    fev_abort("{.arg seg_lengths} must all be positive.")
+  }
+  for (nm in c("thresh_exp", "thresh_viable")) {
+    v <- get(nm)
+    if (!is.numeric(v) || length(v) != 1L || is.na(v) || v < 0 || v > 1) {
+      fev_abort("{.arg {nm}} must be a single number in {.val {c(0, 1)}}.",
+                .envir = environment())
+    }
+  }
+
+  xy <- fev_directional_point(point, r)
+  step <- step %||% terra::res(r)[1]
+  bearings <- seq(interval, 360, by = interval)
+  bounds <- c(0, cumsum(seg_lengths))
+  n_seg <- length(seg_lengths)
+
+  frac <- matrix(NA_real_, nrow = length(bearings), ncol = n_seg)
+  off_grid <- 0L
+  n_sampled <- 0L
+
+  for (i in seq_along(bearings)) {
+    theta <- bearings[i] * pi / 180
+    for (k in seq_len(n_seg)) {
+      d <- seq(bounds[k] + step / 2, bounds[k + 1], by = step)
+      if (!length(d)) {
+        next
+      }
+      # Compass bearings: 0 is north, clockwise, so x uses sin and y cos.
+      px <- xy[1] + d * sin(theta)
+      py <- xy[2] + d * cos(theta)
+      vals <- terra::extract(r, cbind(px, py))[, 1]
+      n_sampled <- n_sampled + length(vals)
+      off_grid <- off_grid + sum(is.na(vals))
+      frac[i, k] <- mean(vals >= thresh_exp, na.rm = TRUE)
+    }
+  }
+
+  if (off_grid > 0) {
+    fev_warn(c(
+      "{round(100 * off_grid / n_sampled, 1)}% of transect samples fell \\
+       outside the exposure layer.",
+      i = "Those samples are dropped, so the affected segments are judged on \\
+           the part of the transect that is mapped -- which biases them toward \\
+           whatever the near field looks like.",
+      i = "Use a layer extending at least {.val {sum(seg_lengths)}} beyond the \\
+           point."
+    ), class = "fev_transect_off_grid", .envir = environment())
+  }
+
+  viable <- frac >= thresh_viable
+  viable[is.na(frac)] <- NA
+  tab <- data.frame(bearing = bearings)
+  for (k in seq_len(n_seg)) {
+    tab[[paste0("seg", k)]] <- viable[, k]
+    tab[[paste0("frac", k)]] <- round(frac[, k], 4)
+  }
+  tab$viable <- apply(viable, 1, function(v) isTRUE(all(v)))
+
+  prov <- prov %||% fev_prov_new(crs_work = NA)
+  prov <- fev_prov_add_step(
+    prov, fun = "fev_directional",
+    params = list(point = signif(xy, 8), seg_lengths = seg_lengths,
+                  interval = interval, n_transects = length(bearings),
+                  thresh_exp = thresh_exp, thresh_viable = thresh_viable,
+                  step = step, n_viable = sum(tab$viable),
+                  pct_off_grid = round(100 * off_grid / max(n_sampled, 1), 2),
+                  source = "Beverly & Forbes 2023")
+  )
+
+  structure(
+    list(table = tab, point = xy, crs = fev_crs_label(r),
+         params = list(seg_lengths = seg_lengths, interval = interval,
+                       thresh_exp = thresh_exp, thresh_viable = thresh_viable,
+                       step = step),
+         provenance = prov),
+    class = "fev_directional"
+  )
+}
+
+#' @noRd
+fev_directional_point <- function(point, r) {
+  xy <- if (is.numeric(point) && length(point) == 2L) {
+    as.numeric(point)
+  } else {
+    p <- if (inherits(point, "SpatVector")) sf::st_as_sf(point) else point
+    if (!inherits(p, c("sf", "sfc"))) {
+      fev_abort(c(
+        "{.arg point} must be an {.cls sf}, {.cls sfc}, {.cls SpatVector} or \\
+         {.code c(x, y)}.",
+        x = "Got {.cls {class(point)[1]}}."
+      ))
+    }
+    g <- sf::st_geometry(p)
+    if (length(g) != 1L) {
+      fev_abort(c(
+        "{.arg point} must be exactly one point.",
+        x = "Got {length(g)}.",
+        i = "Loop over your values, or use {.fn fev_exposure} for a map."
+      ), .envir = environment())
+    }
+    if (fev_crs_usable(g) && !fev_crs_equal(g, r)) {
+      g <- sf::st_transform(g, fev_crs(r))
+    }
+    as.numeric(sf::st_coordinates(sf::st_centroid(g))[1, 1:2])
+  }
+
+  e <- fev_bbox(r)
+  if (xy[1] < e[["xmin"]] || xy[1] > e[["xmax"]] ||
+      xy[2] < e[["ymin"]] || xy[2] > e[["ymax"]]) {
+    fev_abort(c(
+      "{.arg point} falls outside the exposure layer.",
+      x = "Point {.val {signif(xy, 8)}}; extent {.val {signif(e, 8)}}.",
+      i = "Both are read in {.val {fev_crs_label(r)}} -- if the point came \\
+           from a lon/lat file, set its CRS rather than its numbers."
+    ), class = "fev_disjoint_extent", .envir = environment())
+  }
+  xy
+}
+
+#' @export
+print.fev_directional <- function(x, ...) {
+  tab <- x$table
+  n_seg <- sum(grepl("^seg", names(tab)))
+  cli::cli_h1("fev_directional")
+  cli::cli_li("Point: {.val {signif(x$point, 8)}} ({x$crs})")
+  cli::cli_li("{nrow(tab)} transect{?s} every {x$params$interval} degree{?s}, \\
+               {n_seg} segment{?s} of {.val {x$params$seg_lengths}}")
+  cli::cli_li("Thresholds: exposure {.val {x$params$thresh_exp}}, viability \\
+               {.val {x$params$thresh_viable}}")
+
+  n_viable <- sum(tab$viable)
+  if (!n_viable) {
+    cli::cli_alert_success("No direction offers a continuous pathway.")
+  } else {
+    cli::cli_alert_warning(
+      "{n_viable} of {nrow(tab)} bearing{?s} ({round(100 * n_viable / nrow(tab), 1)}%) \\
+       offer a continuous high-exposure pathway."
+    )
+    cli::cli_li("Bearings: {.val {fev_bearing_ranges(tab$bearing[tab$viable])}}")
+  }
+  invisible(x)
+}
+
+#' Collapse a set of bearings into readable ranges
+#' @noRd
+fev_bearing_ranges <- function(b) {
+  if (!length(b)) {
+    return(character())
+  }
+  b <- sort(b)
+  brk <- c(0, which(diff(b) > 1), length(b))
+  vapply(seq_len(length(brk) - 1L), function(i) {
+    seg <- b[(brk[i] + 1L):brk[i + 1L]]
+    if (length(seg) == 1L) as.character(seg) else paste0(min(seg), "-", max(seg))
+  }, character(1))
+}
+
+#' @export
+plot.fev_directional <- function(x, ...) {
+  tab <- x$table
+  theta <- tab$bearing * pi / 180
+  radius <- ifelse(tab$viable, 1, 0.35)
+  px <- radius * sin(theta)
+  py <- radius * cos(theta)
+  graphics::plot(px, py, type = "n", asp = 1, axes = FALSE, xlab = "", ylab = "",
+                 main = "Directional vulnerability", ...)
+  graphics::symbols(0, 0, circles = 1, inches = FALSE, add = TRUE,
+                    fg = "grey80")
+  graphics::segments(0, 0, px, py,
+                     col = ifelse(tab$viable, "firebrick", "grey85"))
+  graphics::text(0, 1.12, "N")
+  invisible(x)
+}

@@ -171,37 +171,67 @@ fev_fwi_classes <- function(scheme = c("effis", "caliver_europe"),
 
 #' Fire exposure transmission distances
 #'
-#' Default radii for the focal exposure metrics, with the source of each.
+#' Default radii for the focal exposure metrics, with the source of each and
+#' the process it stands for.
 #'
-#' @section These are Canadian values, and that matters:
-#' The distances come from Beverly et al. (2010), derived on four communities
-#' in Alberta — boreal and coniferous fuels. Their transposition to holm oak,
-#' garrigue or maquis is **not established**. Ember transport distance depends
-#' on firebrand mass, plume dynamics and canopy structure, none of which are
-#' comparable between a black spruce stand and a Mediterranean shrubland.
+#' @section Where these come from:
+#' The three distances are the ones the exposure literature uses throughout:
+#' 30 m for radiant heat, 100 m for short-range embers, 500 m for long-range
+#' embers. They originate in Beverly et al. (2010), derived on four Alberta
+#' communities, and are carried forward unchanged in Beverly et al. (2021),
+#' which is the landscape-scale formulation this package implements.
 #'
-#' Use them as a documented starting point, not as a validated parameter. If
-#' your study area is Mediterranean, either justify them explicitly or
-#' recalibrate against local burnt-area data. `fev_exposure()` emits a warning
-#' on first use for exactly this reason.
+#' Beverly et al. (2021) is paywalled and **has not been read directly**. The
+#' distances above were instead verified on 2026-08-16 against the reference
+#' documentation of `fireexposuR` 1.2.0 — an rOpenSci peer-reviewed package
+#' written by the same group — which states them explicitly and cites both
+#' papers. That is a secondary source, and it is named as one.
 #'
-#' @section What is not sourced here:
-#' Beverly et al. (2021), *A simple metric of landscape fire exposure*
-#' (Landscape Ecology), defines transmission distances per fuel type. That
-#' article is behind a paywall and **has not been read**, so no per-fuel-type
-#' radii are shipped. Do not infer them from the 2010 values.
+#' @section On transposing them to Mediterranean fuels:
+#' The brief that governs this package assumed these radii were unvalidated
+#' outside boreal and coniferous Canadian fuels. That is no longer quite true,
+#' and the change is worth stating precisely.
+#'
+#' Khan et al. (2025) applied the metric to mainland Portugal over 1995–2018 on
+#' a 100 m grid and validated it against burned area in five fire years:
+#' roughly 80% of burned area fell in sites with exposure of 80% or more, and
+#' the authors conclude the Canadian metric "aligned well with wildfires
+#' modulated by Portuguese climate and vegetation". So the **metric**
+#' transposes to an Iberian Mediterranean-Atlantic context.
+#'
+#' What that paper does not settle is the **radius**: its abstract states the
+#' grid resolution but not the transmission distance used, and it was read at
+#' abstract level only. Nor does Portugal — maritime pine, eucalyptus, Atlantic
+#' shrubland — stand in for holm oak, garrigue and maquis. Treat 500 m as a
+#' defensible starting point with one Mediterranean validation behind it, not
+#' as a calibrated value for the Var. [fev_exposure()] says so on first use.
+#'
+#' @section What is still not sourced:
+#' No radius **per fuel type** is shipped. Beverly et al. (2021) is reported to
+#' define hazardous fuel by conifer content, but the criterion was not read at
+#' its source, so nothing is derived from it here. Do not infer per-fuel-type
+#' distances from the three values below.
 #'
 #' @return A data frame with columns `type`, `min_m`, `max_m`, `process`,
 #'   `source`.
 #'
-#' @source
-#' Beverly, J.L., Bothwell, P., Conner, J.C.R., Herd, E.P.K. (2010).
-#' Assessing the exposure of the built environment to potential ignition
-#' sources generated from vegetative fuel. *International Journal of Wildland
-#' Fire* 19(3): 299-313. \doi{10.1071/WF09071}
+#' @seealso [fev_exposure()], which consumes these.
 #'
-#' Cross-check values from `fireexposuR` 1.2.0 defaults (`fire_exp(t_dist =
-#' 500)`), read from the installed package on 2026-08-15.
+#' @source
+#' Beverly, J.L., Bothwell, P., Conner, J.C.R., Herd, E.P.K. (2010). Assessing
+#' the exposure of the built environment to potential ignition sources
+#' generated from vegetative fuel. *International Journal of Wildland Fire*
+#' 19(3): 299-313. \doi{10.1071/WF09071}
+#'
+#' Beverly, J.L., McLoughlin, N., Chapman, E. (2021). A simple metric of
+#' landscape fire exposure. *Landscape Ecology* 36: 785-801. Not read directly;
+#' distances verified through the `fireexposuR` 1.2.0 reference documentation
+#' on 2026-08-16.
+#'
+#' Khan, S.I., Colaço, M.C., Sequeira, A.C., Rego, F.C., Beverly, J.L. (2025).
+#' Validating a landscape metric to map fire exposure to hazardous fuels in
+#' Portugal. *Natural Hazards* 121: 16273-16295.
+#' \doi{10.1007/s11069-025-07424-8}. Read at abstract level on 2026-08-16.
 #'
 #' @examples
 #' fev_exposure_radii()
@@ -213,8 +243,47 @@ fev_exposure_radii <- function() {
     min_m   = c(0.1, 0.1, 100.1),
     max_m   = c(30, 100, 500),
     process = c("radiant heat", "short-range embers", "long-range embers"),
-    source  = rep("Beverly et al. 2010 (Alberta, boreal/coniferous fuels)", 3L),
+    source  = c(
+      rep("Beverly et al. 2010 (Alberta); carried forward in Beverly et al. 2021", 2L),
+      "Beverly et al. 2010/2021; validated in Portugal by Khan et al. 2025"
+    ),
     stringsAsFactors = FALSE
+  )
+}
+
+#' Directional vulnerability defaults
+#'
+#' Parameters of the directional assessment of Beverly and Forbes (2023):
+#' radial transects drawn outward from a value, each split into three segments,
+#' and judged viable where they intersect enough high-exposure ground.
+#'
+#' @section These two thresholds are empirical, not conventional:
+#' `thresh_exp = 0.6` comes from the observation that fires burned
+#' preferentially where exposure exceeded 60%. `thresh_viable = 0.8` comes from
+#' observed burned pathways, whose average intersection with pre-fire
+#' high-exposure patches was 80%. Both were measured on Canadian landscapes.
+#' Unlike the fuel availability weights of [fev_fuel_weights()], they are
+#' sourced — they are simply sourced from somewhere else.
+#'
+#' @return A named list of the defaults.
+#'
+#' @source
+#' Beverly, J.L., Forbes, A.M. (2023). Assessing directional vulnerability to
+#' wildfire. *Natural Hazards* 117: 831-849. Not read directly; parameters and
+#' their empirical justification verified against the `fireexposuR` 1.2.0
+#' reference documentation on 2026-08-16.
+#'
+#' @examples
+#' fev_directional_defaults()
+#'
+#' @export
+fev_directional_defaults <- function() {
+  list(
+    seg_lengths   = c(5000, 5000, 5000),
+    interval      = 1,
+    thresh_exp    = 0.6,
+    thresh_viable = 0.8,
+    source        = "Beverly & Forbes 2023 (Natural Hazards 117:831-849)"
   )
 }
 
