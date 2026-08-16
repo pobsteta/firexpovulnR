@@ -2,53 +2,89 @@
 % Please edit documentation in R/constants.R
 \name{fev_fwi_classes}
 \alias{fev_fwi_classes}
-\title{EFFIS fire danger classes}
+\title{Fire danger classes for the Fire Weather Index}
 \source{
 EFFIS, \emph{Fire Danger Forecast},
-\url{https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast}.
-The "Very Extreme" class was introduced in June 2021 to discriminate within
-the large areas classified \emph{Extreme} around the Mediterranean in summer.
+\url{https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast},
+verified 2026-08-15. The "Very Extreme" class was introduced in June 2021 to
+discriminate within the large areas classified \emph{Extreme} around the
+Mediterranean in summer.
+
+Vitolo, C., Di Giuseppe, F., D'Andrea, M. (2018), \emph{Caliver: An R package for
+CALIbration and VERification of forest fire gridded model outputs}, PLoS ONE
+13(1): e0189419. \doi{10.1371/journal.pone.0189419}. European thresholds
+\verb{2, 5, 10, 19, 33} read from the paper on 2026-08-16.
 }
 \usage{
 fev_fwi_classes(
-  breaks = c(11.2, 21.3, 38, 50, 70),
-  labels = c("Low", "Moderate", "High", "Very High", "Extreme", "Very Extreme")
+  scheme = c("effis", "caliver_europe"),
+  breaks = NULL,
+  labels = NULL
 )
 }
 \arguments{
-\item{breaks}{Numeric vector of the five interior class boundaries.
-Defaults to the EFFIS values.}
+\item{scheme}{\code{"effis"} (default) or \code{"caliver_europe"}. Ignored when
+\code{breaks} is given.}
+
+\item{breaks}{Numeric vector of the five interior class boundaries,
+overriding \code{scheme}. \code{\link[=fev_fwi_thresholds]{fev_fwi_thresholds()}} returns one.}
 
 \item{labels}{Character vector of six class labels.}
 }
 \value{
-A data frame with columns \code{class}, \code{lower}, \code{upper}.
+A data frame with columns \code{class}, \code{lower}, \code{upper}, and a \code{scheme}
+attribute.
 }
 \description{
-The six danger classes EFFIS maps the Fire Weather Index into, as published
-on the EFFIS \emph{Fire Danger Forecast} page (verified 2026-08-15).
+The six classes a Fire Weather Index value is mapped into, under one of two
+published schemes. Both are shipped because they disagree by a factor of
+three, and which one you use changes what your maps say.
 }
-\section{On the missing "very low" class}{
+\section{The two schemes disagree, and that is worth knowing}{
+\tabular{lll}{
+   Class \tab EFFIS \tab caliver / Vitolo et al. 2018 \cr
+   Very Low \tab — \tab < 2 \cr
+   Low \tab < 11.2 \tab 2–5 \cr
+   Moderate \tab 11.2–21.3 \tab 5–10 \cr
+   High \tab 21.3–38.0 \tab 10–19 \cr
+   Very High \tab 38.0–50.0 \tab 19–33 \cr
+   Extreme \tab 50.0–70.0 \tab ≥ 33 \cr
+   Very Extreme \tab > 70.0 \tab — \cr
+}
 
-A threshold of \code{5.2} for a "Very Low" class circulates widely in the
+
+They are not two estimates of one quantity. The EFFIS breaks are
+operational forecast thresholds for a European-scale warning service, tuned
+so that the top classes stay rare enough to be actionable. The caliver
+breaks were \strong{derived from a reanalysis record} — the median of yearly 98th
+percentiles over ERA-Interim 1980–2016, April to October, put through the
+Canadian intensity relation — and describe the distribution of that record.
+
+An FWI of 40 is \emph{Very High} under EFFIS and comfortably \emph{Extreme} under
+caliver. Say which you used.
+}
+
+\section{On the missing "very low" EFFIS class}{
+
+A threshold of \code{5.2} for a "Very Low" EFFIS class circulates widely in the
 literature and on third-party sites. \strong{It does not appear on the current
-EFFIS page}, which defines six classes starting at \emph{Low}. The default here
-follows the official page. Do not add the 5.2 break on the grounds that it
-is common — if you need it, pass your own \code{breaks}, and say so in your
-methods.
+EFFIS page}, which defines six classes starting at \emph{Low}. It is not added
+here on the grounds that it is common — pass your own \code{breaks} if you need
+it, and say so in your methods.
 }
 
-\section{On using these at all}{
+\section{On using absolute breaks at all}{
 
-These are operational service thresholds calibrated for European-scale
-forecasting, not physical constants. The whole point of
-\code{fev_fwi_percentile()} is that raw FWI breaks mean different things in
-different climates: an FWI of 25 is exceptional in Brittany and ordinary in
-the Var. Prefer percentile ranks over these classes for cross-regional
-comparison.
+These are service thresholds and record statistics, not physical constants.
+The point of \code{\link[=fev_fwi_percentile]{fev_fwi_percentile()}} is that raw FWI breaks mean different
+things in different climates: an FWI of 25 is exceptional in Brittany and
+ordinary in the Var. Prefer percentile ranks for cross-regional comparison,
+and \code{\link[=fev_fwi_thresholds]{fev_fwi_thresholds()}} to derive breaks from your own record rather than
+import someone else's.
 }
 
 \examples{
 fev_fwi_classes()
+fev_fwi_classes("caliver_europe")
 
 }

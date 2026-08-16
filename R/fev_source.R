@@ -36,9 +36,10 @@ new_fev_source <- function(data, dataset, ...) {
 #'
 #' @aliases fev_source
 #'
-#' @param x A `fev_source`, or — for `fev_data()` — a `fev_fuel_layer` as
-#'   returned by [fev_fuel_binary()], [fev_fuel_type()] and
-#'   [fev_fuel_availability()], which wrap their raster for the same reason.
+#' @param x A `fev_source`, or — for `fev_data()` — any `fev_layer`: the
+#'   objects returned by [fev_fuel_binary()], [fev_fuel_type()],
+#'   [fev_fuel_availability()], [fev_fwi_percentile()] and
+#'   [fev_danger_index()], which wrap their raster for the same reason.
 #' @return `fev_data()` returns the underlying `sf` or `SpatRaster`.
 #'   `fev_source_info()` returns the record as a named list.
 #'
@@ -52,9 +53,9 @@ new_fev_source <- function(data, dataset, ...) {
 #'
 #' @export
 fev_data <- function(x) {
-  if (!inherits(x, c("fev_source", "fev_fuel_layer"))) {
+  if (!inherits(x, c("fev_source", "fev_layer"))) {
     fev_abort(c(
-      "{.arg x} must be a {.cls fev_source} or {.cls fev_fuel_layer}, not \\
+      "{.arg x} must be a {.cls fev_source} or {.cls fev_layer}, not \\
        {.cls {class(x)[1]}}.",
       i = if (inherits(x, "fev_fuel_source"))
             "For a {.cls fev_fuel_source}, use {.fn fev_fuel_categorical} or \\

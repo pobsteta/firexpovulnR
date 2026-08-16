@@ -63,46 +63,92 @@ fev_sources <- function() {
 
 # Scientific thresholds -------------------------------------------------------
 
-#' EFFIS fire danger classes
+#' Fire danger classes for the Fire Weather Index
 #'
-#' The six danger classes EFFIS maps the Fire Weather Index into, as published
-#' on the EFFIS *Fire Danger Forecast* page (verified 2026-08-15).
+#' The six classes a Fire Weather Index value is mapped into, under one of two
+#' published schemes. Both are shipped because they disagree by a factor of
+#' three, and which one you use changes what your maps say.
 #'
-#' @section On the missing "very low" class:
-#' A threshold of `5.2` for a "Very Low" class circulates widely in the
+#' @section The two schemes disagree, and that is worth knowing:
+#' | Class | EFFIS | caliver / Vitolo et al. 2018 |
+#' |---|---|---|
+#' | Very Low | — | < 2 |
+#' | Low | < 11.2 | 2–5 |
+#' | Moderate | 11.2–21.3 | 5–10 |
+#' | High | 21.3–38.0 | 10–19 |
+#' | Very High | 38.0–50.0 | 19–33 |
+#' | Extreme | 50.0–70.0 | ≥ 33 |
+#' | Very Extreme | > 70.0 | — |
+#'
+#' They are not two estimates of one quantity. The EFFIS breaks are
+#' operational forecast thresholds for a European-scale warning service, tuned
+#' so that the top classes stay rare enough to be actionable. The caliver
+#' breaks were **derived from a reanalysis record** — the median of yearly 98th
+#' percentiles over ERA-Interim 1980–2016, April to October, put through the
+#' Canadian intensity relation — and describe the distribution of that record.
+#'
+#' An FWI of 40 is *Very High* under EFFIS and comfortably *Extreme* under
+#' caliver. Say which you used.
+#'
+#' @section On the missing "very low" EFFIS class:
+#' A threshold of `5.2` for a "Very Low" EFFIS class circulates widely in the
 #' literature and on third-party sites. **It does not appear on the current
-#' EFFIS page**, which defines six classes starting at *Low*. The default here
-#' follows the official page. Do not add the 5.2 break on the grounds that it
-#' is common — if you need it, pass your own `breaks`, and say so in your
-#' methods.
+#' EFFIS page**, which defines six classes starting at *Low*. It is not added
+#' here on the grounds that it is common — pass your own `breaks` if you need
+#' it, and say so in your methods.
 #'
-#' @section On using these at all:
-#' These are operational service thresholds calibrated for European-scale
-#' forecasting, not physical constants. The whole point of
-#' `fev_fwi_percentile()` is that raw FWI breaks mean different things in
-#' different climates: an FWI of 25 is exceptional in Brittany and ordinary in
-#' the Var. Prefer percentile ranks over these classes for cross-regional
-#' comparison.
+#' @section On using absolute breaks at all:
+#' These are service thresholds and record statistics, not physical constants.
+#' The point of [fev_fwi_percentile()] is that raw FWI breaks mean different
+#' things in different climates: an FWI of 25 is exceptional in Brittany and
+#' ordinary in the Var. Prefer percentile ranks for cross-regional comparison,
+#' and [fev_fwi_thresholds()] to derive breaks from your own record rather than
+#' import someone else's.
 #'
-#' @param breaks Numeric vector of the five interior class boundaries.
-#'   Defaults to the EFFIS values.
+#' @param scheme `"effis"` (default) or `"caliver_europe"`. Ignored when
+#'   `breaks` is given.
+#' @param breaks Numeric vector of the five interior class boundaries,
+#'   overriding `scheme`. [fev_fwi_thresholds()] returns one.
 #' @param labels Character vector of six class labels.
 #'
-#' @return A data frame with columns `class`, `lower`, `upper`.
+#' @return A data frame with columns `class`, `lower`, `upper`, and a `scheme`
+#'   attribute.
 #'
 #' @source
 #' EFFIS, *Fire Danger Forecast*,
-#' <https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast>.
-#' The "Very Extreme" class was introduced in June 2021 to discriminate within
-#' the large areas classified *Extreme* around the Mediterranean in summer.
+#' <https://forest-fire.emergency.copernicus.eu/about-effis/technical-background/fire-danger-forecast>,
+#' verified 2026-08-15. The "Very Extreme" class was introduced in June 2021 to
+#' discriminate within the large areas classified *Extreme* around the
+#' Mediterranean in summer.
+#'
+#' Vitolo, C., Di Giuseppe, F., D'Andrea, M. (2018), *Caliver: An R package for
+#' CALIbration and VERification of forest fire gridded model outputs*, PLoS ONE
+#' 13(1): e0189419. \doi{10.1371/journal.pone.0189419}. European thresholds
+#' `2, 5, 10, 19, 33` read from the paper on 2026-08-16.
 #'
 #' @examples
 #' fev_fwi_classes()
+#' fev_fwi_classes("caliver_europe")
 #'
 #' @export
-fev_fwi_classes <- function(breaks = c(11.2, 21.3, 38.0, 50.0, 70.0),
-                            labels = c("Low", "Moderate", "High",
-                                       "Very High", "Extreme", "Very Extreme")) {
+fev_fwi_classes <- function(scheme = c("effis", "caliver_europe"),
+                            breaks = NULL, labels = NULL) {
+  scheme <- match.arg(scheme)
+  preset <- switch(
+    scheme,
+    effis = list(
+      breaks = c(11.2, 21.3, 38.0, 50.0, 70.0),
+      labels = c("Low", "Moderate", "High", "Very High", "Extreme",
+                 "Very Extreme")
+    ),
+    caliver_europe = list(
+      breaks = c(2, 5, 10, 19, 33),
+      labels = c("Very Low", "Low", "Moderate", "High", "Very High", "Extreme")
+    )
+  )
+  breaks <- breaks %||% preset$breaks
+  labels <- labels %||% preset$labels
+
   if (length(breaks) != length(labels) - 1L) {
     fev_abort(c(
       "{.arg labels} must have exactly one more element than {.arg breaks}.",
@@ -112,11 +158,14 @@ fev_fwi_classes <- function(breaks = c(11.2, 21.3, 38.0, 50.0, 70.0),
   if (is.unsorted(breaks, strictly = TRUE)) {
     fev_abort("{.arg breaks} must be strictly increasing.")
   }
-  data.frame(
-    class = factor(labels, levels = labels),
-    lower = c(-Inf, breaks),
-    upper = c(breaks, Inf),
-    stringsAsFactors = FALSE
+  structure(
+    data.frame(
+      class = factor(labels, levels = labels),
+      lower = c(-Inf, breaks),
+      upper = c(breaks, Inf),
+      stringsAsFactors = FALSE
+    ),
+    scheme = scheme
   )
 }
 

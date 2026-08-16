@@ -176,6 +176,52 @@ synth_class_raster <- function(codes = c("FF2-57-57", "LA4"), nrow = 4, ncol = 4
   r
 }
 
+#' A dated daily series whose percentile ranks are known by hand
+#'
+#' Every cell carries the same values, `1..n` in layer order, so the percentile
+#' rank of layer `j` against the whole record is exactly `100 * j / n`. That
+#' makes the calibration testable against an analytic value rather than merely
+#' reproducible — which is the difference between a test and a snapshot.
+#'
+#' @param n Number of daily layers.
+#' @param start First date.
+#' @param nrow,ncol Grid size.
+#' @param values Optional matrix of values, cells by layers.
+synth_danger_series <- function(n = 100, start = "2020-01-01",
+                                nrow = 2, ncol = 2, values = NULL) {
+  r <- terra::rast(nrows = nrow, ncols = ncol, xmin = 0, xmax = ncol * 25,
+                   ymin = 0, ymax = nrow * 25, crs = "EPSG:2154", nlyr = n)
+  terra::values(r) <- values %||% matrix(rep(seq_len(n), each = nrow * ncol),
+                                         nrow = nrow * ncol)
+  terra::time(r) <- seq(as.Date(start), by = "day", length.out = n)
+  names(r) <- format(terra::time(r), "d%Y%m%d")
+  r
+}
+
+#' A single-day weather grid with the layers cffdrs expects
+synth_weather_grid <- function(temp = 25, rh = 40, ws = 10, prec = 0,
+                               nrow = 3, ncol = 3) {
+  r <- terra::rast(nrows = nrow, ncols = ncol, xmin = 0, xmax = ncol * 25,
+                   ymin = 0, ymax = nrow * 25, crs = "EPSG:2154", nlyr = 4)
+  n <- nrow * ncol
+  terra::values(r) <- cbind(rep_len(temp, n), rep_len(rh, n),
+                            rep_len(ws, n), rep_len(prec, n))
+  names(r) <- c("temp", "rh", "ws", "prec")
+  r
+}
+
+#' A station weather table with everything cffdrs needs, latitude included
+synth_weather_table <- function(n = 5, lat = 43.3,
+                                ws = c(10, 12, 15, 20, 11)) {
+  data.frame(
+    lat = lat, long = 6.4, yr = 2020, mon = 7, day = seq_len(n),
+    temp = rep_len(c(25, 28, 30, 31, 29), n),
+    rh = rep_len(c(40, 35, 30, 28, 33), n),
+    ws = rep_len(ws, n),
+    prec = rep_len(c(0, 0, 0, 0, 2), n)
+  )
+}
+
 #' A minimal fev_stack, for testing methods that need one
 synth_stack <- function(...) {
   args <- list(...)
@@ -183,4 +229,26 @@ synth_stack <- function(...) {
     args <- list(exposure = synth_raster(values = seq(0, 1, length.out = 100)))
   }
   do.call(fev_stack, c(args, list(crs_work = 2154)))
+}
+
+#' Collect the condition classes a call emits, without letting them escape
+#'
+#' Several package functions legitimately raise more than one warning at once
+#' -- a short reference period is usually also a thin one -- and nested
+#' `expect_warning()` cannot assert on two warnings of the same class. Every
+#' package warning carries the `fev_warning` class, so they can be caught and
+#' inspected as a set instead.
+#'
+#' @param expr Expression to evaluate.
+#' @return Character vector of the first class of each warning raised.
+warning_classes <- function(expr) {
+  seen <- character()
+  withCallingHandlers(
+    suppressMessages(force(expr)),
+    fev_warning = function(w) {
+      seen <<- c(seen, class(w)[1])
+      invokeRestart("muffleWarning")
+    }
+  )
+  seen
 }

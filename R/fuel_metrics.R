@@ -12,10 +12,8 @@
 
 #' @noRd
 new_fev_fuel_layer <- function(data, role, provenance = NULL, units = NA_character_) {
-  structure(
-    list(data = data, role = role, units = units, provenance = provenance),
-    class = "fev_fuel_layer"
-  )
+  new_fev_layer(data, role = role, provenance = provenance, units = units,
+                class = "fev_fuel_layer")
 }
 
 #' Burnable / non-burnable mask
@@ -296,31 +294,4 @@ fev_pct_true <- function(r) {
     return(NA_real_)
   }
   round(100 * terra::global(r, fun = "sum", na.rm = TRUE)[[1]] / n_ok, 2)
-}
-
-#' @export
-print.fev_fuel_layer <- function(x, ...) {
-  r <- x$data
-  cli::cli_h1("fev_fuel_layer: {x$role}")
-  cli::cli_li("{terra::nrow(r)} x {terra::ncol(r)} cells at \\
-               {.val {signif(terra::res(r)[1], 6)}}, {fev_crs_label(r)}")
-  if (!is.na(x$units)) {
-    cli::cli_li("Units: {.val {x$units}}")
-  }
-  lv <- fev_cat_levels(r)
-  if (!is.null(lv)) {
-    cli::cli_li("Classes: {.val {lv[[2]]}}")
-  } else {
-    mm <- terra::global(r, fun = "range", na.rm = TRUE)
-    cli::cli_li("Range: {.val {signif(c(mm[[1]][1], mm[[2]][1]), 4)}}")
-  }
-  n_ok <- terra::global(r, fun = "notNA")[[1]]
-  cli::cli_li("Mapped: {.val {round(100 * n_ok / terra::ncell(r), 1)}}% of cells")
-  invisible(x)
-}
-
-#' @export
-plot.fev_fuel_layer <- function(x, ...) {
-  terra::plot(x$data, main = x$role, ...)
-  invisible(x)
 }
