@@ -3,10 +3,10 @@
 # Derived from https://github.com/r-lib/actions/tree/v2/examples, following the
 # same shape as nemeton's.
 #
-# Vignettes are built here and nowhere else: R-CMD-check passes
-# --no-build-vignettes because the end-to-end vignette runs the real processing
-# chain and is slow. The site is therefore also what proves the vignette still
-# knits.
+# The vignette is built here as well as in R-CMD-check. It runs on synthetic
+# data and takes about eight seconds, so there is no reason to skip it in
+# either place -- and skipping it in one of them is exactly what turned the
+# first phase 7 push red.
 
 on:
   push:

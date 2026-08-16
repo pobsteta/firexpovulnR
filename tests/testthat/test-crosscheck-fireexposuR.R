@@ -11,6 +11,16 @@
 #
 # fireexposuR is in Suggests and used only here.
 
+# Loading fireexposuR pulls in MultiscaleDTM and, through it, rgl, which warns
+# at load time on a headless runner ("see ?rgl.useNULL"). Getting that out of
+# the way here means the warning is attached to the namespace load rather than
+# to whichever expectation happened to trigger it first.
+suppressWarnings(suppressMessages(
+  if (requireNamespace("fireexposuR", quietly = TRUE)) {
+    loadNamespace("fireexposuR")
+  }
+))
+
 tol <- 1e-4
 
 expect_matches_fireexposuR <- function(fuel, radius, ...) {

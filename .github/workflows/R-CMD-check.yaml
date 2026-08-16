@@ -106,11 +106,17 @@ jobs:
         with:
           # --no-manual: no LaTeX on the runner, and the PDF manual is not a
           #   deliverable for an internal research package.
+          # Vignettes ARE built here. They were excluded while none existed,
+          #   which then failed the moment one did: R CMD check warns twice
+          #   about a vignettes/ directory with no inst/doc, and error-on
+          #   "warning" turns that into a red build. The vignette runs on
+          #   synthetic data in about eight seconds, so building it is real
+          #   coverage rather than a cost.
           # No --as-cran: the brief states CRAN policy compliance is not a
           #   goal, and running it would fail the build on things the package
           #   has deliberately chosen (GitHub dependencies, package size).
           args: 'c("--no-manual")'
-          build_args: 'c("--no-manual", "--no-build-vignettes")'
+          build_args: 'c("--no-manual")'
           error-on: '"warning"'
           upload-snapshots: true
 
