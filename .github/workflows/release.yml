@@ -42,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout (full history and tags)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           # workflow_run checks out the default branch by default; pin it to

@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: DESCRIPTION = NEWS.md = CITATION.cff
         run: |
@@ -74,7 +74,7 @@ jobs:
       FIREXPOVULNR_TEST_NETWORK: "0"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: r-lib/actions/setup-pandoc@v2
 
@@ -128,7 +128,7 @@ jobs:
       FIREXPOVULNR_TEST_NETWORK: "0"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -162,12 +162,16 @@ jobs:
         shell: Rscript {0}
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./cobertura.xml
-          # The repository is public, so uploads work without a token; the
-          # secret is honoured when set and rate limits are friendlier with it.
+          # A CODECOV_TOKEN secret is REQUIRED, public repository or not.
+          # The first run without one was rejected with "Token required
+          # because branch is protected" -- the upload failed while the job
+          # stayed green, which is exactly the silent failure fail_ci_if_error
+          # is there to allow and the badge is there to expose. Add the secret
+          # from https://app.codecov.io/gh/pobsteta/firexpovulnR/settings.
           token: ${{ secrets.CODECOV_TOKEN }}
-          # Coverage reporting going down must not turn a green build red:
-          # it is information, not a gate.
+          # Coverage moving must not turn a green build red: it is
+          # information, not a gate.
           fail_ci_if_error: false
