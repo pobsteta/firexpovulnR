@@ -6,3 +6,10 @@
 ^\.github$
 ^README\.Rmd$
 ^\.gitignore$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^CITATION\.cff$
+^codecov\.yml$
+^cobertura\.xml$
+^release-notes\.md$

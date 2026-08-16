@@ -1,0 +1,111 @@
+url: https://pobsteta.github.io/firexpovulnR/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+  bslib:
+    primary: "#B23A15"   # braise
+    success: "#2E7D32"   # couvert forestier
+
+home:
+  title: "firexpovulnR — danger, exposition et vulnérabilité au feu de forêt"
+  description: >
+    Chaîne de traitement R reproductible pour l'évaluation du risque d'incendie
+    de forêt en Europe, avec la France métropolitaine comme terrain primaire.
+    Danger météorologique calibré en percentiles régionaux, exposition dérivée
+    du combustible, vulnérabilité des enjeux, indice composite — chaque seuil
+    importé est un paramètre documenté et surchargeable, et chaque analyse
+    transporte sa provenance.
+  links:
+  - text: Voir sur GitHub
+    href: https://github.com/pobsteta/firexpovulnR
+
+navbar:
+  # `articles` returns to this list in phase 7, when the end-to-end vignette
+  # exists. Declaring it now would put a dead menu in the navbar.
+  structure:
+    left:  [reference, news]
+    right: [search, github]
+
+reference:
+  - title: "Objet, provenance et contrôles"
+    desc: >
+      La classe qui transporte une analyse et le dossier qui la rend rejouable.
+      Les couches ne partagent pas forcément une grille : le décalage d'échelle
+      est porté par l'objet, pas masqué par lui.
+    contents:
+    - fev_stack
+    - as_fev_stack
+    - fev_stack_save
+    - fev_provenance
+    - fev_data
+    - fev_check_crs
+
+  - title: "Acquisition et cache"
+    desc: >
+      Un client par source, chacun rendant ses métadonnées de provenance —
+      jeu de données, millésime, requête exacte, date de téléchargement. Le
+      cache est indexé par empreinte de requête, donc deux appels de paramètres
+      différents ne peuvent pas se confondre.
+    contents:
+    - fev_fetch_fwi
+    - fev_fetch_bdforet
+    - fev_fetch_corine
+    - fev_fetch_burnt
+    - fev_cache_info
+    - fev_cache_clear
+    - fev_cache_dir
+    - fev_sources
+
+  - title: "Combustible"
+    desc: >
+      L'abstraction porte deux registres, catégoriel et continu, et ne suppose
+      jamais que l'information est une classe. Les tables de correspondance
+      sont justifiées ligne par ligne et intégralement surchargeables.
+    contents:
+    - fev_fuel_source
+    - fev_fuel_merge
+    - fev_fuel_binary
+    - fev_fuel_type
+    - fev_fuel_availability
+    - fev_fuel_lookup
+    - fev_fuel_types
+    - fev_fuel_weights
+    - fev_fuel_registers
+
+  - title: "Danger météorologique"
+    desc: >
+      Le cœur méthodologique est la calibration en percentiles : un seuil FWI
+      absolu redessine surtout la climatologie, alors qu'un rang percentile
+      dit la même chose dans le Var et en Bretagne.
+    contents:
+    - fev_fwi_calc
+    - fev_fwi_percentile
+    - fev_fwi_thresholds
+    - fev_fwi_classes
+    - fev_danger_class
+    - fev_danger_index
+
+  - title: "Exposition et vulnérabilité"
+    desc: >
+      Fraction focale de combustible autour de chaque cellule, vulnérabilité
+      directionnelle depuis un enjeu ponctuel, et normalisation des couches
+      d'enjeux. Aucune source d'enjeux n'est imposée.
+    contents:
+    - fev_exposure
+    - fev_directional
+    - fev_exposure_radii
+    - fev_directional_defaults
+    - fev_vuln_layer
+    - fev_vuln_stack
+
+  - title: "Alignement des échelles"
+    desc: >
+      La seule fonction du package autorisée à changer une grille. Toutes les
+      autres refusent des entrées de grilles différentes et y renvoient.
+    contents:
+    - fev_align
+
+  - title: "Méthodes"
+    contents:
+    - plot.fev_stack

@@ -1,6 +1,6 @@
 Package: firexpovulnR
 Title: Fire Danger, Exposure and Vulnerability Assessment for European Forests
-Version: 0.0.0.9000
+Version: 0.6.0
 Authors@R:
     person("Pascal", "Obstétar", email = "pascal.obstetar@gmail.com",
            role = c("aut", "cre"))
@@ -42,6 +42,7 @@ Suggests:
     withr
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/pobsteta/firexpovulnR
+URL: https://github.com/pobsteta/firexpovulnR,
+    https://pobsteta.github.io/firexpovulnR/
 BugReports: https://github.com/pobsteta/firexpovulnR/issues
 Config/roxygen2/version: 8.1.0

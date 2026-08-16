@@ -1,0 +1,173 @@
+# Integration checks: version coherence, R CMD check, coverage.
+#
+# Ported from the nemeton pipeline, minus its dependency workarounds (lidR /
+# r-universe, dissUtils, spinR, the Rfast oneTBB rebuild) which are specific to
+# that package's Imports and have no counterpart here.
+#
+# One deliberate difference: nemeton runs testthat in a job of its own because
+# R CMD check exhibits a terra anomaly on GitHub runners. This package keeps the
+# suite inside R CMD check, so it is checked in the same sandbox users install
+# into. If the same anomaly ever appears, split the job rather than dropping the
+# tests -- the coverage job below already runs the whole suite a second time and
+# would catch a silent skip.
+
+name: R-CMD-check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Version coherence: DESCRIPTION = NEWS.md = CITATION.cff
+  #
+  # The release workflow tags whatever DESCRIPTION says, so a drift between
+  # these three publishes a release whose notes and citation describe another
+  # version. Checked here, before anything can tag.
+  #
+  # Development versions (X.Y.Z.9000) are exempt: NEWS and CITATION track
+  # releases, not the cycle between them.
+  # ---------------------------------------------------------------------------
+  version-consistency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: DESCRIPTION = NEWS.md = CITATION.cff
+        run: |
+          desc=$(awk '/^Version:/{print $2; exit}' DESCRIPTION)
+          if ! [[ "$desc" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Development version ($desc) — coherence check skipped."
+            exit 0
+          fi
+          news=$(grep -m1 -oE '[0-9]+\.[0-9]+\.[0-9]+' NEWS.md)
+          cff=$(grep -m1 -E '^version:' CITATION.cff | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          echo "DESCRIPTION=$desc  NEWS=$news  CITATION=$cff"
+          if [ "$desc" != "$news" ] || [ "$desc" != "$cff" ]; then
+            echo "::error::Versions out of step (DESCRIPTION=$desc, NEWS=$news, CITATION=$cff)"
+            exit 1
+          fi
+          echo "✅ versions aligned: $desc"
+
+  # ---------------------------------------------------------------------------
+  # R CMD check, tests included.
+  # ---------------------------------------------------------------------------
+  R-CMD-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [version-consistency]
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+      NOT_CRAN: true
+      # The network integration tests stay off by default and are opt-in
+      # through this variable. CI must never depend on IGN, EFFIS or
+      # Copernicus being up: a red build has to mean a regression here.
+      FIREXPOVULNR_TEST_NETWORK: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        # The geospatial toolchain the brief requires: terra and sf are built
+        # against these, and there is no fallback path in the package.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgdal-dev \
+            libgeos-dev \
+            libproj-dev \
+            libudunits2-dev \
+            libssl-dev \
+            libcurl4-openssl-dev \
+            libxml2-dev
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          # --no-manual: no LaTeX on the runner, and the PDF manual is not a
+          #   deliverable for an internal research package.
+          # No --as-cran: the brief states CRAN policy compliance is not a
+          #   goal, and running it would fail the build on things the package
+          #   has deliberately chosen (GitHub dependencies, package size).
+          args: 'c("--no-manual")'
+          build_args: 'c("--no-manual", "--no-build-vignettes")'
+          error-on: '"warning"'
+          upload-snapshots: true
+
+  # ---------------------------------------------------------------------------
+  # Coverage. Runs the whole suite a second time under covr.
+  # ---------------------------------------------------------------------------
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [R-CMD-check]
+
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      NOT_CRAN: true
+      FIREXPOVULNR_TEST_NETWORK: "0"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgdal-dev libgeos-dev libproj-dev libudunits2-dev \
+            libssl-dev libcurl4-openssl-dev libxml2-dev
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr
+          needs: coverage
+
+      - name: Compute coverage
+        run: |
+          cov <- covr::package_coverage(
+            quiet = FALSE,
+            clean = FALSE,
+            install_path = file.path(
+              normalizePath(Sys.getenv("RUNNER_TEMP"), winslash = "/"),
+              "package"
+            )
+          )
+          print(cov)
+          covr::to_cobertura(cov)
+        shell: Rscript {0}
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./cobertura.xml
+          # The repository is public, so uploads work without a token; the
+          # secret is honoured when set and rate limits are friendlier with it.
+          token: ${{ secrets.CODECOV_TOKEN }}
+          # Coverage reporting going down must not turn a green build red:
+          # it is information, not a gate.
+          fail_ci_if_error: false

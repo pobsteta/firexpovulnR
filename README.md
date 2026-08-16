@@ -1,7 +1,12 @@
 # firexpovulnR
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/pobsteta/firexpovulnR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pobsteta/firexpovulnR/actions/workflows/R-CMD-check.yaml)
+[![Version](https://img.shields.io/github/v/release/pobsteta/firexpovulnR?sort=semver&logo=github&label=version&color=blue)](https://github.com/pobsteta/firexpovulnR/releases/latest)
+[![pkgdown](https://github.com/pobsteta/firexpovulnR/actions/workflows/pkgdown.yaml/badge.svg)](https://pobsteta.github.io/firexpovulnR/)
+[![codecov](https://codecov.io/gh/pobsteta/firexpovulnR/graph/badge.svg)](https://codecov.io/gh/pobsteta/firexpovulnR)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?logo=gnu)](https://www.gnu.org/licenses/gpl-3.0)
 <!-- badges: end -->
 
 Chaîne de traitement R reproductible pour l'évaluation du **risque d'incendie
@@ -80,6 +85,41 @@ pak::pak("pobsteta/firexpovulnR")
 
 Le toolchain géospatial (GDAL, GEOS, PROJ) doit être présent sur la machine :
 le package s'appuie sur `terra` et `sf` exclusivement (ni `raster`, ni `sp`).
+
+## Documentation
+
+Le site de référence est publié à
+<https://pobsteta.github.io/firexpovulnR/>. `NEWS.md` porte l'historique des
+versions.
+
+## Développement
+
+L'intégration continue tient quatre choses :
+
+| Workflow | Ce qu'il garantit |
+|---|---|
+| `R-CMD-check.yaml` | `DESCRIPTION` = `NEWS.md` = `CITATION.cff`, puis `R CMD check` tests compris, puis la couverture envoyée à Codecov |
+| `release.yml` | Tag `vX.Y.Z` et release GitHub, pilotés par `Version:` dans `DESCRIPTION` — **seulement après un check vert** |
+| `pkgdown.yaml` | Le site de référence, et la vignette de bout en bout qui n'est montée que là |
+
+Aucun test unitaire ne touche le réseau. Les tests d'intégration contre les API
+réelles (IGN, EFFIS, Copernicus) sont désactivés sauf
+`FIREXPOVULNR_TEST_NETWORK=1` : une CI rouge doit signifier une régression du
+code, pas l'indisponibilité d'un tiers.
+
+### Poser une version
+
+Le cycle de développement porte une version `X.Y.Z.9000`, que les garde-fous
+ignorent. Pour publier :
+
+1. `Version:` dans `DESCRIPTION` passe à `X.Y.Z` ;
+2. `NEWS.md` gagne une section `# firexpovulnR X.Y.Z (AAAA-MM-JJ)` ;
+3. `version:` et `date-released:` dans `CITATION.cff` suivent ;
+4. push sur `main`.
+
+Le reste est automatique. Les trois fichiers doivent s'accorder, sinon le
+premier job échoue avant que quoi que ce soit ne soit taggué — c'est ce qui
+empêche de publier une release dont les notes décrivent une autre version.
 
 ## Licence
 

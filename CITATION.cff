@@ -1,0 +1,96 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "firexpovulnR: Fire Danger, Exposure and Vulnerability Assessment for European Forests"
+abstract: >
+  Reproducible processing chain combining fire weather danger (Fire Weather
+  Index calibrated on regional percentiles), fuel-based fire exposure metrics,
+  and vulnerability of exposed assets into a composite risk index, for European
+  forest study areas with metropolitan France as the primary field. Every
+  imported threshold is an explicit, documented and overridable parameter, and
+  every analysis carries a full provenance record. Intended for internal
+  research use, not for CRAN submission.
+authors:
+  - family-names: "Obstétar"
+    given-names: "Pascal"
+    email: "pascal.obstetar@gmail.com"
+    orcid: "https://orcid.org/0009-0003-5403-1187"
+version: "0.6.0"
+date-released: "2026-08-16"
+url: "https://pobsteta.github.io/firexpovulnR/"
+repository-code: "https://github.com/pobsteta/firexpovulnR"
+repository-artifact: "https://github.com/pobsteta/firexpovulnR/releases"
+license: GPL-3.0-only
+keywords:
+  - wildfire
+  - fire-danger
+  - fire-weather-index
+  - fire-exposure
+  - vulnerability
+  - forestry
+  - R
+  - spatial-analysis
+  - reproducibility
+references:
+  - type: article
+    title: "A simple metric of landscape fire exposure"
+    authors:
+      - family-names: "Beverly"
+        given-names: "Jennifer L."
+      - family-names: "McLoughlin"
+        given-names: "Neal"
+      - family-names: "Chapman"
+        given-names: "Elizabeth"
+    journal: "Landscape Ecology"
+    volume: 36
+    start: 785
+    end: 801
+    year: 2021
+  - type: article
+    title: "Assessing directional vulnerability to wildfire"
+    authors:
+      - family-names: "Beverly"
+        given-names: "Jennifer L."
+      - family-names: "Forbes"
+        given-names: "Air M."
+    journal: "Natural Hazards"
+    volume: 117
+    start: 831
+    end: 849
+    year: 2023
+  - type: article
+    title: >
+      Caliver: An R package for CALIbration and VERification of forest fire
+      gridded model outputs
+    authors:
+      - family-names: "Vitolo"
+        given-names: "Claudia"
+      - family-names: "Di Giuseppe"
+        given-names: "Francesca"
+      - family-names: "D'Andrea"
+        given-names: "Mirko"
+    journal: "PLoS ONE"
+    volume: 13
+    issue: 1
+    year: 2018
+    doi: "10.1371/journal.pone.0189419"
+  - type: article
+    title: >
+      Validating a landscape metric to map fire exposure to hazardous fuels in
+      Portugal
+    authors:
+      - family-names: "Khan"
+        given-names: "Sidra Ijaz"
+      - family-names: "Colaço"
+        given-names: "Maria Conceição"
+      - family-names: "Sequeira"
+        given-names: "Ana Catarina"
+      - family-names: "Rego"
+        given-names: "Francisco Castro"
+      - family-names: "Beverly"
+        given-names: "Jennifer L."
+    journal: "Natural Hazards"
+    volume: 121
+    start: 16273
+    end: 16295
+    year: 2025
+    doi: "10.1007/s11069-025-07424-8"

@@ -1,0 +1,84 @@
+# Documentation site, built by pkgdown and published to GitHub Pages.
+#
+# Derived from https://github.com/r-lib/actions/tree/v2/examples, following the
+# same shape as nemeton's.
+#
+# Vignettes are built here and nowhere else: R-CMD-check passes
+# --no-build-vignettes because the end-to-end vignette runs the real processing
+# chain and is slow. The site is therefore also what proves the vignette still
+# knits.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+name: pkgdown
+
+jobs:
+  pkgdown:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    concurrency:
+      group: pkgdown-${{ github.event_name != 'pull_request' || github.run_id }}
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      FIREXPOVULNR_TEST_NETWORK: "0"
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-pandoc@v2
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        # The font and image libraries on top of the geospatial stack are what
+        # ragg and the site's figures need.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgdal-dev \
+            libgeos-dev \
+            libproj-dev \
+            libudunits2-dev \
+            libssl-dev \
+            libcurl4-openssl-dev \
+            libxml2-dev \
+            libfontconfig1-dev \
+            libharfbuzz-dev \
+            libfribidi-dev \
+            libfreetype6-dev \
+            libpng-dev \
+            libtiff5-dev \
+            libjpeg-dev
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: |
+            any::pkgdown
+            local::.
+          needs: website
+
+      - name: Build site
+        run: pkgdown::build_site_github_pages(new_process = FALSE, install = FALSE)
+        shell: Rscript {0}
+
+      - name: Deploy to GitHub Pages
+        # Publish only from main or a published release. A pull request and a
+        # manual dispatch build the site without deploying it, so a branch can
+        # be validated without overwriting what is live.
+        if: github.event_name == 'push' || github.event_name == 'release'
+        uses: JamesIves/github-pages-deploy-action@v4.5.0
+        with:
+          clean: false
+          branch: gh-pages
+          folder: docs
