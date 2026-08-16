@@ -213,6 +213,23 @@ fev_all_na <- function(x) {
   all(as.numeric(cnt[[1]]) == 0)
 }
 
+#' Level table of a categorical layer, or NULL
+#'
+#' `terra::levels()` returns a list whose element is `""` — an empty character
+#' string, not `NULL` — for a layer that has no categories. Testing it with
+#' `is.null()` therefore passes, and the next `nrow()` returns `NULL` rather
+#' than erroring, so the mistake surfaces later as an unrelated `&&` failure.
+#' Everything in the package that reads categories goes through here.
+#'
+#' @noRd
+fev_cat_levels <- function(r) {
+  lv <- terra::levels(r[[1]])[[1]]
+  if (!is.data.frame(lv) || !nrow(lv)) {
+    return(NULL)
+  }
+  lv
+}
+
 #' Versions of the geospatial stack, for the provenance record
 #'
 #' A result is only reproducible if you know what produced it. GDAL/GEOS/PROJ

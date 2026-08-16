@@ -169,6 +169,102 @@ fev_exposure_radii <- function() {
   )
 }
 
+#' Default fuel availability weights
+#'
+#' A continuous weight in `[0, 1]` per structural fuel type, used by
+#' [fev_fuel_availability()] to turn a class layer into a graded one.
+#'
+#' @section These numbers are not sourced, and that is the point of this page:
+#' Unlike [fev_fwi_classes()] and [fev_exposure_radii()], **nothing here comes
+#' from a publication or a service**. No fuel-availability weighting for BD
+#' Forêt or CORINE classes was verified at a source during phase 2, and none is
+#' invented in the tables. These are a convention: an ordering the package can
+#' defend qualitatively — Mediterranean shrubland above closed conifer above
+#' closed broadleaf, worked cropland at zero — with the actual numbers chosen
+#' to be round rather than measured.
+#'
+#' Treat them as a starting point you are expected to replace. Whatever you
+#' pass to [fev_fuel_availability()] is written into the provenance record, so
+#' a reader can see which numbers produced your results. If you keep these,
+#' say so in your methods, and say that they are conventional.
+#'
+#' @section Consistency with the burnable mask:
+#' A fuel type whose classes are non-burnable in the shipped lookups carries a
+#' weight of exactly 0, so [fev_fuel_availability()] and [fev_fuel_binary()]
+#' cannot contradict each other. If you override one, check the other.
+#'
+#' @param weights Optional named numeric vector overriding some or all of the
+#'   defaults. Names must be values of [fev_fuel_types()].
+#' @param quiet Suppress the warning that these values are conventional. Use
+#'   it only once you have made that clear elsewhere.
+#'
+#' @return A named numeric vector, one weight per fuel type.
+#'
+#' @seealso [fev_fuel_availability()], [fev_fuel_types()].
+#'
+#' @examples
+#' fev_fuel_weights(quiet = TRUE)
+#'
+#' # Down-weight closed broadleaf for a study where it is largely beech.
+#' fev_fuel_weights(c(broadleaf_closed = 0.4), quiet = TRUE)
+#'
+#' @export
+fev_fuel_weights <- function(weights = NULL, quiet = FALSE) {
+  base <- c(
+    shrubland           = 1.00,
+    conifer_closed      = 0.95,
+    sclerophyll_closed  = 0.95,
+    conifer_open        = 0.90,
+    transitional_shrub  = 0.90,
+    mixed_closed        = 0.80,
+    mixed_open          = 0.80,
+    grassland           = 0.70,
+    burnt_regrowth      = 0.70,
+    broadleaf_open      = 0.65,
+    broadleaf_closed    = 0.60,
+    unstocked           = 0.60,
+    agroforestry        = 0.50,
+    mosaic_agri_natural = 0.35,
+    sparse_vegetation   = 0.30,
+    poplar_plantation   = 0.30,
+    urban_vegetation    = 0.25,
+    cropland            = 0.00,
+    non_fuel            = 0.00
+  )
+
+  if (!is.null(weights)) {
+    if (is.null(names(weights)) || any(!nzchar(names(weights)))) {
+      fev_abort("{.arg weights} must be a named numeric vector.")
+    }
+    unknown <- setdiff(names(weights), names(base))
+    if (length(unknown)) {
+      fev_abort(c(
+        "Unknown fuel type{?s} in {.arg weights}: {.val {unknown}}.",
+        i = "See {.fn fev_fuel_types} for the accepted names."
+      ))
+    }
+    if (any(weights < 0 | weights > 1, na.rm = TRUE)) {
+      fev_abort("{.arg weights} must lie in {.val {c(0, 1)}}.")
+    }
+    base[names(weights)] <- weights
+  }
+
+  if (!isTRUE(quiet)) {
+    fev_warn(c(
+      "Fuel availability weights are a package convention, not a sourced \\
+       parameter.",
+      i = "No weighting of BD For\u00eat or CORINE classes was found at a \\
+           verifiable source. The ordering is defensible; the numbers are \\
+           round, not measured.",
+      i = "Override them, or state in your methods that you kept the \\
+           defaults. They are recorded in the provenance either way.",
+      i = "Silence this with {.code quiet = TRUE}."
+    ), class = "fev_unsourced_default")
+  }
+
+  base
+}
+
 # Provider quirks the code must handle ----------------------------------------
 
 # EFFIS ships a .prj declaring GEOGCS["GCS_unknown", DATUM["D_WGS_1984",...]],

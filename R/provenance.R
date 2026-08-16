@@ -148,6 +148,40 @@ fev_prov_add_step <- function(prov, fun, params = list(), notes = NULL) {
   prov
 }
 
+#' Combine two provenance records
+#'
+#' Used when two objects that each carry a history are combined, as in
+#' `fev_fuel_merge()`. `a` is the base — its package, session and working CRS
+#' are kept — and `b`'s sources and steps are appended after it. Steps are
+#' renumbered so `seq` stays a reading order.
+#'
+#' Sources are de-duplicated on dataset plus vintage plus download time, so
+#' that re-merging the same auxiliary twice does not record it twice. Steps are
+#' not: doing the same operation twice is a fact about the analysis, and the
+#' record is meant to say what happened, not what was intended.
+#'
+#' @noRd
+fev_prov_merge <- function(a, b) {
+  if (is.null(a)) return(b)
+  if (is.null(b)) return(a)
+
+  out <- a
+  key <- function(s) paste(s$dataset, s$millesime, s$downloaded_at, sep = "|")
+  seen <- vapply(a$sources, key, character(1))
+  for (s in b$sources) {
+    if (!key(s) %in% seen) {
+      out$sources[[length(out$sources) + 1L]] <- s
+      seen <- c(seen, key(s))
+    }
+  }
+
+  out$steps <- c(a$steps, b$steps)
+  for (i in seq_along(out$steps)) {
+    out$steps[[i]]$seq <- i
+  }
+  out
+}
+
 #' Drop NULLs so the YAML stays readable
 #'
 #' `yaml::as.yaml()` renders a NULL as `~`, which litters the file with empty

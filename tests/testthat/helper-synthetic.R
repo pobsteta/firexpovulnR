@@ -107,6 +107,75 @@ synth_aoi <- function(x = synth_raster(), shrink = 0.1) {
   sf::st_as_sf(sf::st_as_sfc(bb))
 }
 
+#' A rectangle, as an sf polygon
+#' @noRd
+synth_rect <- function(xmin, xmax, ymin, ymax, crs = 2154) {
+  sf::st_sfc(
+    sf::st_polygon(list(cbind(
+      c(xmin, xmax, xmax, xmin, xmin),
+      c(ymin, ymin, ymax, ymax, ymin)
+    ))),
+    crs = crs
+  )
+}
+
+#' A BD Forêt-style polygon layer covering only part of the study area
+#'
+#' The gap is the point: it is what the auxiliary source has to fill, and what
+#' the per-pixel source layer has to attribute correctly. Real TFV codes, so
+#' the shipped lookup is genuinely exercised.
+#'
+#' @param full When TRUE, covers the whole 0-200 square instead of its left
+#'   half, for tests that need a primary with no gap.
+synth_bdforet <- function(full = FALSE, crs = 2154) {
+  if (full) {
+    geom <- c(synth_rect(0, 100, 0, 200, crs), synth_rect(100, 200, 0, 200, crs))
+  } else {
+    geom <- c(synth_rect(0, 50, 0, 200, crs), synth_rect(50, 100, 0, 200, crs))
+  }
+  sf::st_sf(
+    code_tfv = c("FF2-57-57", "FF1G06-06"),  # Aleppo pine, holm oak
+    geometry = geom
+  )
+}
+
+#' A CORINE-style polygon layer covering the whole study area
+synth_clc <- function(crs = 2154) {
+  sf::st_sf(
+    code_18 = c("323", "512"),  # sclerophyllous vegetation, water bodies
+    geometry = c(synth_rect(0, 200, 0, 100, crs),
+                 synth_rect(0, 200, 100, 200, crs))
+  )
+}
+
+#' The AOI both synthetic sources share, so their grids match
+synth_fuel_aoi <- function(crs = 2154) {
+  sf::st_as_sf(synth_rect(0, 200, 0, 200, crs))
+}
+
+#' A ready-made pair of fuel sources on a common grid
+#'
+#' @param res Cell size.
+synth_fuel_pair <- function(res = 25) {
+  aoi <- synth_fuel_aoi()
+  list(
+    primary = fev_fuel_source(synth_bdforet(), type = "bdforet_v2",
+                              res = res, aoi = aoi, millesime = 2014),
+    secondary = fev_fuel_source(synth_clc(), type = "clc_2018",
+                                res = res, aoi = aoi, millesime = 2018)
+  )
+}
+
+#' A categorical SpatRaster carrying given codes, for register tests
+synth_class_raster <- function(codes = c("FF2-57-57", "LA4"), nrow = 4, ncol = 4,
+                               crs = "EPSG:2154") {
+  r <- synth_raster(nrow, ncol, res = 25, crs = crs,
+                    values = rep_len(seq_along(codes), nrow * ncol))
+  levels(r) <- data.frame(id = seq_along(codes), class = codes)
+  names(r) <- "class"
+  r
+}
+
 #' A minimal fev_stack, for testing methods that need one
 synth_stack <- function(...) {
   args <- list(...)

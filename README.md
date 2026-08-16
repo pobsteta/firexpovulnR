@@ -38,6 +38,12 @@ publiés.
 - **Décalage d'échelle explicite.** Le rééchantillonnage entre danger
   kilométrique et exposition décamétrique passe obligatoirement par
   `fev_align()`, qui avertit et journalise. Aucun alignement implicite ailleurs.
+- **Combustible catégoriel *et* continu.** Un objet `fev_fuel_source` porte
+  deux registres : un registre catégoriel (classe TFV ou CORINE) et un
+  registre continu (charge par strate, densité apparente, hauteur de base de
+  houppier). BD Forêt et CORINE alimentent le premier ; le second attend les
+  métriques dérivées du LiDAR HD. Chaque fonction aval déclare celui qu'elle
+  consomme et refuse explicitement quand il est vide.
 
 ## Avertissements méthodologiques
 

@@ -11,7 +11,9 @@ fev_data(x)
 fev_source_info(x)
 }
 \arguments{
-\item{x}{A \code{fev_source}.}
+\item{x}{A \code{fev_source}, or — for \code{fev_data()} — a \code{fev_fuel_layer} as
+returned by \code{\link[=fev_fuel_binary]{fev_fuel_binary()}}, \code{\link[=fev_fuel_type]{fev_fuel_type()}} and
+\code{\link[=fev_fuel_availability]{fev_fuel_availability()}}, which wrap their raster for the same reason.}
 }
 \value{
 \code{fev_data()} returns the underlying \code{sf} or \code{SpatRaster}.
