@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -32,6 +32,41 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.0" id="firexpovulnr-070-2026-08-16">firexpovulnR 0.7.0 (2026-08-16)<a class="anchor" aria-label="anchor" href="#firexpovulnr-070-2026-08-16"></a></h2>
+<p>Dernière phase du brief. La chaîne cible s’exécute désormais de bout en bout, et la vignette la déroule sans réseau.</p>
+<p>729 tests hors ligne, aucun échec. <code>R CMD check</code> sans erreur, avertissement ni note.</p>
+<div class="section level4">
+<h4 id="combinaison-et-risque-0-7-0">Combinaison et risque<a class="anchor" aria-label="anchor" href="#combinaison-et-risque-0-7-0"></a></h4>
+<ul><li>
+<code><a href="../reference/fev_risk.html">fev_risk()</a></code> livre les trois méthodes du brief, et elles ne répondent pas à la même question. <code>"effis_mean"</code> normalise puis fait la moyenne à poids égaux. <code>"pareto"</code> rend le <strong>front de Pareto</strong> — un ensemble, pas un score : les cellules qu’on ne peut améliorer sur une dimension sans dégrader l’autre. <code>"weighted"</code> exige ses poids et les inscrit, faute de défaut défendable.</li>
+<li>Les deux premières viennent du workflow CLIMAAX, dont le carnet a été lu le 2026-08-16 plutôt que paraphrasé : <code>danger_index=(clim_norm+burn_norm)/2</code> et <code>paretoset(..., sense=[max,...])</code> sont recopiés de son propre code.</li>
+<li>La normalisation min-max par défaut <strong>réétire</strong> une couche déjà mise à l’échelle : c’est ce que fait CLIMAAX, la doc le dit, et <code>normalise = "none"</code> existe pour l’éviter.</li>
+<li>Le balayage de dominance est quadratique dans le nombre de combinaisons distinctes. Il travaille donc sur les tuples arrondis et <strong>refuse</strong> au-delà d’un seuil, plutôt que de tourner une après-midi.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="validation-et-le-biais-temporel-0-7-0">Validation, et le biais temporel<a class="anchor" aria-label="anchor" href="#validation-et-le-biais-temporel-0-7-0"></a></h4>
+<ul><li>
+<code><a href="../reference/fev_validate.html">fev_validate()</a></code> rend une AUC, une courbe ROC et la répartition observé/attendu par classe de risque — cette dernière dans la forme de <code><a href="https://docs.ropensci.org/fireexposuR/reference/fire_exp_validate.html" class="external-link">fireexposuR::fire_exp_validate()</a></code>, dont les bornes par défaut sont reprises.</li>
+<li>
+<strong>Le contrôle de biais temporel tourne avant toute statistique de skill.</strong> Chaque feu est comparé au millésime du combustible, lu dans la provenance, et la fonction avertit avec un chiffre : « 28,6 % de la surface brûlée postdate le millésime de plus de 5 ans ». <code>max_lag_years</code> filtre.</li>
+<li>Le millésime n’a pas à être redonné quand la couche vient de la chaîne : il voyage depuis <code><a href="../reference/fev_fuel_source.html">fev_fuel_source()</a></code>. Quand il est inconnu, le contrôle ne peut pas tourner — la fonction refuse si on demandait un filtrage, et avertit bruyamment sinon.</li>
+<li>Aucun intervalle de confiance n’est rendu sur l’AUC, et la doc dit pourquoi : les cellules ne sont pas des observations indépendantes, un feu est contigu, et un intervalle bâti sur le nombre de cellules serait très trop étroit.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="coût-de-lexposition-0-7-0">Coût de l’exposition<a class="anchor" aria-label="anchor" href="#co%C3%BBt-de-lexposition-0-7-0"></a></h4>
+<ul><li>Découverte reprise du projet nemeton, qui a rencontré le problème en production avec la même métrique : la fenêtre focale est exprimée en mètres mais matérialisée en cellules, donc le coût varie comme l’inverse de la puissance quatrième de la maille. <code><a href="../reference/fev_exposure.html">fev_exposure()</a></code> estime ce coût <strong>avant</strong> de commencer et propose une taille de maille, plutôt que de sembler bloqué.</li>
+<li>
+<code>filename</code> et <code>wopt</code> sont passés à <code>terra</code>, ce qui rend un traitement départemental possible par blocs.</li>
+<li>
+<strong>Test de charge documenté sur une emprise réaliste</strong>, comme le demande le brief : 6 006 km² à 25 m avec un rayon de 500 m — la taille du Var — en 61 à 83 secondes, 155 Mo de pointe, débit d’environ 170 millions d’opérations pondérées par seconde. Le test vit dans la suite, désactivé sauf <code>FIREXPOVULNR_TEST_LOAD=1</code>.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="vignette-0-7-0">Vignette<a class="anchor" aria-label="anchor" href="#vignette-0-7-0"></a></h4>
+<ul><li>
+<code><a href="../articles/firexpovulnR.html">vignette("firexpovulnR")</a></code> déroule la chaîne complète sur un paysage synthétique, sans réseau, avec les appels réels montrés à leur place dans des blocs non exécutés. Elle se termine par ce que la chaîne ne sait pas, par ordre d’importance décroissante — le sous-étage d’abord.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.6.0" id="firexpovulnr-060-2026-08-16">firexpovulnR 0.6.0 (2026-08-16)<a class="anchor" aria-label="anchor" href="#firexpovulnr-060-2026-08-16"></a></h2>
 <p>Première version numérotée. Elle couvre les phases 0 à 6 du brief de développement : l’objet et sa provenance, l’acquisition, le combustible, le danger, l’exposition et la vulnérabilité. La phase 7 — combinaison en risque, validation contre les surfaces brûlées, vignette de bout en bout — reste à faire, et le workflow cible du brief n’est donc pas encore exécutable intégralement.</p>
@@ -62,7 +97,7 @@
 <li>
 <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code> est une fusion strictement intra-registre, avec une couche de provenance par pixel. Elle est idempotente : re-fusionner ne relabellise pas les pixels déjà attribués.</li>
 <li>Les tables de correspondance vivent dans <code>data-raw/</code>, sont justifiées ligne par ligne et sont livrées en CSV surchargeables : 32 postes TFV, 44 classes CORINE de niveau 3. 4 lignes ambiguës sur 32 côté BD Forêt, 17 sur 44 côté CORINE, chacune disant où est le doute.</li>
-<li>Le millésime BD Forêt est <strong>obligatoire</strong> dans <code><a href="../reference/fev_fuel_source.html">fev_fuel_source()</a></code>. Sans lui le contrôle de biais temporel de <code>fev_validate()</code> ne pourra pas tourner ; <code>millesime = NA</code> explicite est accepté et averti.</li>
+<li>Le millésime BD Forêt est <strong>obligatoire</strong> dans <code><a href="../reference/fev_fuel_source.html">fev_fuel_source()</a></code>. Sans lui le contrôle de biais temporel de <code><a href="../reference/fev_validate.html">fev_validate()</a></code> ne pourra pas tourner ; <code>millesime = NA</code> explicite est accepté et averti.</li>
 <li>
 <code><a href="../reference/fev_fuel_weights.html">fev_fuel_weights()</a></code> livre dix-neuf poids de disponibilité qui ne viennent d’aucune publication. Ils avertissent à chaque appel et partent dans la provenance avec <code>weights_sourced = FALSE</code>.</li>
 </ul></div>

@@ -1,5 +1,80 @@
 # Changelog
 
+## firexpovulnR 0.7.0 (2026-08-16)
+
+Dernière phase du brief. La chaîne cible s’exécute désormais de bout en
+bout, et la vignette la déroule sans réseau.
+
+729 tests hors ligne, aucun échec. `R CMD check` sans erreur,
+avertissement ni note.
+
+#### Combinaison et risque
+
+- [`fev_risk()`](https://pobsteta.github.io/firexpovulnR/reference/fev_risk.md)
+  livre les trois méthodes du brief, et elles ne répondent pas à la même
+  question. `"effis_mean"` normalise puis fait la moyenne à poids égaux.
+  `"pareto"` rend le **front de Pareto** — un ensemble, pas un score :
+  les cellules qu’on ne peut améliorer sur une dimension sans dégrader
+  l’autre. `"weighted"` exige ses poids et les inscrit, faute de défaut
+  défendable.
+- Les deux premières viennent du workflow CLIMAAX, dont le carnet a été
+  lu le 2026-08-16 plutôt que paraphrasé :
+  `danger_index=(clim_norm+burn_norm)/2` et
+  `paretoset(..., sense=[max,...])` sont recopiés de son propre code.
+- La normalisation min-max par défaut **réétire** une couche déjà mise à
+  l’échelle : c’est ce que fait CLIMAAX, la doc le dit, et
+  `normalise = "none"` existe pour l’éviter.
+- Le balayage de dominance est quadratique dans le nombre de
+  combinaisons distinctes. Il travaille donc sur les tuples arrondis et
+  **refuse** au-delà d’un seuil, plutôt que de tourner une après-midi.
+
+#### Validation, et le biais temporel
+
+- [`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+  rend une AUC, une courbe ROC et la répartition observé/attendu par
+  classe de risque — cette dernière dans la forme de
+  [`fireexposuR::fire_exp_validate()`](https://docs.ropensci.org/fireexposuR/reference/fire_exp_validate.html),
+  dont les bornes par défaut sont reprises.
+- **Le contrôle de biais temporel tourne avant toute statistique de
+  skill.** Chaque feu est comparé au millésime du combustible, lu dans
+  la provenance, et la fonction avertit avec un chiffre : « 28,6 % de la
+  surface brûlée postdate le millésime de plus de 5 ans ».
+  `max_lag_years` filtre.
+- Le millésime n’a pas à être redonné quand la couche vient de la chaîne
+  : il voyage depuis
+  [`fev_fuel_source()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_source.md).
+  Quand il est inconnu, le contrôle ne peut pas tourner — la fonction
+  refuse si on demandait un filtrage, et avertit bruyamment sinon.
+- Aucun intervalle de confiance n’est rendu sur l’AUC, et la doc dit
+  pourquoi : les cellules ne sont pas des observations indépendantes, un
+  feu est contigu, et un intervalle bâti sur le nombre de cellules
+  serait très trop étroit.
+
+#### Coût de l’exposition
+
+- Découverte reprise du projet nemeton, qui a rencontré le problème en
+  production avec la même métrique : la fenêtre focale est exprimée en
+  mètres mais matérialisée en cellules, donc le coût varie comme
+  l’inverse de la puissance quatrième de la maille.
+  [`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md)
+  estime ce coût **avant** de commencer et propose une taille de maille,
+  plutôt que de sembler bloqué.
+- `filename` et `wopt` sont passés à `terra`, ce qui rend un traitement
+  départemental possible par blocs.
+- **Test de charge documenté sur une emprise réaliste**, comme le
+  demande le brief : 6 006 km² à 25 m avec un rayon de 500 m — la taille
+  du Var — en 61 à 83 secondes, 155 Mo de pointe, débit d’environ 170
+  millions d’opérations pondérées par seconde. Le test vit dans la
+  suite, désactivé sauf `FIREXPOVULNR_TEST_LOAD=1`.
+
+#### Vignette
+
+- [`vignette("firexpovulnR")`](https://pobsteta.github.io/firexpovulnR/articles/firexpovulnR.md)
+  déroule la chaîne complète sur un paysage synthétique, sans réseau,
+  avec les appels réels montrés à leur place dans des blocs non
+  exécutés. Elle se termine par ce que la chaîne ne sait pas, par ordre
+  d’importance décroissante — le sous-étage d’abord.
+
 ## firexpovulnR 0.6.0 (2026-08-16)
 
 Première version numérotée. Elle couvre les phases 0 à 6 du brief de
@@ -65,8 +140,10 @@ avertissement ni note.
   17 sur 44 côté CORINE, chacune disant où est le doute.
 - Le millésime BD Forêt est **obligatoire** dans
   [`fev_fuel_source()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_source.md).
-  Sans lui le contrôle de biais temporel de `fev_validate()` ne pourra
-  pas tourner ; `millesime = NA` explicite est accepté et averti.
+  Sans lui le contrôle de biais temporel de
+  [`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+  ne pourra pas tourner ; `millesime = NA` explicite est accepté et
+  averti.
 - [`fev_fuel_weights()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_weights.md)
   livre dix-neuf poids de disponibilité qui ne viennent d’aucune
   publication. Ils avertissent à chaque appel et partent dans la

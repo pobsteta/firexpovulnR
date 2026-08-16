@@ -13,6 +13,8 @@ fev_exposure(
   no_burn = NULL,
   lookup = NULL,
   na_rm = FALSE,
+  filename = "",
+  ...,
   quiet = FALSE
 )
 ```
@@ -60,9 +62,22 @@ Khan, S.I. et al. (2025), *Natural Hazards* 121: 16273-16295,
   of a study area, at the cost of computing a proportion over fewer
   cells than the ring contains.
 
+- filename:
+
+  Optional output path. Given one, `terra` streams the result to disk in
+  blocks instead of holding it in memory — which is what makes a
+  departmental run possible at all.
+
+- ...:
+
+  Passed to
+  [`terra::focal()`](https://rspatial.github.io/terra/reference/focal.html),
+  notably `wopt` (for `list(progress = 1)` or a compression setting) and
+  `overwrite`.
+
 - quiet:
 
-  Suppress the first-use note about the radii.
+  Suppress the first-use note about the radii and the cost estimate.
 
 ## Value
 
@@ -91,6 +106,30 @@ garrigue or maquis, and Portugal is not the Var. See
 [`fev_exposure_radii()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_radii.md)
 for what exactly is sourced. A message says this on first use in a
 session; the radius used is recorded in the provenance every time.
+
+## Cost, which is not linear in what you would expect
+
+The window is expressed in metres but materialised in cells, so it holds
+about `(2 * radius / res)^2` weights and the whole pass costs on the
+order of `1 / res^4`. Halving the cell size multiplies the work by
+sixteen.
+
+At 25 m with a 500 m radius the ring is about 1250 cells, and a French
+department of 6000 km² is 15 million of them — some 2e10 weighted
+operations. At 2 m the same radius gives a 501 x 501 window and the pass
+stops being feasible. This function estimates the count before starting
+and warns with the number and a suggested cell size, rather than
+appearing to hang.
+
+For a departmental run, pass `filename` so `terra` streams to disk in
+blocks, and `wopt = list(progress = 1)` to see it move. Measured timings
+are in the package vignette.
+
+Note that a GeoTIFF written this way defaults to single precision, which
+rounds the proportion at about the eighth decimal. That is far below
+anything the metric means, but it does mean an on-disk result and an
+in-memory one are not bit-identical; pass
+`wopt = list(datatype = "FLT8S")` if you need them to be.
 
 ## Graded exposure
 

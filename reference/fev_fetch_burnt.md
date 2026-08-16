@@ -78,8 +78,9 @@ be visible in a methods section.
 
 ## See also
 
-`fev_validate()`, which uses these to score a risk surface and runs the
-temporal-bias check against the fuel vintage.
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md),
+which uses these to score a risk surface and runs the temporal-bias
+check against the fuel vintage.
 
 ## Examples
 

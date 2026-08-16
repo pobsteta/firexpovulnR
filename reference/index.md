@@ -123,13 +123,21 @@ d’enjeux. Aucune source d’enjeux n’est imposée.
 - [`fev_vuln_stack()`](https://pobsteta.github.io/firexpovulnR/reference/fev_vuln_stack.md)
   : Combine vulnerability dimensions
 
-## Alignement des échelles
+## Combinaison, risque et validation
 
-La seule fonction du package autorisée à changer une grille. Toutes les
-autres refusent des entrées de grilles différentes et y renvoient.
+[`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
+est la seule fonction du package autorisée à changer une grille ; toutes
+les autres refusent des entrées de grilles différentes et y renvoient.
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+traite le biais temporel comme du code, pas comme une réserve de bas de
+page.
 
 - [`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
   : Put layers on a common grid, explicitly
+- [`fev_risk()`](https://pobsteta.github.io/firexpovulnR/reference/fev_risk.md)
+  : Composite fire risk
+- [`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+  : Validate a risk map against observed burnt areas
 
 ## Méthodes
 

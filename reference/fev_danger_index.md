@@ -87,7 +87,8 @@ though it is what composite indices usually do. `"geometric"` sits
 between product and mean.
 
 None of these is validated against burnt-area data here. That is
-`fev_validate()`, in phase 7.
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md),
+in phase 7.
 
 ## See also
 

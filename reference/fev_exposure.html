@@ -9,7 +9,7 @@ how much of the surrounding landscape could carry fire to it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -49,6 +49,8 @@ how much of the surrounding landscape could carry fire to it.</p>
 <span>  no_burn <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lookup <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  na_rm <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  filename <span class="op">=</span> <span class="st">""</span>,</span>
+<span>  <span class="va">...</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -99,8 +101,20 @@ of a study area, at the cost of computing a proportion over fewer cells
 than the ring contains.</p></dd>
 
 
+<dt id="arg-filename">filename<a class="anchor" aria-label="anchor" href="#arg-filename"></a></dt>
+<dd><p>Optional output path. Given one, <code>terra</code> streams the result
+to disk in blocks instead of holding it in memory — which is what makes a
+departmental run possible at all.</p></dd>
+
+
+<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
+<dd><p>Passed to <code><a href="https://rspatial.github.io/terra/reference/focal.html" class="external-link">terra::focal()</a></code>, notably <code>wopt</code> (for
+<code>list(progress = 1)</code> or a compression setting) and <code>overwrite</code>.</p></dd>
+
+
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
-<dd><p>Suppress the first-use note about the radii.</p></dd>
+<dd><p>Suppress the first-use note about the radii and the cost
+estimate.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -131,6 +145,28 @@ Iberian context. It has not been calibrated on holm oak, garrigue or maquis,
 and Portugal is not the Var. See <code><a href="fev_exposure_radii.html">fev_exposure_radii()</a></code> for what exactly is
 sourced. A message says this on first use in a session; the radius used is
 recorded in the provenance every time.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="cost-which-is-not-linear-in-what-you-would-expect">Cost, which is not linear in what you would expect<a class="anchor" aria-label="anchor" href="#cost-which-is-not-linear-in-what-you-would-expect"></a></h2>
+
+
+<p>The window is expressed in metres but materialised in cells, so it holds
+about <code>(2 * radius / res)^2</code> weights and the whole pass costs on the order of
+<code>1 / res^4</code>. Halving the cell size multiplies the work by sixteen.</p>
+<p>At 25 m with a 500 m radius the ring is about 1250 cells, and a French
+department of 6000 km² is 15 million of them — some 2e10 weighted
+operations. At 2 m the same radius gives a 501 x 501 window and the pass
+stops being feasible. This function estimates the count before starting and
+warns with the number and a suggested cell size, rather than appearing to
+hang.</p>
+<p>For a departmental run, pass <code>filename</code> so <code>terra</code> streams to disk in blocks,
+and <code>wopt = list(progress = 1)</code> to see it move. Measured timings are in the
+package vignette.</p>
+<p>Note that a GeoTIFF written this way defaults to single precision, which
+rounds the proportion at about the eighth decimal. That is far below
+anything the metric means, but it does mean an on-disk result and an
+in-memory one are not bit-identical; pass
+<code>wopt = list(datatype = "FLT8S")</code> if you need them to be.</p>
     </div>
     <div class="section level2">
     <h2 id="graded-exposure">Graded exposure<a class="anchor" aria-label="anchor" href="#graded-exposure"></a></h2>

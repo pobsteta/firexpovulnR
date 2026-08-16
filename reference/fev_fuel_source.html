@@ -13,7 +13,7 @@ vintage."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -162,7 +162,7 @@ those, the cost is quadratic in memory and in focal-window time.</p>
 <p>For <code>type = "bdforet_v2"</code> the vintage is <strong>required</strong>. BD Forêt v2 was built
 department by department between 2007 and 2018, so a stand mapped in 2008
 may have burnt in 2010 and be in another state entirely; without the vintage
-the temporal-bias check in <code>fev_validate()</code> cannot run at all. The WFS does
+the temporal-bias check in <code><a href="fev_validate.html">fev_validate()</a></code> cannot run at all. The WFS does
 not serve it and no per-department table was found (phase 2 report, section
 2 bis), so it has to come from you. Passing <code>millesime = NA</code> explicitly is
 accepted — it records "we looked and do not know", which is honest — but it

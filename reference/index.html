@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -322,9 +322,9 @@
         </dt>
         <dd>Combine vulnerability dimensions</dd>
       </dl></div><div class="section level2">
-      <h2 id="alignement-des-chelles">Alignement des échelles<a class="anchor" aria-label="anchor" href="#alignement-des-chelles"></a></h2>
+      <h2 id="combinaison-risque-et-validation">Combinaison, risque et validation<a class="anchor" aria-label="anchor" href="#combinaison-risque-et-validation"></a></h2>
 
-      <div class="section-desc"><p>La seule fonction du package autorisée à changer une grille. Toutes les autres refusent des entrées de grilles différentes et y renvoient.</p></div>
+      <div class="section-desc"><p><code><a href="../reference/fev_align.html">fev_align()</a></code> est la seule fonction du package autorisée à changer une grille ; toutes les autres refusent des entrées de grilles différentes et y renvoient. <code><a href="../reference/fev_validate.html">fev_validate()</a></code> traite le biais temporel comme du code, pas comme une réserve de bas de page.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -337,6 +337,20 @@
 
         </dt>
         <dd>Put layers on a common grid, explicitly</dd>
+
+        <dt>
+
+          <code><a href="fev_risk.html">fev_risk()</a></code>
+
+        </dt>
+        <dd>Composite fire risk</dd>
+
+        <dt>
+
+          <code><a href="fev_validate.html">fev_validate()</a></code>
+
+        </dt>
+        <dd>Validate a risk map against observed burnt areas</dd>
       </dl></div><div class="section level2">
       <h2 id="m-thodes">Méthodes<a class="anchor" aria-label="anchor" href="#m-thodes"></a></h2>
 

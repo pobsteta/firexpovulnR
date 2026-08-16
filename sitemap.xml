@@ -1,6 +1,8 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://pobsteta.github.io/firexpovulnR/404.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/LICENSE-text.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/articles/firexpovulnR.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/articles/index.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/authors.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/index.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/news/index.html</loc></url>
@@ -35,9 +37,11 @@
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_percentile.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_thresholds.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_provenance.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_risk.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_sources.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_stack.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_stack_save.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_validate.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_vuln_layer.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_vuln_stack.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/firexpovulnR-package.html</loc></url>

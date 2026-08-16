@@ -57,6 +57,8 @@ Useful links:
 
 - <https://github.com/pobsteta/firexpovulnR>
 
+- <https://pobsteta.github.io/firexpovulnR/>
+
 - Report bugs at <https://github.com/pobsteta/firexpovulnR/issues>
 
 ## Author

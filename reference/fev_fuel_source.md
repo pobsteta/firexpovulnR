@@ -123,12 +123,13 @@ in focal-window time.
 For `type = "bdforet_v2"` the vintage is **required**. BD Forêt v2 was
 built department by department between 2007 and 2018, so a stand mapped
 in 2008 may have burnt in 2010 and be in another state entirely; without
-the vintage the temporal-bias check in `fev_validate()` cannot run at
-all. The WFS does not serve it and no per-department table was found
-(phase 2 report, section 2 bis), so it has to come from you. Passing
-`millesime = NA` explicitly is accepted — it records "we looked and do
-not know", which is honest — but it is not the default, so that the
-check is never skipped by accident.
+the vintage the temporal-bias check in
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+cannot run at all. The WFS does not serve it and no per-department table
+was found (phase 2 report, section 2 bis), so it has to come from you.
+Passing `millesime = NA` explicitly is accepted — it records "we looked
+and do not know", which is honest — but it is not the default, so that
+the check is never skipped by accident.
 
 ## Rasterising polygons
 

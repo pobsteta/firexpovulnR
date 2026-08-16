@@ -79,8 +79,9 @@ may have burnt in 2010 and be in a completely different state.
 `millesime` is therefore recorded as `NA` unless you supply it, and
 nothing is inferred. Supply it when you know it —
 [`fev_fuel_source()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_source.md)
-requires it, and the temporal-bias check in `fev_validate()` cannot run
-without it.
+requires it, and the temporal-bias check in
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+cannot run without it.
 
 ## See also
 
