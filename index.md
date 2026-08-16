@@ -106,6 +106,11 @@ L’intégration continue tient quatre choses :
 | `release.yml` | Tag `vX.Y.Z` et release GitHub, pilotés par `Version:` dans `DESCRIPTION` — **seulement après un check vert** |
 | `pkgdown.yaml` | Le site de référence, et la vignette de bout en bout qui n’est montée que là |
 
+Le badge de couverture reste vide tant qu’un secret `CODECOV_TOKEN`
+n’est pas posé sur le dépôt : Codecov refuse un dépôt sans jeton même
+public, et l’envoi échoue sans faire rougir le build. Le pourcentage est
+de toute façon imprimé dans le journal du job `coverage`.
+
 Aucun test unitaire ne touche le réseau. Les tests d’intégration contre
 les API réelles (IGN, EFFIS, Copernicus) sont désactivés sauf
 `FIREXPOVULNR_TEST_NETWORK=1` : une CI rouge doit signifier une
