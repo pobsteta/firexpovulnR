@@ -1,5 +1,46 @@
 # Changelog
 
+## firexpovulnR 0.9.0 (2026-08-16)
+
+Un exemple sur données réelles, et il ne se passe pas bien — ce qui est
+le sujet.
+
+#### Article « Couchey »
+
+- [`vignette("couchey")`](https://pobsteta.github.io/firexpovulnR/articles/couchey.md)
+  déroule la chaîne complète sur **Couchey** (Côte-d’Or), territoire de
+  référence du projet voisin `nemetonshiny`, à partir de données réelles
+  : BD Forêt v2 (568 formations), CORINE 2018 (99 polygones) et une
+  surface brûlée EFFIS. Seule la météo est synthétique, faute de jeton
+  Copernicus, et l’article le dit.
+- Le terrain est l’inverse de celui pour lequel le package a été conçu :
+  chênaie, hêtraie et charmaie de plaine, avec des vignes là où un
+  exemple varois aurait de la garrigue. C’est délibéré — un exemple
+  complaisant n’apprend rien sur les limites des valeurs par défaut.
+- **Le millésime y est ambigu à 50/50** : deux campagnes BD ORTHO, 2010
+  et 2014, à 49,9 % et 50,1 % de la surface. Cas d’école de ce que
+  [`fev_bdforet_millesime()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdforet_millesime.md)
+  refuse de trancher.
+- **La validation échoue, et c’est le résultat.** L’endpoint public
+  EFFIS sert un seul feu sur 160 km² et neuf ans — 26 ha, 31 juillet
+  2020 — qui postdate le millésime prudent de dix ans. Le contrôle de
+  biais temporel rapporte 100 % de surface brûlée au-delà du seuil, et
+  `max_lag_years = 5` vide l’échantillon. La conclusion honnête n’est
+  pas un AUC mais « cette carte ne peut pas être validée avec cette
+  donnée », et l’article la formule ainsi.
+- L’AUC est montré quand même, avec la mention explicite qu’il n’a pas
+  de valeur probante ici — par omission il aurait été plus flatteur.
+
+#### Données livrées
+
+- `inst/extdata/couchey.gpkg` (1,3 Mo, six couches) est construit par
+  `data-raw/build_couchey_extract.R`, qui contacte les services réels.
+  L’article lit le disque : une documentation rouge ne doit pas être un
+  bulletin de disponibilité de l’IGN.
+- Les géométries sont simplifiées à 10 m, bien sous la grille de travail
+  de 25 m, ce qui conserve 99,89 % de la surface et ramène le fichier de
+  5,0 à 1,3 Mo. Décision d’empaquetage, pas d’analyse.
+
 ## firexpovulnR 0.8.0 (2026-08-16)
 
 Le dernier blocage du rapport de faisabilité tombe. Le millésime de la

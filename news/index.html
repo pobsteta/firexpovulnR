@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -15,7 +15,11 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/couchey.html">Couchey : la chaîne sur données réelles, hors de son terrain de conception</a></li>
+  </ul></li>
+<li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -32,6 +36,27 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.9.0" id="firexpovulnr-090-2026-08-16">firexpovulnR 0.9.0 (2026-08-16)<a class="anchor" aria-label="anchor" href="#firexpovulnr-090-2026-08-16"></a></h2>
+<p>Un exemple sur données réelles, et il ne se passe pas bien — ce qui est le sujet.</p>
+<div class="section level4">
+<h4 id="article--couchey--0-9-0">Article « Couchey »<a class="anchor" aria-label="anchor" href="#article--couchey--0-9-0"></a></h4>
+<ul><li>
+<code><a href="../articles/couchey.html">vignette("couchey")</a></code> déroule la chaîne complète sur <strong>Couchey</strong> (Côte-d’Or), territoire de référence du projet voisin <code>nemetonshiny</code>, à partir de données réelles : BD Forêt v2 (568 formations), CORINE 2018 (99 polygones) et une surface brûlée EFFIS. Seule la météo est synthétique, faute de jeton Copernicus, et l’article le dit.</li>
+<li>Le terrain est l’inverse de celui pour lequel le package a été conçu : chênaie, hêtraie et charmaie de plaine, avec des vignes là où un exemple varois aurait de la garrigue. C’est délibéré — un exemple complaisant n’apprend rien sur les limites des valeurs par défaut.</li>
+<li>
+<strong>Le millésime y est ambigu à 50/50</strong> : deux campagnes BD ORTHO, 2010 et 2014, à 49,9 % et 50,1 % de la surface. Cas d’école de ce que <code><a href="../reference/fev_bdforet_millesime.html">fev_bdforet_millesime()</a></code> refuse de trancher.</li>
+<li>
+<strong>La validation échoue, et c’est le résultat.</strong> L’endpoint public EFFIS sert un seul feu sur 160 km² et neuf ans — 26 ha, 31 juillet 2020 — qui postdate le millésime prudent de dix ans. Le contrôle de biais temporel rapporte 100 % de surface brûlée au-delà du seuil, et <code>max_lag_years = 5</code> vide l’échantillon. La conclusion honnête n’est pas un AUC mais « cette carte ne peut pas être validée avec cette donnée », et l’article la formule ainsi.</li>
+<li>L’AUC est montré quand même, avec la mention explicite qu’il n’a pas de valeur probante ici — par omission il aurait été plus flatteur.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="données-livrées-0-9-0">Données livrées<a class="anchor" aria-label="anchor" href="#donn%C3%A9es-livr%C3%A9es-0-9-0"></a></h4>
+<ul><li>
+<code>inst/extdata/couchey.gpkg</code> (1,3 Mo, six couches) est construit par <code>data-raw/build_couchey_extract.R</code>, qui contacte les services réels. L’article lit le disque : une documentation rouge ne doit pas être un bulletin de disponibilité de l’IGN.</li>
+<li>Les géométries sont simplifiées à 10 m, bien sous la grille de travail de 25 m, ce qui conserve 99,89 % de la surface et ramène le fichier de 5,0 à 1,3 Mo. Décision d’empaquetage, pas d’analyse.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.8.0" id="firexpovulnr-080-2026-08-16">firexpovulnR 0.8.0 (2026-08-16)<a class="anchor" aria-label="anchor" href="#firexpovulnr-080-2026-08-16"></a></h2>
 <p>Le dernier blocage du rapport de faisabilité tombe. Le millésime de la BD Forêt v2 est récupérable, et pas par un contournement.</p>
