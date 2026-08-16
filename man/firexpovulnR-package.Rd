@@ -44,6 +44,7 @@ directly.
 Useful links:
 \itemize{
   \item \url{https://github.com/pobsteta/firexpovulnR}
+  \item \url{https://pobsteta.github.io/firexpovulnR/}
   \item Report bugs at \url{https://github.com/pobsteta/firexpovulnR/issues}
 }
 

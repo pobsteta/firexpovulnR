@@ -21,10 +21,8 @@ home:
     href: https://github.com/pobsteta/firexpovulnR
 
 navbar:
-  # `articles` returns to this list in phase 7, when the end-to-end vignette
-  # exists. Declaring it now would put a dead menu in the navbar.
   structure:
-    left:  [reference, news]
+    left:  [articles, reference, news]
     right: [search, github]
 
 reference:
@@ -99,13 +97,23 @@ reference:
     - fev_vuln_layer
     - fev_vuln_stack
 
-  - title: "Alignement des échelles"
+  - title: "Combinaison, risque et validation"
     desc: >
-      La seule fonction du package autorisée à changer une grille. Toutes les
-      autres refusent des entrées de grilles différentes et y renvoient.
+      `fev_align()` est la seule fonction du package autorisée à changer une
+      grille ; toutes les autres refusent des entrées de grilles différentes et
+      y renvoient. `fev_validate()` traite le biais temporel comme du code, pas
+      comme une réserve de bas de page.
     contents:
     - fev_align
+    - fev_risk
+    - fev_validate
 
   - title: "Méthodes"
     contents:
     - plot.fev_stack
+
+articles:
+  - title: "Prise en main"
+    navbar: ~
+    contents:
+    - firexpovulnR

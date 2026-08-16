@@ -14,7 +14,7 @@ authors:
     given-names: "Pascal"
     email: "pascal.obstetar@gmail.com"
     orcid: "https://orcid.org/0009-0003-5403-1187"
-version: "0.6.0"
+version: "0.7.0"
 date-released: "2026-08-16"
 url: "https://pobsteta.github.io/firexpovulnR/"
 repository-code: "https://github.com/pobsteta/firexpovulnR"

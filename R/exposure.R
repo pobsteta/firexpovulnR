@@ -32,6 +32,28 @@
 #' sourced. A message says this on first use in a session; the radius used is
 #' recorded in the provenance every time.
 #'
+#' @section Cost, which is not linear in what you would expect:
+#' The window is expressed in metres but materialised in cells, so it holds
+#' about `(2 * radius / res)^2` weights and the whole pass costs on the order of
+#' `1 / res^4`. Halving the cell size multiplies the work by sixteen.
+#'
+#' At 25 m with a 500 m radius the ring is about 1250 cells, and a French
+#' department of 6000 km² is 15 million of them — some 2e10 weighted
+#' operations. At 2 m the same radius gives a 501 x 501 window and the pass
+#' stops being feasible. This function estimates the count before starting and
+#' warns with the number and a suggested cell size, rather than appearing to
+#' hang.
+#'
+#' For a departmental run, pass `filename` so `terra` streams to disk in blocks,
+#' and `wopt = list(progress = 1)` to see it move. Measured timings are in the
+#' package vignette.
+#'
+#' Note that a GeoTIFF written this way defaults to single precision, which
+#' rounds the proportion at about the eighth decimal. That is far below
+#' anything the metric means, but it does mean an on-disk result and an
+#' in-memory one are not bit-identical; pass
+#' `wopt = list(datatype = "FLT8S")` if you need them to be.
+#'
 #' @section Graded exposure:
 #' Passing a [fev_fuel_availability()] layer instead of a binary mask gives a
 #' weighted exposure: each surrounding cell contributes its availability rather
@@ -52,7 +74,13 @@
 #'   them. `FALSE` matches `fireexposuR`; `TRUE` is more forgiving at the edges
 #'   of a study area, at the cost of computing a proportion over fewer cells
 #'   than the ring contains.
-#' @param quiet Suppress the first-use note about the radii.
+#' @param filename Optional output path. Given one, `terra` streams the result
+#'   to disk in blocks instead of holding it in memory — which is what makes a
+#'   departmental run possible at all.
+#' @param ... Passed to [terra::focal()], notably `wopt` (for
+#'   `list(progress = 1)` or a compression setting) and `overwrite`.
+#' @param quiet Suppress the first-use note about the radii and the cost
+#'   estimate.
 #'
 #' @return A `fev_exposure_layer` holding a `SpatRaster` named `exposure`.
 #'
@@ -81,6 +109,8 @@ fev_exposure <- function(fuel,
                          no_burn = NULL,
                          lookup = NULL,
                          na_rm = FALSE,
+                         filename = "",
+                         ...,
                          quiet = FALSE) {
   type <- match.arg(type)
   radii <- fev_exposure_radii()
@@ -121,6 +151,8 @@ fev_exposure <- function(fuel,
     ), class = "fev_extent_too_small", .envir = environment())
   }
 
+  fev_check_focal_cost(haz, n_ring, res, radius, quiet)
+
   if (!isTRUE(quiet)) {
     fev_once("exposure_radii", fev_inform(c(
       "Exposure radii come from Canadian work (Beverly et al. 2010, 2021).",
@@ -135,13 +167,18 @@ fev_exposure <- function(fuel,
   }
 
   weights <- w / n_ring
-  exposure <- terra::focal(haz, w = weights, fun = "sum", na.rm = na_rm)
+  exposure <- terra::focal(haz, w = weights, fun = "sum", na.rm = na_rm, ...)
   # A sum of n weights of 1/n does not land exactly on 1 in floating point: a
   # fully burnable window comes back as 1 + 7e-16. The result is a proportion
   # by construction, so the excess is noise -- but it is enough to trip the
   # 0-1 checks in fev_danger_index() and fev_directional() further down the
   # chain. fireexposuR hides the same thing by rounding to four decimals.
-  exposure <- terra::clamp(exposure, 0, 1, values = TRUE)
+  #
+  # `filename` is honoured here rather than on the focal call: clamping after
+  # writing would pull the whole result back into memory and undo the point of
+  # streaming it out.
+  exposure <- terra::clamp(exposure, 0, 1, values = TRUE, filename = filename,
+                           ...)
   names(exposure) <- "exposure"
 
   if (!is.null(no_burn)) {
@@ -163,6 +200,48 @@ fev_exposure <- function(fuel,
   new_fev_layer(exposure, role = "exposure", provenance = prov,
                 units = "proportion of surrounding fuel, 0-1",
                 class = "fev_exposure_layer")
+}
+
+#' Refuse to start a focal pass that will not finish today
+#'
+#' The window is expressed in metres but materialised in cells, so its weight
+#' count grows as `(2 * radius / res)^2` and the total work as `1 / res^4`. That
+#' is not a subtlety: on the nemeton project the same metric, run at 2 m with a
+#' 500 m radius, sat at 51% of one core for over 75 minutes with no I/O and no
+#' memory pressure -- a 501 x 501 window over five million cells. The fix there
+#' was to bound the grid of the exposure step alone, leaving the finer grid to
+#' the slope and topography indicators that have a linear cost.
+#'
+#' So the estimate is given before the pass rather than after it, and the advice
+#' names the specific remedy rather than "this may be slow".
+#'
+#' @noRd
+fev_check_focal_cost <- function(haz, n_ring, res, radius, quiet) {
+  ops <- as.numeric(terra::ncell(haz)) * n_ring
+  # Measured throughput when this was written is 180-210 million weighted
+  # operations per second, so this threshold is about five minutes. A whole
+  # department at 25 m costs 1.2e10 -- 83 seconds -- and stays quiet, because a
+  # departmental run is the normal case and a warning on it would be noise.
+  target <- 5e10
+  if (ops < target || isTRUE(quiet)) {
+    return(invisible(ops))
+  }
+  # The cell size at which the same extent would cost about `target`. Both
+  # ncell and the window scale as res^-2, so the total goes as res^-4 and the
+  # inversion is res * (ops / target)^(1/4).
+  suggested <- signif(res * (ops / target)^(1 / 4), 2)
+  fev_warn(c(
+    "This focal pass is about {.val {signif(ops / 1e9, 3)}} billion weighted \\
+     operations.",
+    i = "The window is {n_ring} cells at {.val {signif(res, 6)}} m for a \\
+         radius of {.val {radius}} m. Its cost grows as the fourth power of \\
+         the inverse cell size, so halving {.arg res} multiplies this by 16.",
+    i = "Consider running the exposure step on a grid of about \\
+         {.val {suggested}} m and keeping the fine grid for the layers whose \\
+         cost is linear in cells.",
+    i = "Pass {.code quiet = TRUE} once you have decided."
+  ), class = "fev_focal_cost", .envir = environment())
+  invisible(ops)
 }
 
 #' An annulus weight matrix, matching fireexposuR cell for cell

@@ -1,0 +1,356 @@
+---
+title: "Chaîne complète : du combustible au risque validé"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Chaîne complète : du combustible au risque validé}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.2,
+  dpi = 96
+)
+set.seed(1)
+```
+
+```{r libs, message = FALSE}
+library(firexpovulnR)
+library(terra)
+library(sf)
+```
+
+Cette vignette déroule la chaîne complète, du combustible au risque validé,
+**sans réseau**. Les sources réelles sont montrées à leur place, dans des blocs
+non exécutés ; le paysage utilisé ici est synthétique, pour que la vignette soit
+rejouable partout et rapide à construire.
+
+Elle sert aussi à dire, à chaque étape, ce qui est sourcé et ce qui ne l'est
+pas. Le package impose une seule chose : que ce partage soit lisible.
+
+## 1. Le paysage d'étude
+
+On fabrique un massif de 5 km de côté : une pinède au sud, une chênaie verte
+au centre, du maquis à l'est, de l'eau au nord-ouest.
+
+```{r landscape}
+rect <- function(x1, x2, y1, y2) {
+  st_polygon(list(cbind(c(x1, x2, x2, x1, x1), c(y1, y1, y2, y2, y1))))
+}
+
+bdforet <- st_sf(
+  code_tfv = c("FF2-57-57", "FF1G06-06"),   # pin d'Alep, chêne vert
+  geometry = st_sfc(rect(0, 5000, 0, 2000), rect(1500, 3500, 2000, 3500),
+                    crs = 2154)
+)
+
+corine <- st_sf(
+  code_18 = c("323", "512"),                 # sclérophylles, plans d'eau
+  geometry = st_sfc(rect(3500, 5000, 2000, 5000), rect(0, 1500, 3500, 5000),
+                    crs = 2154)
+)
+
+aoi <- st_as_sf(st_sfc(rect(0, 5000, 0, 5000), crs = 2154))
+```
+
+En production, ces deux couches viennent des services :
+
+```{r fetch, eval = FALSE}
+bdforet <- fev_data(fev_fetch_bdforet(aoi, millesime = 2014, dept = "83"))
+corine  <- fev_data(fev_fetch_corine(aoi, year = 2018))
+```
+
+## 2. Combustible
+
+`fev_fuel_source()` rasterise sur une grille calée, à une résolution qui est un
+paramètre explicite. Le millésime de la BD Forêt est **obligatoire** : sans lui,
+le contrôle de biais temporel de la section 7 ne peut pas tourner.
+
+```{r fuel}
+primaire <- fev_fuel_source(bdforet, type = "bdforet_v2", res = 25,
+                            aoi = aoi, millesime = 2014)
+auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
+                              aoi = aoi, millesime = 2018)
+
+fuel <- fev_fuel_merge(primaire, auxiliaire)
+fuel
+```
+
+La fusion est hiérarchique et laisse une trace : la couche `source` dit, pour
+chaque pixel, de quel jeu de données vient sa classe. Sans elle, un pixel de
+25 m issu de la BD Forêt et un pixel rééchantillonné depuis une unité CORINE de
+25 ha se ressemblent et ne veulent pas dire la même chose.
+
+```{r merge-summary}
+summary(fuel)
+```
+
+Les tables de correspondance sont justifiées ligne par ligne, et 4 des 32 lignes
+de la BD Forêt comme 17 des 44 de CORINE sont marquées ambiguës :
+
+```{r lookup}
+clc <- fev_fuel_lookup("clc")
+head(clc[clc$confidence == "ambiguous", c("code", "label", "notes")], 3)
+```
+
+De là viennent le masque brûlable et la disponibilité pondérée. **Les poids ne
+sont sourcés nulle part** : ce sont une convention du package, et la fonction le
+dit à chaque appel.
+
+```{r binary}
+brulable <- fev_fuel_binary(fuel)
+poids <- fev_fuel_weights(quiet = TRUE)   # quiet ici seulement : voir ?fev_fuel_weights
+dispo <- fev_fuel_availability(fuel, weights = poids)
+```
+
+```{r plot-fuel, fig.height = 3.4}
+par(mfrow = c(1, 2), mar = c(2, 2, 2, 4))
+plot(fev_data(brulable), main = "Brûlable")
+plot(fev_data(dispo), main = "Disponibilité")
+```
+
+## 3. Exposition
+
+L'anneau focal reproduit la géométrie de `fireexposuR::fire_exp()`, cellule
+évaluée exclue. Les rayons viennent de travaux canadiens ; la métrique a été
+validée au Portugal, le rayon ne l'est pas sur chêne vert ou maquis.
+
+```{r exposure}
+expo <- fev_exposure(brulable, radius = 500, type = "ember", quiet = TRUE)
+expo
+```
+
+```{r plot-expo, fig.height = 3.6}
+par(mar = c(2, 2, 2, 4))
+plot(fev_data(expo), main = "Exposition, rayon 500 m")
+```
+
+Depuis un enjeu ponctuel, `fev_directional()` répond à une autre question : d'où
+un feu pourrait-il arriver.
+
+```{r directional}
+maison <- c(2500, 2500)
+dir <- fev_directional(expo, point = maison,
+                       seg_lengths = c(600, 600, 600), interval = 10)
+dir
+```
+
+## 4. Danger météorologique
+
+Le cœur méthodologique est la calibration en percentiles : un seuil FWI absolu
+redessine surtout la climatologie, alors qu'un rang percentile dit la même chose
+dans le Var et en Bretagne.
+
+```{r fwi-series}
+# Série journalière synthétique sur une grille kilométrique.
+grille_meteo <- rast(nrows = 5, ncols = 5, xmin = 0, xmax = 5000,
+                     ymin = 0, ymax = 5000, crs = "EPSG:2154", nlyr = 730)
+values(grille_meteo) <- matrix(
+  abs(rnorm(25 * 730, mean = 15, sd = 12)), nrow = 25
+)
+time(grille_meteo) <- seq(as.Date("2019-01-01"), by = "day", length.out = 730)
+```
+
+En production, la série vient du produit historique CEMS :
+
+```{r fetch-fwi, eval = FALSE}
+fwi <- fev_fetch_fwi(aoi, period = c("1991-01-01", "2020-12-31"))
+```
+
+```{r percentile, message = FALSE, warning = FALSE}
+danger_pct <- fev_fwi_percentile(grille_meteo, ref_period = c(2019, 2020))
+danger_pct
+```
+
+Les deux jeux de seuils publiés diffèrent d'un facteur trois, et une carte
+classée ne dit pas lequel l'a produite — c'est pourquoi `fev_danger_class()`
+l'inscrit dans la provenance.
+
+```{r classes}
+fev_fwi_classes()[, c("class", "lower", "upper")]
+fev_fwi_classes("caliver_europe")[, c("class", "lower", "upper")]
+```
+
+## 5. Le décalage d'échelle
+
+Le danger est ici kilométrique et l'exposition décamétrique. C'est le point le
+plus conséquent de toute la chaîne, et il passe par une seule fonction, qui
+avertit et journalise.
+
+```{r align}
+dernier_jour <- fev_data(danger_pct)[[terra::nlyr(fev_data(danger_pct))]]
+pile <- fev_align(danger = dernier_jour, disponibilite = fev_data(dispo),
+                  exposition = fev_data(expo))
+pile
+```
+
+`fev_align()` est la **seule** fonction du package autorisée à changer une
+grille. Toutes les autres refusent des entrées de grilles différentes et y
+renvoient. Le rapport d'échelle part dans la provenance :
+
+```{r align-prov}
+etapes <- fev_provenance(pile)$steps
+etapes[[length(etapes)]]$params[c("scale_ratio", "cells_per_coarse_cell",
+                                  "direction", "methods")]
+```
+
+## 6. Vulnérabilité et risque
+
+Aucune source d'enjeux n'est imposée. Ici, une densité bâtie et un habitat
+protégé, tous deux synthétiques.
+
+```{r vuln}
+gabarit <- pile$exposition
+
+population <- rast(gabarit)
+values(population) <- 0
+population[80:120, 80:120] <- 500      # un village
+
+natura <- rast(gabarit)
+values(natura) <- 0
+natura[1:60, 120:200] <- 1             # un site protégé
+
+vuln <- fev_vuln_stack(
+  humaine = fev_vuln_layer(population, method = "log", name = "pop"),
+  ecologique = fev_vuln_layer(natura, method = "minmax", name = "n2000"),
+  weights = c(0.6, 0.4)
+)
+```
+
+Le danger composite croise météo et combustible ; le risque croise danger et
+vulnérabilité.
+
+```{r risk, warning = FALSE}
+danger <- fev_danger_index(pile$danger, pile$disponibilite,
+                           normalise = "percentile")
+
+risque <- fev_risk(danger, vuln, normalise = "none")
+```
+
+`method = "pareto"` fait autre chose, et c'est ce que fait réellement le
+workflow CLIMAAX : il rend un **ensemble**, pas un score — les cellules qu'on ne
+peut améliorer sur une dimension sans dégrader l'autre.
+
+```{r pareto, warning = FALSE}
+front <- fev_risk(danger, vuln, method = "pareto", normalise = "none")
+global(fev_data(front), "sum", na.rm = TRUE)
+```
+
+```{r plot-risk, fig.height = 3.4}
+par(mfrow = c(1, 2), mar = c(2, 2, 2, 4))
+plot(fev_data(risque), main = "Risque (effis_mean)")
+plot(fev_data(front), main = "Front de Pareto")
+```
+
+## 7. Validation, et le biais temporel
+
+C'est ici que le millésime sert. Chaque feu est comparé à la date du
+combustible, et la fonction dit avec un chiffre quelle part de la surface brûlée
+postdate ce millésime.
+
+```{r fires}
+feux <- st_sf(
+  FIREDATE = c("2016-08-02", "2022-07-14"),
+  geometry = st_sfc(rect(200, 2200, 200, 1400),
+                    rect(3600, 4900, 2200, 3400), crs = 2154)
+)
+```
+
+En production :
+
+```{r fetch-burnt, eval = FALSE}
+feux <- fev_data(fev_fetch_burnt(aoi, period = c("2016", "2023")))
+```
+
+```{r validate}
+val <- fev_validate(risque, feux, millesime = 2014)
+val
+```
+
+Le millésime n'a pas eu besoin d'être redonné quand la couche vient de la
+chaîne : il voyage dans la provenance depuis `fev_fuel_source()`. Et si on veut
+écarter les feux qui postdatent trop le combustible :
+
+```{r validate-filtered}
+val_filtre <- fev_validate(risque, feux, millesime = 2014, max_lag_years = 5)
+val_filtre$temporal$table
+```
+
+```{r plot-validate, fig.height = 3.8}
+plot(val)
+```
+
+## 8. Provenance
+
+Tout ce qui précède est rejouable parce que chaque paramètre utilisé — y
+compris ceux qui n'ont jamais été tapés — est écrit au moment où il sert.
+
+```{r provenance}
+prov <- fev_provenance(pile)
+vapply(prov$steps, function(s) s$fun, character(1))
+```
+
+```{r provenance-yaml, eval = FALSE}
+fev_provenance(pile, file = "provenance.yml")
+```
+
+## Ce que la chaîne ne sait pas
+
+Quatre limites, par ordre d'importance décroissante.
+
+**Le sous-étage.** Ni CORINE ni la BD Forêt ne décrivent la strate basse ni la
+charge de combustible. Une futaie de chêne vert avec un sous-bois dense et la
+même sans sous-bois sont **identiques** dans les deux bases, alors que la
+propagation de surface en dépend directement. C'est la principale faiblesse
+méthodologique du package, et c'est ce que le LiDAR HD permettra de lever
+(phase 8) — le registre continu de `fev_fuel_source()` existe déjà pour
+l'accueillir.
+
+**Les poids de disponibilité.** Dix-neuf nombres qui ne viennent d'aucune
+publication. L'ordre est défendable, les valeurs sont rondes et non mesurées.
+Elles partent dans la provenance avec `weights_sourced = FALSE`.
+
+**Les rayons d'exposition.** Canadiens à l'origine, avec une validation
+portugaise de la métrique (Khan et al. 2025) mais aucune calibration sur chêne
+vert, garrigue ou maquis.
+
+**Le décalage d'échelle.** Descendre un FWI de 25 km sur une grille de 25 m
+ajoute de la résolution, pas de l'information. `fev_align()` le dit à chaque
+fois et l'inscrit ; la carte, elle, ne le dira pas à votre lecteur.
+
+## Coût, sur une emprise réelle
+
+La fenêtre focale est exprimée en mètres mais matérialisée en cellules : son
+coût varie comme l'inverse de la puissance quatrième de la taille de maille.
+Diviser la résolution par deux multiplie le travail par seize.
+
+Mesures sur cette machine, combustible aléatoire, rayon 500 m :
+
+| Emprise | Résolution | Cellules | Fenêtre | Temps | Pointe mémoire |
+|---|---|---|---|---|---|
+| 100 km² | 25 m | 160 000 | 1 256 | 1,0 s | — |
+| 400 km² | 25 m | 640 000 | 1 256 | 4,5 s | — |
+| **6 006 km²** (un département) | 25 m | 9 610 000 | 1 256 | **61 à 83 s** | 155 Mo |
+
+L'écart sur la dernière ligne est la variation d'une exécution à l'autre sur la
+même machine, pas deux mesures différentes : c'est la largeur honnête d'un
+chronométrage unique. Le débit mesuré tourne autour de 170 millions
+d'opérations pondérées par seconde.
+
+Un département tient donc en une minute environ, en écrivant le résultat par
+blocs :
+
+```{r load, eval = FALSE}
+expo <- fev_exposure(brulable, radius = 500,
+                     filename = "exposition_var.tif",
+                     wopt = list(progress = 1))
+```
+
+À 2 m en revanche — la résolution d'un MNT LiDAR — la fenêtre passe à
+501 × 501 et le même département demande environ mille fois plus de travail.
+`fev_exposure()` estime ce coût avant de commencer et propose une taille de
+maille, plutôt que de sembler bloqué.
