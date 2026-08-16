@@ -31,6 +31,10 @@ data-raw/downloads/
 *.tif
 *.tiff
 *.gpkg
+# ... but the shipped reference extract is versioned: it is what makes the
+# Couchey article runnable without a network. Rebuilt by
+# data-raw/build_couchey_extract.R.
+!inst/extdata/couchey.gpkg
 *.shp
 *.shx
 *.dbf
