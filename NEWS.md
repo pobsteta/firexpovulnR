@@ -1,3 +1,25 @@
+# firexpovulnR 0.9.1 (2026-08-16)
+
+### L'incendie du 29 juillet 2026 à Couchey
+
+* L'extrait Couchey est reconstruit sur la période 2016-2026 et contient
+  désormais **trois** incendies, dont celui qui a brûlé la commune elle-même :
+  **124 ha, déclaré le 29 juillet 2026 à 13 h 42, éteint le lendemain à 2 h 15**.
+  `PERCNA2K = 100` — la totalité en site Natura 2000 — et l'occupation du sol
+  brûlée est à 60 % de feuillus et 17 % de forêt mixte, c'est-à-dire le
+  combustible que les poids par défaut du package classent en bas de leur
+  échelle.
+* L'emprise passe de 160 à 292 km² pour couvrir les trois feux, ce qui fait
+  entrer un second département : le millésime y compte maintenant **trois**
+  campagnes candidates, 2007, 2010 et 2014, à un tiers de surface chacune.
+* Le contrôle de biais temporel n'a jamais été aussi net : **100 % de la
+  surface brûlée postdate le millésime de plus de cinq ans**, et l'incendie de
+  Couchey de dix-neuf ans. L'article conclut donc que la carte ne peut pas être
+  validée avec cette donnée, plutôt que de publier un AUC.
+* Les attributs EFFIS utiles sont conservés dans l'extrait — `COMMUNE`,
+  `CLASS`, `PERCNA2K` et la ventilation par occupation du sol — pour que
+  l'article n'affirme rien qu'il ne puisse sourcer.
+
 # firexpovulnR 0.9.0 (2026-08-16)
 
 Un exemple sur données réelles, et il ne se passe pas bien — ce qui est le

@@ -38,11 +38,20 @@
 #
 # Fetched 2026-08-16:
 #   commune      ADMINEXPRESS-COG.2021, Couchey (21200), 1267 ha
-#   study_area   the commune and the 2020 fire, buffered 1.5 km: 12.6 x 12.6 km
-#   bdforet_v2   568 vegetation formations, IGN Géoplateforme WFS
-#   clc_2018     99 land cover polygons, same WFS
-#   burnt_areas  1 fire, 2020-07-31, 26 ha, EFFIS -- the only one the public
-#                endpoint serves within 20 km
+#   study_area   the commune and every fire, buffered 1.5 km: 12.6 x 23.1 km
+#   bdforet_v2   vegetation formations, IGN Géoplateforme WFS
+#   clc_2018     land cover polygons, same WFS
+#   burnt_areas  3 fires, EFFIS, everything the public endpoint serves within
+#                20 km of the commune:
+#                  2020-07-31   26 ha  Velars-sur-Ouche
+#                  2026-07-08   41 ha  Nuits-Saint-Georges
+#                  2026-07-29  124 ha  COUCHEY -- 100% Natura 2000,
+#                                      60% broadleaf, contained in ~12 h
+#
+# The 2026-07-29 fire is the reason this extract was rebuilt. It burnt the
+# commune itself six weeks before this script last ran, which makes the
+# temporal bias concrete rather than illustrative: the fuel layer under it
+# dates from a 2010 or 2014 aerial survey.
 #
 # Geometries are simplified to a 10 m tolerance, which keeps 99.89% of the
 # mapped area and is well below the 25 m working grid of the article. That is
@@ -61,7 +70,8 @@ stopifnot("run from the package root" = file.exists("DESCRIPTION"))
 
 WFS <- "https://data.geopf.fr/wfs/ows"
 TOLERANCE <- 10          # metres, well under the 25 m working grid
-BUFFER <- 1500           # metres of margin around commune + fire
+BUFFER <- 1500           # metres of margin around commune + fires
+PERIOD <- c("2016", "2026")
 OUT <- file.path("inst", "extdata", "couchey.gpkg")
 
 # --- the commune ------------------------------------------------------------
@@ -83,14 +93,19 @@ message(sprintf("commune: %s (%s), %.0f ha", commune$nom, commune$insee_com,
 # Searched over a 20 km buffer because EFFIS only maps fires above roughly
 # 30 ha and Burgundy has few of them: over the commune alone there is nothing.
 around <- st_buffer(st_geometry(commune), 20000)
-burnt <- fev_data(fev_fetch_burnt(around, period = c("2016", "2024"),
-                                  cache = FALSE))
+burnt <- fev_data(fev_fetch_burnt(around, period = PERIOD, cache = FALSE))
 message(sprintf("fires within 20 km: %d", nrow(burnt)))
+print(sf::st_drop_geometry(burnt)[, c("fire_date", "area_ha", "COMMUNE")])
 
 # --- the study area ---------------------------------------------------------
+# Every fire is kept, not only the ones near the commune: a validation sample
+# of one is no sample at all, and the neighbouring fires sit on the same Côte
+# with the same fuel.
 study <- st_as_sf(st_as_sfc(st_bbox(
-  st_buffer(st_union(st_geometry(burnt), st_geometry(commune)), BUFFER)
+  st_buffer(st_union(st_union(st_geometry(burnt)), st_geometry(commune)),
+            BUFFER)
 )))
+message(sprintf("study area: %.0f km2", as.numeric(st_area(study)) / 1e6))
 
 # --- fuel -------------------------------------------------------------------
 bdforet <- fev_data(fev_fetch_bdforet(study, millesime = "auto",
@@ -120,7 +135,14 @@ st_write(simplify(bdforet[, c("code_tfv", "tfv_g11", "essence")]),
          OUT, layer = "bdforet_v2", append = TRUE, quiet = TRUE)
 st_write(simplify(corine[, "code_18"]),
          OUT, layer = "clc_2018", append = TRUE, quiet = TRUE)
-st_write(burnt[, c("FIREDATE", "fire_date", "fire_year", "area_ha")],
+# COMMUNE is what identifies the Couchey fire among the three, PERCNA2K says
+# it burnt entirely inside a Natura 2000 site, and the land-cover shares say
+# what burnt. All are EFFIS's own attributes, so they cost nothing to keep and
+# save the article from asserting anything it cannot source.
+burnt_cols <- c("FIREDATE", "FINALDATE", "fire_date", "fire_year", "area_ha",
+                "COMMUNE", "PROVINCE", "CLASS", "PERCNA2K",
+                "BROADLEA", "CONIFER", "MIXED", "OTHERNATLC", "AGRIAREAS")
+st_write(burnt[, intersect(burnt_cols, names(burnt))],
          OUT, layer = "burnt_areas", append = TRUE, quiet = TRUE)
 st_write(st_sf(as.data.frame(unclass(millesime)),
                geometry = st_sfc(st_point(c(NA_real_, NA_real_)), crs = 2154)),
