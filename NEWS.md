@@ -1,3 +1,20 @@
+# firexpovulnR 0.9.3 (2026-08-17)
+
+* Vignette Couchey : une section explique les grands rectangles visibles sur la
+  carte de risque. Ce ne sont pas des dalles de calcul mal raccordées — les
+  trois couches sont sur exactement la même grille de 25 m, et `fev_risk()`
+  aurait refusé sinon. Ce sont les **mailles de la grille météo**, 3,2 × 3,9 km,
+  descendues à 25 m au plus proche voisin : un rapport de 126 pour 1. Le
+  bilinéaire aurait lissé l'escalier en dessinant une variation que la donnée
+  n'a jamais mesurée.
+* La section ajoute la comparaison qui remet l'échelle en place : avec le vrai
+  produit CEMS à 0,25°, les mailles font environ 19 × 28 km et **toute l'emprise
+  de l'étude tiendrait dans une seule**. La carte ne serait alors plus pavée du
+  tout, ce qui est le même aveu sous une forme moins visible.
+* Un graphique côte à côte montre le danger météo et la disponibilité en
+  combustible à la même résolution, pour que la différence de contenu soit
+  lisible.
+
 # firexpovulnR 0.9.2 (2026-08-17)
 
 * Vignette Couchey : les périmètres d'incendie sont tracés en **rouge** et non

@@ -212,6 +212,49 @@ plot(st_geometry(commune), add = TRUE, border = "white", lwd = 2)
 plot(st_geometry(feux), add = TRUE, border = "red", lwd = 2)
 ```
 
+### Les dalles rectangulaires sont la grille météo, et elles sont voulues
+
+La carte ci-dessus est visiblement pavée de grands rectangles. Ce n'est **pas**
+un défaut d'harmonisation des grilles : `fev_align()` a mis les trois couches
+sur exactement la même grille de 25 m, et `fev_risk()` aurait refusé sinon.
+
+Ces dalles sont le **contenu** de la couche de danger, pas un artefact
+d'assemblage. La grille météo synthétique de cette vignette fait 6 × 4
+cellules :
+
+```{r echelle}
+c(maille_meteo_m = round(res(meteo)[1]),
+  maille_combustible_m = res(pile$exposition)[1],
+  rapport = round(res(meteo)[1] / res(pile$exposition)[1]))
+```
+
+Une maille météo de 3,2 km recouvre donc environ **126 pixels de combustible
+dans chaque direction**. En les descendant à 25 m, `fev_align()` utilise le plus
+proche voisin — délibérément :
+
+```{r plot-danger, fig.height = 4.6}
+par(mfrow = c(1, 2), mar = c(2, 2, 2, 4))
+plot(pile$danger, main = "Danger météo à 25 m")
+plot(fev_data(dispo), main = "Disponibilité en combustible")
+```
+
+À gauche, la météo telle qu'elle est réellement résolue. À droite, le
+combustible. Le bilinéaire aurait dessiné un dégradé lisse entre les centres de
+mailles — plus joli, et représentant une variation que la donnée n'a jamais
+mesurée. Le plus proche voisin laisse voir l'escalier, qui est ce que la donnée
+dit vraiment.
+
+Et il faut lire ces dalles comme une version **atténuée** du problème. Avec le
+vrai produit CEMS à 0,25°, les mailles font environ 19 × 28 km : toute cette
+emprise de 12,6 × 23,1 km tiendrait dans **une seule** d'entre elles. La carte
+de risque ne serait alors plus pavée du tout — elle serait modulée
+uniformément par une valeur météo unique, ce qui est le même aveu sous une
+forme moins visible.
+
+C'est pour cela que `fev_align()` inscrit le rapport d'échelle dans la
+provenance et avertit à chaque appel : descendre le danger sur la grille du
+combustible ajoute de la résolution, pas de l'information.
+
 ## L'incendie du 29 juillet 2026
 
 ```{r fires}
