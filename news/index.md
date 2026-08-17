@@ -1,5 +1,48 @@
 # Changelog
 
+## firexpovulnR 0.13.0 (2026-08-17)
+
+#### L’AUC publié était `NA`, par débordement d’entier
+
+- [`sum()`](https://rdrr.io/r/base/sum.html) d’un vecteur logique
+  renvoie un **entier**, donc `n1 * n0` et `n1 * (n1 + 1)` dans
+  `fev_auc()` débordaient l’entier 32 bits. Avec un demi- million de
+  cellules non brûlées, cela arrive au-delà d’environ **4 400 cellules
+  brûlées — 275 ha à 25 m**, seuil que tout échantillon de feu réel
+  franchit. R répond `NA` sans erreur.
+- Conséquence concrète :
+  [`vignette("maures")`](https://pobsteta.github.io/firexpovulnR/articles/maures.md)
+  **publiait `NA` comme AUC**. Couchey, dont les feux totalisent environ
+  150 ha, passait juste sous le seuil, ce qui explique que le défaut
+  soit resté invisible. Corrigé en calculant en double ; l’AUC réel des
+  Maures est **0,53**.
+- La méthode [`print()`](https://rdrr.io/r/base/print.html) faisait
+  `if (x$auc < 0.55)`, or `if (NA < 0.55)` est une erreur et non `FALSE`
+  : afficher l’objet échouait donc précisément sur ceux qu’il fallait
+  inspecter. Gardé, et un AUC non fini est désormais signalé comme une
+  validation *ratée*, pas réussie.
+
+#### Article « Les Maures » — la carte de risque manquait
+
+- `risque` était calculé puis utilisé seulement par
+  [`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+  : la **carte de risque composite n’était jamais tracée**. Elle l’est
+  désormais, avec les onze périmètres d’incendie et les deux placettes
+  LiDAR.
+- La carte est cohérente — risque moyen 0,32 sur combustible brûlable
+  contre 0,05 en dehors, un facteur 6,5.
+- Et la conclusion est plus dure qu’avant, parce qu’elle a maintenant un
+  chiffre : AUC 0,53, ratios par classe 0,93 / 1,05 / 1,00. La carte ne
+  distingue pas ce qui a brûlé de ce qui n’a pas brûlé. Ce n’est pas un
+  échec de la météo, qui place le jour du feu premier sur 1 096 jours —
+  c’est ce qu’il advient quand on module un danger juste par un
+  combustible qui a treize ans de retard.
+- Les disques blancs des deux cartes sont documentés : **18 cellules non
+  cartographiées** aux Maures (42 à Couchey), esquilles de rastérisation
+  sur les liserés entre polygones CORINE, amplifiées par la fenêtre
+  focale de 500 m qui propage tout vide. 11,8 % de la carte des Maures,
+  17,5 % de celle de Couchey.
+
 ## firexpovulnR 0.12.1 (2026-08-17)
 
 #### Correctif : les tests réseau ne tournaient pas là où on croyait

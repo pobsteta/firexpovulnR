@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -400,6 +400,22 @@ hectares ont brûlé.</p>
 <span><span class="va">vuln</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_vuln_layer.html">fev_vuln_layer</a></span><span class="op">(</span><span class="va">pile</span><span class="op">$</span><span class="va">exposition</span>, method <span class="op">=</span> <span class="st">"percentile_rank"</span>,</span>
 <span>                       name <span class="op">=</span> <span class="st">"expo"</span><span class="op">)</span></span>
 <span><span class="va">risque</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_risk.html">fev_risk</a></span><span class="op">(</span><span class="va">danger</span>, <span class="va">vuln</span>, normalise <span class="op">=</span> <span class="st">"none"</span><span class="op">)</span></span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">risque</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Risque composite (effis_mean)"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_geometry</a></span><span class="op">(</span><span class="va">feux</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, border <span class="op">=</span> <span class="st">"red"</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_geometry</a></span><span class="op">(</span><span class="va">carres</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, border <span class="op">=</span> <span class="st">"white"</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
+<p><img src="maures_files/figure-html/plot-risk-1.png" class="r-plt" alt="" width="672"></p>
+<p>Le jaune est le maquis continu, les taches sombres les trouées — le
+risque moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors,
+un facteur 6,5. Les périmètres rouges sont les onze incendies, les deux
+carrés blancs les placettes LiDAR.</p>
+<p>Les disques blancs ne sont pas des données manquantes du terrain : ce
+sont <strong>18 cellules non cartographiées</strong> — des esquilles de
+rastérisation sur les liserés entre polygones CORINE — amplifiées par la
+fenêtre focale de 500 m, qui propage tout vide. Avec le cadre de bord de
+même origine, 11,8 % de la carte est vide. Voir
+<code>fev_exposure(na_rm = )</code>.</p>
 </div>
 <div class="section level3">
 <h3 id="le-jour-de-lincendie-sort-premier-de-1-096">Le jour de l’incendie sort premier de 1 096<a class="anchor" aria-label="anchor" href="#le-jour-de-lincendie-sort-premier-de-1-096"></a>
@@ -407,7 +423,7 @@ hectares ont brûlé.</p>
 <p>C’est la vérification que Couchey ne pouvait pas offrir avec un seul
 feu, et que ni l’une ni l’autre ne pouvait offrir avec une série
 inventée :</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">med</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/global.html" class="external-link">global</a></span><span class="op">(</span><span class="va">meteo</span>, <span class="fu">stats</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span>
 <span><span class="va">dates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/time.html" class="external-link">time</a></span><span class="op">(</span><span class="va">meteo</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>date <span class="op">=</span> <span class="va">dates</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">med</span><span class="op">)</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span>,</span>
@@ -420,7 +436,7 @@ inventée :</p>
 Aucune donnée de feu n’entre dans le calcul : le FWI ne connaît que la
 température, l’humidité, le vent et la pluie servis par la
 réanalyse.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dates</span>, <span class="va">med</span>, type <span class="op">=</span> <span class="st">"l"</span>, col <span class="op">=</span> <span class="st">"grey40"</span>, xlab <span class="op">=</span> <span class="st">""</span>, ylab <span class="op">=</span> <span class="st">"FWI médian"</span>,</span>
 <span>     main <span class="op">=</span> <span class="st">"FWI médian sur le massif, 2019-2021"</span><span class="op">)</span></span>
@@ -438,7 +454,7 @@ heures par jour, et la conséquence est mesurable ici — 10 % de jours de
 pluie au lieu de 39 %, et un DC de 1 949 le 16 août au lieu de 619.</p>
 <p>Le second est ce qui rend le premier difficile à voir. Le facteur de
 durée du FWI sature :</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fD</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">bui</span><span class="op">)</span> <span class="fl">1000</span> <span class="op">/</span> <span class="op">(</span><span class="fl">25</span> <span class="op">+</span> <span class="fl">108.64</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.023</span> <span class="op">*</span> <span class="va">bui</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>BUI_150 <span class="op">=</span> <span class="fl">150</span>, BUI_200 <span class="op">=</span> <span class="fl">200</span>, BUI_300 <span class="op">=</span> <span class="fl">300</span>, BUI_600 <span class="op">=</span> <span class="fl">600</span><span class="op">)</span>, <span class="va">fD</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; BUI_150 BUI_200 BUI_300 BUI_600 </span></span>
@@ -448,7 +464,7 @@ presque aveugle à la sécheresse supplémentaire : un DC dérivé au double
 de sa valeur physique <strong>ne fait pas paraître le FWI faux</strong>.
 Il faut regarder le DC et le BUI directement, ce que
 <code>fev_fwi_from_weather(index = "DC")</code> permet.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"DMC"</span>, <span class="st">"DC"</span>, <span class="st">"BUI"</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">ix</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_fwi_from_weather.html">fev_fwi_from_weather</a></span><span class="op">(</span><span class="va">meteo_tab</span>, index <span class="op">=</span> <span class="va">ix</span>, crs_work <span class="op">=</span> <span class="fl">2154</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/summarize-generics.html" class="external-link">median</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/values.html" class="external-link">values</a></span><span class="op">(</span><span class="va">r</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">dates</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2021-08-16"</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,</span>
@@ -466,7 +482,7 @@ Il faut regarder le DC et le BUI directement, ce que
 profonde et plausible. C’est ce qu’on veut lire : une valeur qu’on peut
 confronter à la littérature, pas un nombre qui a seulement l’air
 grand.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_validate.html">fev_validate</a></span><span class="op">(</span><span class="va">risque</span>, <span class="va">feux</span>, millesime <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">mil</span><span class="op">$</span><span class="va">year</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">temporal</span><span class="op">$</span><span class="va">table</span></span>
 <span><span class="co">#&gt;                        lag_years n_fires area_ha pct_area</span></span>
@@ -474,8 +490,8 @@ grand.</p>
 <span><span class="co">#&gt; 2                         1 to 5       0       0        0</span></span>
 <span><span class="co">#&gt; 3                            &gt; 5      11    6927      100</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">auc</span></span>
-<span><span class="co">#&gt; [1] NA</span></span></code></pre></div>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<span><span class="co">#&gt; [1] 0.5304155</span></span></code></pre></div>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span><span class="op">$</span><span class="va">classes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"pct_of_area"</span>, <span class="st">"pct_of_burnt"</span>, <span class="st">"ratio"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       class pct_of_area pct_of_burnt ratio</span></span>
 <span><span class="co">#&gt; 1   0 - 0.2       31.84        29.68  0.93</span></span>
@@ -486,10 +502,20 @@ grand.</p>
 <p>Le biais temporel est le même qu’à Couchey, et pour la même raison :
 le combustible est de 2008, les feux vont de 2017 à 2026. Onze incendies
 valent mieux qu’un, mais ils ont tous brûlé au moins neuf ans après la
-photographie aérienne qui fonde la couche. L’AUC ci-dessus repose
-désormais sur une météo réelle, mais il décrit toujours la géométrie du
-combustible bien plus qu’une performance de prévision : le danger météo
-est modulé par une couche de combustible de 2008.</p>
+photographie aérienne qui fonde la couche — <strong>100 % de la surface
+brûlée</strong>, comme le dit le tableau.</p>
+<p>Et cette fois l’AUC est calculable, sur une météo réelle et un
+échantillon de 109 000 cellules brûlées. Il vaut <strong>0,53</strong>.
+Les ratios par classe le disent plus crûment : 0,93, 1,05, 1,00 — la
+carte ne distingue pas ce qui a brûlé de ce qui n’a pas brûlé.</p>
+<p>C’est le résultat, et il faut le lire pour ce qu’il est. Ce n’est pas
+un échec de la météo, qui place le jour du feu premier sur 1 096. C’est
+ce qui arrive quand on module un danger météorologique juste par une
+couche de combustible qui a treize ans de retard sur l’événement : le
+terme spatial du produit est faux là où il compte, et le terme temporel
+ne peut pas le sauver. Les Maures, avec onze feux et une couverture
+LiDAR complète, ne rattrapent pas Couchey sur ce point — elles le
+documentent mieux.</p>
 </div>
 </div>
 <div class="section level2">
@@ -536,7 +562,7 @@ est modulé par une couche de combustible de 2008.</p>
 <tr class="even">
 <td>Validation</td>
 <td>impossible, et c’est le résultat</td>
-<td>possible, sur météo réelle</td>
+<td>possible : <strong>AUC 0,53</strong>, soit le hasard</td>
 </tr>
 <tr class="odd">
 <td>Jour du feu dans le FWI</td>

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,24 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.13.0" id="firexpovulnr-0130-2026-08-17">firexpovulnR 0.13.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0130-2026-08-17"></a></h2>
+<div class="section level4">
+<h4 id="lauc-publié-était-na-par-débordement-dentier-0-13-0">L’AUC publié était <code>NA</code>, par débordement d’entier<a class="anchor" aria-label="anchor" href="#lauc-publi%C3%A9-%C3%A9tait-na-par-d%C3%A9bordement-dentier-0-13-0"></a></h4>
+<ul><li>
+<code><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum()</a></code> d’un vecteur logique renvoie un <strong>entier</strong>, donc <code>n1 * n0</code> et <code>n1 * (n1 + 1)</code> dans <code>fev_auc()</code> débordaient l’entier 32 bits. Avec un demi- million de cellules non brûlées, cela arrive au-delà d’environ <strong>4 400 cellules brûlées — 275 ha à 25 m</strong>, seuil que tout échantillon de feu réel franchit. R répond <code>NA</code> sans erreur.</li>
+<li>Conséquence concrète : <code><a href="../articles/maures.html">vignette("maures")</a></code> <strong>publiait <code>NA</code> comme AUC</strong>. Couchey, dont les feux totalisent environ 150 ha, passait juste sous le seuil, ce qui explique que le défaut soit resté invisible. Corrigé en calculant en double ; l’AUC réel des Maures est <strong>0,53</strong>.</li>
+<li>La méthode <code><a href="https://rdrr.io/r/base/print.html" class="external-link">print()</a></code> faisait <code>if (x$auc &lt; 0.55)</code>, or <code>if (NA &lt; 0.55)</code> est une erreur et non <code>FALSE</code> : afficher l’objet échouait donc précisément sur ceux qu’il fallait inspecter. Gardé, et un AUC non fini est désormais signalé comme une validation <em>ratée</em>, pas réussie.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="article--les-maures---la-carte-de-risque-manquait-0-13-0">Article « Les Maures » — la carte de risque manquait<a class="anchor" aria-label="anchor" href="#article--les-maures---la-carte-de-risque-manquait-0-13-0"></a></h4>
+<ul><li>
+<code>risque</code> était calculé puis utilisé seulement par <code><a href="../reference/fev_validate.html">fev_validate()</a></code> : la <strong>carte de risque composite n’était jamais tracée</strong>. Elle l’est désormais, avec les onze périmètres d’incendie et les deux placettes LiDAR.</li>
+<li>La carte est cohérente — risque moyen 0,32 sur combustible brûlable contre 0,05 en dehors, un facteur 6,5.</li>
+<li>Et la conclusion est plus dure qu’avant, parce qu’elle a maintenant un chiffre : AUC 0,53, ratios par classe 0,93 / 1,05 / 1,00. La carte ne distingue pas ce qui a brûlé de ce qui n’a pas brûlé. Ce n’est pas un échec de la météo, qui place le jour du feu premier sur 1 096 jours — c’est ce qu’il advient quand on module un danger juste par un combustible qui a treize ans de retard.</li>
+<li>Les disques blancs des deux cartes sont documentés : <strong>18 cellules non cartographiées</strong> aux Maures (42 à Couchey), esquilles de rastérisation sur les liserés entre polygones CORINE, amplifiées par la fenêtre focale de 500 m qui propage tout vide. 11,8 % de la carte des Maures, 17,5 % de celle de Couchey.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.12.1" id="firexpovulnr-0121-2026-08-17">firexpovulnR 0.12.1 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0121-2026-08-17"></a></h2>
 <div class="section level4">

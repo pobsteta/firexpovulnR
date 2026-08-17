@@ -369,6 +369,27 @@ vuln <- fev_vuln_layer(pile$exposition, method = "percentile_rank",
 risque <- fev_risk(danger, vuln, normalise = "none")
 ```
 
+``` r
+
+par(mar = c(2, 2, 2, 4))
+plot(fev_data(risque), main = "Risque composite (effis_mean)")
+plot(st_geometry(feux), add = TRUE, border = "red", lwd = 2)
+plot(st_geometry(carres), add = TRUE, border = "white", lwd = 2)
+```
+
+![](maures_files/figure-html/plot-risk-1.png)
+
+Le jaune est le maquis continu, les taches sombres les trouées — le
+risque moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors,
+un facteur 6,5. Les périmètres rouges sont les onze incendies, les deux
+carrés blancs les placettes LiDAR.
+
+Les disques blancs ne sont pas des données manquantes du terrain : ce
+sont **18 cellules non cartographiées** — des esquilles de rastérisation
+sur les liserés entre polygones CORINE — amplifiées par la fenêtre
+focale de 500 m, qui propage tout vide. Avec le cadre de bord de même
+origine, 11,8 % de la carte est vide. Voir `fev_exposure(na_rm = )`.
+
 ### Le jour de l’incendie sort premier de 1 096
 
 C’est la vérification que Couchey ne pouvait pas offrir avec un seul
@@ -457,7 +478,7 @@ val$temporal$table
 #> 2                         1 to 5       0       0        0
 #> 3                            > 5      11    6927      100
 val$auc
-#> [1] NA
+#> [1] 0.5304155
 ```
 
 ``` r
@@ -474,10 +495,22 @@ val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 Le biais temporel est le même qu’à Couchey, et pour la même raison : le
 combustible est de 2008, les feux vont de 2017 à 2026. Onze incendies
 valent mieux qu’un, mais ils ont tous brûlé au moins neuf ans après la
-photographie aérienne qui fonde la couche. L’AUC ci-dessus repose
-désormais sur une météo réelle, mais il décrit toujours la géométrie du
-combustible bien plus qu’une performance de prévision : le danger météo
-est modulé par une couche de combustible de 2008.
+photographie aérienne qui fonde la couche — **100 % de la surface
+brûlée**, comme le dit le tableau.
+
+Et cette fois l’AUC est calculable, sur une météo réelle et un
+échantillon de 109 000 cellules brûlées. Il vaut **0,53**. Les ratios
+par classe le disent plus crûment : 0,93, 1,05, 1,00 — la carte ne
+distingue pas ce qui a brûlé de ce qui n’a pas brûlé.
+
+C’est le résultat, et il faut le lire pour ce qu’il est. Ce n’est pas un
+échec de la météo, qui place le jour du feu premier sur 1 096. C’est ce
+qui arrive quand on module un danger météorologique juste par une couche
+de combustible qui a treize ans de retard sur l’événement : le terme
+spatial du produit est faux là où il compte, et le terme temporel ne
+peut pas le sauver. Les Maures, avec onze feux et une couverture LiDAR
+complète, ne rattrapent pas Couchey sur ce point — elles le documentent
+mieux.
 
 ## Ce que cette page ajoute à Couchey
 
@@ -488,7 +521,7 @@ est modulé par une couche de combustible de 2008.
 | LiDAR HD | **0 dalle** | **505 dalles, 100 %** |
 | Échantillon de feux | 1 feu, 26 ha | **11 feux, 6 927 ha** |
 | Millésime | 2007 / 2010 / 2014 | 2008 / 2014 |
-| Validation | impossible, et c’est le résultat | possible, sur météo réelle |
+| Validation | impossible, et c’est le résultat | possible : **AUC 0,53**, soit le hasard |
 | Jour du feu dans le FWI | 2e sur 960 jours | **1er sur 1 096 jours** |
 
 Et une chose que ni l’une ni l’autre ne résout : le LiDAR HD est de
