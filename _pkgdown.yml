@@ -51,6 +51,8 @@ reference:
     - fev_fetch_corine
     - fev_fetch_burnt
     - fev_bdforet_millesime
+    - fev_lidarhd_available
+    - fev_fetch_lidarhd
     - fev_cache_info
     - fev_cache_clear
     - fev_cache_dir
@@ -71,6 +73,9 @@ reference:
     - fev_fuel_types
     - fev_fuel_weights
     - fev_fuel_registers
+    - fev_fuel_lidar
+    - fev_fuel_attach
+    - fev_lidar_density
 
   - title: "Danger météorologique"
     desc: >

@@ -33,3 +33,17 @@
 ## usethis namespace: start
 ## usethis namespace: end
 NULL
+
+# Point-cloud attribute names, declared so R CMD check does not read them as
+# undefined globals.
+#
+# fev_fuel_lidar() builds an expression for lidR::pixel_metrics(), which
+# evaluates it inside data.table where these are COLUMNS of the LAS, not
+# variables of this package. They are exactly the argument names
+# lidarforfuel::fCBDprofile_fuelmetrics() expects, and renaming them to silence
+# the note would break the call -- so they are declared instead.
+utils::globalVariables(c(
+  "X", "Y", "Z", "Zref", "ReturnNumber",
+  "Easting", "Northing", "Elevation",
+  "LMA", "WD", "gpstime"
+))

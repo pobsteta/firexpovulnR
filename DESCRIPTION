@@ -1,6 +1,6 @@
 Package: firexpovulnR
 Title: Fire Danger, Exposure and Vulnerability Assessment for European Forests
-Version: 0.9.3
+Version: 0.10.0
 Authors@R:
     person("Pascal", "Obstétar", email = "pascal.obstetar@gmail.com",
            role = c("aut", "cre"))
@@ -35,11 +35,16 @@ Suggests:
     httptest2,
     httr2,
     knitr,
+    LadderFuelsR,
+    lidarforfuel,
+    lidR,
     medfate,
     MultiscaleDTM,
     rmarkdown,
     testthat (>= 3.0.0),
     withr
+Remotes:
+    oliviermartin7/LidarForFuel
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://github.com/pobsteta/firexpovulnR,

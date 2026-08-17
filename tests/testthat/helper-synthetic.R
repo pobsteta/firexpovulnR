@@ -303,3 +303,100 @@ synth_directional_landscape <- function(side = c("north", "east"), value = 0.9) 
   names(r) <- "exposure"
   r
 }
+
+#' A synthetic LiDAR point cloud with a known vertical structure
+#'
+#' Three strata — ground, a low shrub layer, a canopy — so the metrics that
+#' matter have a value checkable against the construction: the crown base sits
+#' above the shrub top, and the gap between them is real. Built in Lambert-93
+#' on a LiDAR HD tile origin, so coordinates look like the real thing.
+#'
+#' This is what makes phase 8 testable without a network: the whole
+#' `lidarforfuel` pipeline runs on it.
+#'
+#' @param side Side of the square, in metres.
+#' @param pulses Target pulse density, pulses/m2. LiDAR HD specifies 10.
+#' @param canopy_z,shrub_z Mean height of the canopy and shrub strata, in metres
+#'   above ground.
+#' @param seed Random seed.
+synth_las <- function(side = 100, pulses = 10, canopy_z = 8, shrub_z = 1.2,
+                      seed = 1L) {
+  # Built pulse by pulse, not point by point. A real pulse's returns share one
+  # gpstime and one ground track, and carry ReturnNumber 1..k with
+  # NumberOfReturns = k. Getting that wrong is not cosmetic: lidR::track_sensor()
+  # groups returns by gpstime to reconstruct the flight line, and a cloud whose
+  # every point has a distinct gpstime makes lidarforfuel's trajectory handling
+  # fail on `nrow(traj) == 0` with a zero-length condition.
+  n_pulse <- round(pulses * side^2)
+
+  withr::with_seed(seed, {
+    px <- stats::runif(n_pulse, 0, side) + 968000
+    py <- stats::runif(n_pulse, 0, side) + 6240000
+    pt <- sort(stats::runif(n_pulse, 1e8, 1e8 + 600))
+    ang <- as.integer(sample(-15:15, n_pulse, replace = TRUE))
+
+    # 40% of pulses stop at the ground, 25% in the shrub layer, 35% hit the
+    # canopy and give two or three returns on the way down.
+    kind <- sample(c("g", "b", "c"), n_pulse, replace = TRUE,
+                   prob = c(0.40, 0.25, 0.35))
+    n_ret <- ifelse(kind == "c", sample(2:3, n_pulse, replace = TRUE), 1L)
+
+    idx <- rep(seq_len(n_pulse), n_ret)
+    rn <- unlist(lapply(n_ret, seq_len), use.names = FALSE)
+
+    # Height of each return: first return at the top of whatever it hit, later
+    # returns progressively lower, ending near the ground.
+    z <- numeric(length(idx))
+    top <- ifelse(kind == "g", 0, ifelse(kind == "b", shrub_z, canopy_z))
+    z_first <- 100 + top + stats::rnorm(n_pulse, 0,
+                                        ifelse(kind == "c", 2.5, 0.3))
+    z[rn == 1L] <- z_first
+    z[rn == 2L] <- 100 + shrub_z + stats::rnorm(sum(rn == 2L), 0, 0.5)
+    z[rn == 3L] <- 100 + stats::rnorm(sum(rn == 3L), 0, 0.05)
+
+    cl <- ifelse(z - 100 > 1.5, 5L, ifelse(z - 100 > 0.5, 3L, 2L))
+  })
+
+  las <- suppressMessages(lidR::LAS(data.frame(
+    X = px[idx], Y = py[idx], Z = z,
+    Classification = as.integer(cl),
+    ReturnNumber = as.integer(rn),
+    NumberOfReturns = as.integer(n_ret[idx]),
+    ScanAngleRank = ang[idx], gpstime = pt[idx],
+    Intensity = 100L, ScanDirectionFlag = 0L, EdgeOfFlightline = 0L,
+    UserData = 0L, PointSourceID = 1L,
+    Synthetic_flag = FALSE, Keypoint_flag = FALSE, Withheld_flag = FALSE
+  )))
+  terra::crs(las) <- "EPSG:2154"
+  las
+}
+
+#' A LiDAR HD tile index as the IGN WFS returns one
+#'
+#' Fields and value shapes copied from a real GetFeature over the Var on
+#' 2026-08-17, so the logic is exercised against what the service actually
+#' serves rather than against a guess.
+#'
+#' @param n Number of tiles, laid out west to east from a real tile origin.
+#' @param chantier Acquisition block id.
+#' @param timestamp Availability date.
+synth_lidarhd_index <- function(n = 2, chantier = "106",
+                                timestamp = "2025-05-01") {
+  x0 <- 968000 + (seq_len(n) - 1L) * 1000
+  geom <- lapply(x0, function(x) {
+    sf::st_polygon(list(cbind(c(x, x + 1000, x + 1000, x, x),
+                              c(6239000, 6239000, 6240000, 6240000, 6239000))))
+  })
+  km <- sprintf("%04d", x0 / 1000)
+  name <- paste0("LHD_FXX_", km, "_6240_PTS_C_LAMB93_IGN69")
+  sf::st_sf(
+    name = name,
+    url = paste0("https://data.geopf.fr/telechargement/download/LiDARHD-NUALID/",
+                 "NUALHD_1-0__LAZ_LAMB93_QQ_2025-03-24/",
+                 sub("_PTS_C_", "_PTS_", name), ".copc.laz"),
+    name_download = paste0(name, ".copc.laz"),
+    format = "copc", projection = "EPSG:2154",
+    timestamp = timestamp, id_chantier = chantier,
+    geometry = sf::st_sfc(geom, crs = 2154)
+  )
+}

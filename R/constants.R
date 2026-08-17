@@ -69,6 +69,54 @@
 # fed the initial production of any department -- only an update.
 .FEV_BDFORET_V2_WINDOW <- c(2007L, 2018L)
 
+# LiDAR HD, verified 2026-08-17 by GetCapabilities, DescribeFeatureType and real
+# GetFeature requests. See specs/phase8-rapport-lidar.md.
+#
+# The `dalle` layer is what makes an availability check possible before any
+# download: it carries one feature per 1 km tile, with the download `url`, the
+# `timestamp`, and `id_chantier` identifying the acquisition block -- the
+# per-block vintage the brief asks for.
+#
+# Coverage is genuinely partial. On 2026-08-17: 210 blocks and 505 294 tiles
+# nationally, 1 016 tiles over the Maures, and ZERO over Couchey. An empty
+# result is a legitimate answer here, which is exactly why the axis-order trap
+# matters more than elsewhere -- a lat-first BBOX also returns zero.
+.FEV_LIDARHD_LAYERS <- list(
+  points_dalle = "IGNF_NUAGES-DE-POINTS-LIDAR-HD:dalle",
+  points_bloc  = "IGNF_NUAGES-DE-POINTS-LIDAR-HD:bloc",
+  metadata     = "IGNF_LIDAR-HD_METADONNEE:metadata",
+  mnt_dalle    = "IGNF_MNT-LIDAR-HD:dalle",
+  mns_dalle    = "IGNF_MNS-LIDAR-HD:dalle",
+  mnh_dalle    = "IGNF_MNH-LIDAR-HD:dalle"
+)
+
+# Tiles are 1 km squares in Lambert-93, delivered as Cloud Optimized Point
+# Cloud. COPC is octree-indexed and readable by HTTP range request, so an
+# extent can be read without pulling the whole tile -- which matters when one
+# tile is of the order of a gigabyte and the Maures need a thousand of them.
+.FEV_LIDARHD_TILE_M <- 1000L
+
+# Canonical output of lidarforfuel::fCBDprofile_fuelmetrics(), read from the
+# body of the function on 2026-08-17 and confirmed by running it on a synthetic
+# cloud: 25 named metrics then 150 bulk-density layers, 175 bands in total.
+#
+# THE UPSTREAM README IS WRONG. It states "173 bands, the first 23 being
+# metrics". Trusting it would read the profile from band 24 and silently take
+# Cover_4 and Cover_6 for bulk density values, shifting the whole profile by
+# two. Nothing in this package indexes these bands positionally; it names them.
+.FEV_LIDAR_METRICS <- c(
+  "Profil_Type", "Profil_Type_L", "threshold", "Height", "CBH", "FSG",
+  "Top_Fuel", "H_Bush", "continuity", "VCI_PAD", "VCI_lidr", "entropy_lidr",
+  "PAI_tot", "CBD_max", "CFL", "TFL", "MFL", "FL_1_3", "GSFL", "FL_0_1",
+  "FMA", "date", "Cover", "Cover_4", "Cover_6"
+)
+.FEV_LIDAR_CBD_LAYERS <- 150L
+
+# Every metric is -1 when the computation does not complete -- not NA. Left as
+# it comes, that yields negative crown base heights and negative fuel loads,
+# which pass any naive plausibility check. Converted on read.
+.FEV_LIDAR_NULL_VALUE <- -1
+
 #' Data source registry
 #'
 #' Returns the endpoints and layer names the package contacts, so they can be
