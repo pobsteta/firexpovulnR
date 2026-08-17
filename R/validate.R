@@ -308,8 +308,14 @@ fev_temporal_bias <- function(fires, millesime, max_lag_years) {
 #'
 #' @noRd
 fev_auc <- function(score, positive) {
-  n1 <- sum(positive)
-  n0 <- sum(!positive)
+  # as.numeric, not sum(): sum() of a logical returns an INTEGER, and both
+  # n1 * n0 and n1 * (n1 + 1) overflow 32-bit integers here. With half a million
+  # unburnt cells that happens above roughly 4 400 burnt cells -- 275 ha at 25 m,
+  # which any real fire sample passes -- and R answers NA rather than erroring.
+  # The Maures article published `NA` as its AUC because of this; Couchey, whose
+  # fires total about 150 ha, stayed just under the threshold.
+  n1 <- as.numeric(sum(positive))
+  n0 <- as.numeric(sum(!positive))
   ranks <- rank(score, ties.method = "average")
   (sum(ranks[positive]) - n1 * (n1 + 1) / 2) / (n1 * n0)
 }
@@ -379,8 +385,13 @@ print.fev_validation <- function(x, ...) {
   cli::cli_li("{x$n_cells} cell{?s}, {x$n_burnt} burnt \\
                ({round(100 * x$n_burnt / x$n_cells, 1)}%)")
   cli::cli_li("AUC: {.strong {round(x$auc, 3)}}")
-  if (x$auc < 0.55) {
+  # Guarded: `if (NA < 0.55)` is an error, not FALSE, so a non-finite AUC used to
+  # make printing the object fail outright.
+  if (isTRUE(x$auc < 0.55)) {
     cli::cli_alert_warning("An AUC this close to 0.5 is a coin toss.")
+  } else if (!is.finite(x$auc)) {
+    cli::cli_alert_warning("The AUC is not finite -- treat this validation as \
+                            having failed, not as passed.")
   }
 
   cli::cli_text("")

@@ -213,3 +213,38 @@ test_that("results print and plot", {
   quiet <- suppressWarnings(fev_validate(vrisk(), vfire("2016-07-18", 0, 500)))
   expect_no_error(print(quiet))
 })
+
+test_that("the AUC survives a sample large enough to overflow an integer", {
+  # sum() of a logical returns an INTEGER, so n1 * n0 and n1 * (n1 + 1) overflow
+  # 32-bit integers. With half a million unburnt cells that happens above about
+  # 4 400 burnt cells -- 275 ha at 25 m, which any real fire sample passes -- and
+  # R answers NA rather than erroring. The Maures article published NA as its AUC.
+  set.seed(1)
+  n <- 600000L
+  positive <- rep(FALSE, n)
+  positive[sample(n, 110000)] <- TRUE
+
+  n1 <- sum(positive)
+  n0 <- sum(!positive)
+  expect_true(is.na(suppressWarnings(n1 * n0)))  # the trap is real
+  expect_gt(as.numeric(n1) * as.numeric(n0), .Machine$integer.max)
+
+  auc <- fev_auc(runif(n), positive)
+  expect_false(is.na(auc))
+  expect_gt(auc, 0.45)
+  expect_lt(auc, 0.55)
+
+  # Bounds must still hold at this size.
+  expect_equal(fev_auc(as.numeric(positive), positive), 1)
+  expect_equal(fev_auc(-as.numeric(positive), positive), 0)
+})
+
+test_that("printing a validation with a non-finite AUC does not fail", {
+  # `if (NA < 0.55)` is an error rather than FALSE, so the print method used to
+  # die on exactly the objects that most needed inspecting.
+  v <- fev_validate(vrisk(), vfire("2016-07-18", 0, 500), millesime = 2014)
+  v$auc <- NA_real_
+  expect_no_error(capture.output(print(v)))
+  expect_match(paste(capture.output(print(v), type = "message"), collapse = " "),
+               "not finite")
+})
