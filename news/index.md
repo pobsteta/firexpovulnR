@@ -1,5 +1,106 @@
 # Changelog
 
+## firexpovulnR 0.10.0 (2026-08-17)
+
+Phase 8 — LiDAR HD. Le registre continu, en place et testé depuis la
+phase 4, reçoit enfin un producteur. Rien du module combustible n’a eu
+besoin d’être réécrit, ce qui était l’objet de la contrainte posée avant
+la phase 4.
+
+864 tests hors ligne, aucun échec, aucun avertissement. `R CMD check` en
+statut OK. **Aucun test de cette phase ne touche le réseau ni une dalle
+réelle** : un nuage synthétique construit avec `lidR` traverse les
+vraies fonctions de `lidarforfuel`.
+
+#### Ce que le LiDAR apporte et que rien d’autre ici ne peut
+
+Le sous-étage. Ni CORINE ni la BD Forêt ne le décrivent — c’est la
+faiblesse méthodologique n° 1 que les deux vignettes énoncent. Un profil
+vertical de densité apparente le décrit, et la hauteur de base de
+houppier et le *fuel strata gap* qui s’en déduisent sont les deux
+nombres dont dépend le passage du feu de surface au houppier.
+
+#### Acquisition
+
+- [`fev_lidarhd_available()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidarhd_available.md)
+  interroge l’index de dalles de l’IGN **avant tout téléchargement**,
+  comme le brief l’exige. Le WFS sert une entité par dalle de 1 km avec
+  son `url`, son `timestamp` et son `id_chantier` — le millésime par
+  bloc d’acquisition.
+- La couverture est réellement partielle, et c’est constaté : au
+  2026-08-17, 210 blocs et 505 294 dalles en France, **1 016 sur les
+  Maures et zéro sur Couchey**. Une zone non survolée rend un index
+  vide, pas une erreur.
+- Le message d’absence nomme le piège d’axes, parce qu’ici l’explication
+  innocente est la plus probable : un BBOX latitude d’abord rend aussi
+  zéro entité avec un HTTP 200.
+- [`fev_fetch_lidarhd()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_lidarhd.md)
+  reprend une exécution interrompue en sautant les dalles déjà
+  présentes, refuse un travail plus gros que `max_tiles`, et ne
+  parallélise rien — marteler un service public est la façon d’en perdre
+  l’accès pour tout le monde. Les dalles étant en **COPC**, lisible par
+  plage HTTP, la doc renvoie vers la lecture directe quand quelques
+  hectares suffisent.
+
+#### Métriques de combustible
+
+- [`fev_fuel_lidar()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.md)
+  enveloppe `lidarforfuel` (équipe Olivier Martin, INRAE), évalué par
+  ses auteurs sur des placettes de terrain en France, en Espagne et au
+  Portugal — ce qui justifie de l’employer ici plutôt qu’un outil
+  nord-américain.
+- **Le README amont se trompe sur la structure de sortie.** Il annonce
+  173 bandes dont 23 métriques ; le code en produit **175 dont 25**.
+  Lire le profil à partir de la bande 24 sur cette base prend `Cover_4`
+  et `Cover_6` pour de la densité apparente et décale tout de deux
+  bandes. Rien ici n’indexe par position : la fonction vérifie les noms
+  obtenus contre ceux attendus et **refuse** en cas d’écart.
+- **La valeur nulle est `-1`, pas `NA`.** Laissée telle quelle elle
+  donne des hauteurs de base de houppier et des charges de combustible
+  négatives, qui passent tout contrôle de plausibilité naïf. Convertie à
+  la lecture.
+- [`fev_lidar_density()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_density.md)
+  mesure des **impulsions**, pas des points, parce que la spécification
+  LiDAR HD est écrite en impulsions : au moins 10/m², et 5 au-dessus de
+  3200 m. L’avertissement dit le **sens** du biais : quand la densité
+  baisse, la strate de sous-étage disparaît la première, donc la charge
+  est sous-estimée tandis que la hauteur de base de houppier et l’écart
+  entre strates sont surestimés. Une dalle maigre décrit un paysage plus
+  sûr qu’il n’est.
+- Le repli silencieux de `lidarforfuel` sur une hauteur de vol nominale
+  de 1 400 m, quand la trajectoire est irrécupérable, est intercepté et
+  inscrit dans la provenance. Il change la correction d’angle de
+  balayage.
+- `lma = 140` g/m² et `wd = 591` kg/m³ sont les défauts amont. Ce sont
+  des valeurs d’espèce, elles n’ont pas été retrouvées à une source
+  primaire, et elles mettent les charges à l’échelle directement.
+  Enregistrées avec `lma_wd_sourced = FALSE`.
+
+#### Greffe sur le registre catégoriel
+
+- [`fev_fuel_attach()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_attach.md)
+  verse le registre continu sur une source catégorielle. Ce n’est pas
+  [`fev_fuel_merge()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_merge.md)
+  : celle-ci arbitre entre sources qui se disputent le même pixel, le
+  LiDAR ne dispute rien. Il apporte des grandeurs que ni CORINE ni la BD
+  Forêt ne portent, sur le même sol.
+- La part de cellules catégorielles effectivement couverte est
+  rapportée, parce que le programme est en cours et que les deux
+  registres décrivent des sous-ensembles différents de la carte.
+
+#### Repli documenté
+
+Quand le LiDAR manque — la majorité de la France en 2026, et Couchey —
+les cartes satellitaires pan-européennes de CBH et CBD à ~100 m pour
+2020 (*Geo-spatial Information Science* 28(4), serveur FIRE-RES). Leurs
+corrélations sont **faibles** et le rapport le dit : r = 0,445 pour la
+CBH et **0,330** pour la CBD, soit environ 11 % de variance expliquée.
+
+#### specs/phase8-rapport-lidar.md
+
+Le rapport de vérification, sur le modèle de celui de la phase 2 : ce
+qui a été constaté, comment, et ce qui reste incertain.
+
 ## firexpovulnR 0.9.3 (2026-08-17)
 
 - Vignette Couchey : une section explique les grands rectangles visibles

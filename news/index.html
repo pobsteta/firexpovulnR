@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.10.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,52 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.10.0" id="firexpovulnr-0100-2026-08-17">firexpovulnR 0.10.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0100-2026-08-17"></a></h2>
+<p>Phase 8 — LiDAR HD. Le registre continu, en place et testé depuis la phase 4, reçoit enfin un producteur. Rien du module combustible n’a eu besoin d’être réécrit, ce qui était l’objet de la contrainte posée avant la phase 4.</p>
+<p>864 tests hors ligne, aucun échec, aucun avertissement. <code>R CMD check</code> en statut OK. <strong>Aucun test de cette phase ne touche le réseau ni une dalle réelle</strong> : un nuage synthétique construit avec <code>lidR</code> traverse les vraies fonctions de <code>lidarforfuel</code>.</p>
+<div class="section level4">
+<h4 id="ce-que-le-lidar-apporte-et-que-rien-dautre-ici-ne-peut-0-10-0">Ce que le LiDAR apporte et que rien d’autre ici ne peut<a class="anchor" aria-label="anchor" href="#ce-que-le-lidar-apporte-et-que-rien-dautre-ici-ne-peut-0-10-0"></a></h4>
+<p>Le sous-étage. Ni CORINE ni la BD Forêt ne le décrivent — c’est la faiblesse méthodologique n° 1 que les deux vignettes énoncent. Un profil vertical de densité apparente le décrit, et la hauteur de base de houppier et le <em>fuel strata gap</em> qui s’en déduisent sont les deux nombres dont dépend le passage du feu de surface au houppier.</p>
+</div>
+<div class="section level4">
+<h4 id="acquisition-0-10-0">Acquisition<a class="anchor" aria-label="anchor" href="#acquisition-0-10-0"></a></h4>
+<ul><li>
+<code><a href="../reference/fev_lidarhd_available.html">fev_lidarhd_available()</a></code> interroge l’index de dalles de l’IGN <strong>avant tout téléchargement</strong>, comme le brief l’exige. Le WFS sert une entité par dalle de 1 km avec son <code>url</code>, son <code>timestamp</code> et son <code>id_chantier</code> — le millésime par bloc d’acquisition.</li>
+<li>La couverture est réellement partielle, et c’est constaté : au 2026-08-17, 210 blocs et 505 294 dalles en France, <strong>1 016 sur les Maures et zéro sur Couchey</strong>. Une zone non survolée rend un index vide, pas une erreur.</li>
+<li>Le message d’absence nomme le piège d’axes, parce qu’ici l’explication innocente est la plus probable : un BBOX latitude d’abord rend aussi zéro entité avec un HTTP 200.</li>
+<li>
+<code><a href="../reference/fev_fetch_lidarhd.html">fev_fetch_lidarhd()</a></code> reprend une exécution interrompue en sautant les dalles déjà présentes, refuse un travail plus gros que <code>max_tiles</code>, et ne parallélise rien — marteler un service public est la façon d’en perdre l’accès pour tout le monde. Les dalles étant en <strong>COPC</strong>, lisible par plage HTTP, la doc renvoie vers la lecture directe quand quelques hectares suffisent.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="métriques-de-combustible-0-10-0">Métriques de combustible<a class="anchor" aria-label="anchor" href="#m%C3%A9triques-de-combustible-0-10-0"></a></h4>
+<ul><li>
+<code><a href="../reference/fev_fuel_lidar.html">fev_fuel_lidar()</a></code> enveloppe <code>lidarforfuel</code> (équipe Olivier Martin, INRAE), évalué par ses auteurs sur des placettes de terrain en France, en Espagne et au Portugal — ce qui justifie de l’employer ici plutôt qu’un outil nord-américain.</li>
+<li>
+<strong>Le README amont se trompe sur la structure de sortie.</strong> Il annonce 173 bandes dont 23 métriques ; le code en produit <strong>175 dont 25</strong>. Lire le profil à partir de la bande 24 sur cette base prend <code>Cover_4</code> et <code>Cover_6</code> pour de la densité apparente et décale tout de deux bandes. Rien ici n’indexe par position : la fonction vérifie les noms obtenus contre ceux attendus et <strong>refuse</strong> en cas d’écart.</li>
+<li>
+<strong>La valeur nulle est <code>-1</code>, pas <code>NA</code>.</strong> Laissée telle quelle elle donne des hauteurs de base de houppier et des charges de combustible négatives, qui passent tout contrôle de plausibilité naïf. Convertie à la lecture.</li>
+<li>
+<code><a href="../reference/fev_lidar_density.html">fev_lidar_density()</a></code> mesure des <strong>impulsions</strong>, pas des points, parce que la spécification LiDAR HD est écrite en impulsions : au moins 10/m², et 5 au-dessus de 3200 m. L’avertissement dit le <strong>sens</strong> du biais : quand la densité baisse, la strate de sous-étage disparaît la première, donc la charge est sous-estimée tandis que la hauteur de base de houppier et l’écart entre strates sont surestimés. Une dalle maigre décrit un paysage plus sûr qu’il n’est.</li>
+<li>Le repli silencieux de <code>lidarforfuel</code> sur une hauteur de vol nominale de 1 400 m, quand la trajectoire est irrécupérable, est intercepté et inscrit dans la provenance. Il change la correction d’angle de balayage.</li>
+<li>
+<code>lma = 140</code> g/m² et <code>wd = 591</code> kg/m³ sont les défauts amont. Ce sont des valeurs d’espèce, elles n’ont pas été retrouvées à une source primaire, et elles mettent les charges à l’échelle directement. Enregistrées avec <code>lma_wd_sourced = FALSE</code>.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="greffe-sur-le-registre-catégoriel-0-10-0">Greffe sur le registre catégoriel<a class="anchor" aria-label="anchor" href="#greffe-sur-le-registre-cat%C3%A9goriel-0-10-0"></a></h4>
+<ul><li>
+<code><a href="../reference/fev_fuel_attach.html">fev_fuel_attach()</a></code> verse le registre continu sur une source catégorielle. Ce n’est pas <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code> : celle-ci arbitre entre sources qui se disputent le même pixel, le LiDAR ne dispute rien. Il apporte des grandeurs que ni CORINE ni la BD Forêt ne portent, sur le même sol.</li>
+<li>La part de cellules catégorielles effectivement couverte est rapportée, parce que le programme est en cours et que les deux registres décrivent des sous-ensembles différents de la carte.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="repli-documenté-0-10-0">Repli documenté<a class="anchor" aria-label="anchor" href="#repli-document%C3%A9-0-10-0"></a></h4>
+<p>Quand le LiDAR manque — la majorité de la France en 2026, et Couchey — les cartes satellitaires pan-européennes de CBH et CBD à ~100 m pour 2020 (<em>Geo-spatial Information Science</em> 28(4), serveur FIRE-RES). Leurs corrélations sont <strong>faibles</strong> et le rapport le dit : r = 0,445 pour la CBH et <strong>0,330</strong> pour la CBD, soit environ 11 % de variance expliquée.</p>
+</div>
+<div class="section level4">
+<h4 id="specsphase8-rapport-lidarmd-0-10-0">specs/phase8-rapport-lidar.md<a class="anchor" aria-label="anchor" href="#specsphase8-rapport-lidarmd-0-10-0"></a></h4>
+<p>Le rapport de vérification, sur le modèle de celui de la phase 2 : ce qui a été constaté, comment, et ce qui reste incertain.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.3" id="firexpovulnr-093-2026-08-17">firexpovulnR 0.9.3 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-093-2026-08-17"></a></h2>
 <ul><li>Vignette Couchey : une section explique les grands rectangles visibles sur la carte de risque. Ce ne sont pas des dalles de calcul mal raccordées — les trois couches sont sur exactement la même grille de 25 m, et <code><a href="../reference/fev_risk.html">fev_risk()</a></code> aurait refusé sinon. Ce sont les <strong>mailles de la grille météo</strong>, 3,2 × 3,9 km, descendues à 25 m au plus proche voisin : un rapport de 126 pour 1. Le bilinéaire aurait lissé l’escalier en dessinant une variation que la donnée n’a jamais mesurée.</li>

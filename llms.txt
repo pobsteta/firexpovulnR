@@ -188,6 +188,10 @@ différents ne peuvent pas se confondre.
   : Fetch EFFIS burnt area perimeters
 - [`fev_bdforet_millesime()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdforet_millesime.md)
   : BD Forêt v2 vintage, from the imagery it was photo-interpreted on
+- [`fev_lidarhd_available()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidarhd_available.md)
+  : Is LiDAR HD available over an area, and which tiles
+- [`fev_fetch_lidarhd()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_lidarhd.md)
+  : Retrieve LiDAR HD tiles
 - [`fev_cache_info()`](https://pobsteta.github.io/firexpovulnR/reference/fev_cache_info.md)
   : Inspect the cache
 - [`fev_cache_clear()`](https://pobsteta.github.io/firexpovulnR/reference/fev_cache_clear.md)
@@ -223,6 +227,12 @@ sont justifiées ligne par ligne et intégralement surchargeables.
   [`fev_fuel_categorical()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_registers.md)
   [`fev_fuel_continuous()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_registers.md)
   : Which registers of a fuel source are populated
+- [`fev_fuel_lidar()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.md)
+  : Fuel metrics from a LiDAR point cloud
+- [`fev_fuel_attach()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_attach.md)
+  : Attach continuous fuel metrics to a categorical fuel source
+- [`fev_lidar_density()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_density.md)
+  : Effective pulse and point density of a point cloud
 
 ## Danger météorologique
 

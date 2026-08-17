@@ -25,8 +25,11 @@
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_corine.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_fwi.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_lidarhd.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_attach.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_availability.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_binary.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lookup.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_merge.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_registers.html</loc></url>
@@ -38,6 +41,8 @@
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_classes.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_percentile.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_thresholds.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_density.html</loc></url>
+<url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_lidarhd_available.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_provenance.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_risk.html</loc></url>
 <url><loc>https://pobsteta.github.io/firexpovulnR/reference/fev_sources.html</loc></url>
