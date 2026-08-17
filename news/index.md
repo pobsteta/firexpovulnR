@@ -1,5 +1,13 @@
 # Changelog
 
+## firexpovulnR 0.9.2 (2026-08-17)
+
+- Vignette Couchey : les périmètres d’incendie sont tracés en **rouge**
+  et non plus en noir, sur les trois cartes. Le noir se confondait avec
+  les traits de contour du raster ; le rouge se lit sur la palette
+  continue comme sur le masque binaire, et c’est la convention à
+  laquelle un lecteur s’attend pour une surface brûlée.
+
 ## firexpovulnR 0.9.1 (2026-08-16)
 
 #### L’incendie du 29 juillet 2026 à Couchey

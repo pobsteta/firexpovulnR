@@ -172,12 +172,12 @@ brulable <- fev_fuel_binary(fuel)
 par(mar = c(2, 2, 2, 4))
 plot(fev_data(brulable), main = "Combustible brûlable")
 plot(st_geometry(commune), add = TRUE, border = "white", lwd = 2)
-plot(st_geometry(feux), add = TRUE, border = "black", lwd = 2)
+plot(st_geometry(feux), add = TRUE, border = "red", lwd = 2)
 ```
 
 ![](couchey_files/figure-html/plot-fuel-1.png)
 
-Trait blanc, la commune. Traits noirs, les trois incendies.
+Trait blanc, la commune. Traits rouges, les trois incendies.
 
 ## Exposition
 
@@ -262,7 +262,7 @@ risque <- fev_risk(danger, vuln, normalise = "none")
 par(mar = c(2, 2, 2, 4))
 plot(fev_data(risque), main = "Risque composite (effis_mean)")
 plot(st_geometry(commune), add = TRUE, border = "white", lwd = 2)
-plot(st_geometry(feux), add = TRUE, border = "black", lwd = 2)
+plot(st_geometry(feux), add = TRUE, border = "red", lwd = 2)
 ```
 
 ![](couchey_files/figure-html/plot-risk-1.png)
@@ -308,7 +308,7 @@ par(mar = c(2, 2, 2, 4))
 plot(terra::crop(fev_data(expo), vect(zone)),
      main = "Exposition autour de l'incendie du 29 juillet 2026")
 plot(st_geometry(commune), add = TRUE, border = "grey30", lwd = 1)
-plot(st_geometry(couchey), add = TRUE, border = "black", lwd = 3)
+plot(st_geometry(couchey), add = TRUE, border = "red", lwd = 3)
 ```
 
 ![](couchey_files/figure-html/plot-couchey-1.png)
