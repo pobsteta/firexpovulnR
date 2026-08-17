@@ -31,10 +31,16 @@ data-raw/downloads/
 *.tif
 *.tiff
 *.gpkg
-# ... but the shipped reference extract is versioned: it is what makes the
-# Couchey article runnable without a network. Rebuilt by
-# data-raw/build_couchey_extract.R.
+# ... but the shipped reference extracts are versioned: they are what make the
+# Couchey and Maures articles runnable without a network. Rebuilt by
+# data-raw/build_couchey_extract.R and data-raw/build_maures_extract.R.
+#
+# The exception has to be spelled out per file, and it is easy to forget when a
+# second extract arrives -- which is exactly what happened with maures.gpkg.
 !inst/extdata/couchey.gpkg
+!inst/extdata/maures.gpkg
+!inst/extdata/lidar_burnt.tif
+!inst/extdata/lidar_control.tif
 *.shp
 *.shx
 *.dbf
