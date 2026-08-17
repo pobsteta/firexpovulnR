@@ -71,6 +71,11 @@
 <li>L’avertissement <code>NaNs produced</code> de <code>cffdrs</code> — un <code><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse()</a></code> qui évalue ses deux branches — est étouffé nommément, et la sortie est vérifiée à la place : un NaN réel est signalé au lieu d’être caché derrière du bruit.</li>
 </ul></div>
 <div class="section level4">
+<h4 id="les-tests-réseau-ne-tournaient-pas-là-où-on-croyait-0-12-0">Les tests réseau ne tournaient pas là où on croyait<a class="anchor" aria-label="anchor" href="#les-tests-r%C3%A9seau-ne-tournaient-pas-l%C3%A0-o%C3%B9-on-croyait-0-12-0"></a></h4>
+<ul><li>
+<code>skip_unless_network()</code> testait <code><a href="https://rdrr.io/r/base/nchar.html" class="external-link">nzchar()</a></code> sur <code>FIREXPOVULNR_TEST_NETWORK</code>, alors que le workflow y pose <code>"0"</code> pour dire « désactivé » — et <code>nzchar("0")</code> est vrai. <strong>Tous les tests réseau tournaient donc dans le CI</strong>, et n’étaient verts que tant que l’IGN et EFFIS l’étaient. Le premier délai DNS sur <code>data.geopf.fr</code> a fait rougir le check, ce que le brief interdit précisément. L’activation demande désormais une valeur explicite (<code>1</code>, <code>true</code>, <code>yes</code>), comme le faisait déjà la garde du test de charge.</li>
+</ul></div>
+<div class="section level4">
 <h4 id="les-deux-articles-refaits-sur-météo-réelle-0-12-0">Les deux articles, refaits sur météo réelle<a class="anchor" aria-label="anchor" href="#les-deux-articles-refaits-sur-m%C3%A9t%C3%A9o-r%C3%A9elle-0-12-0"></a></h4>
 <ul><li>
 <code><a href="../articles/couchey.html">vignette("couchey")</a></code> : le <strong>29 juillet 2026</strong>, jour où la commune a brûlé, sort <strong>2e sur 960 jours</strong> en FWI médian. 34–36 °C et 20 % d’humidité relative en Côte-d’Or.</li>
