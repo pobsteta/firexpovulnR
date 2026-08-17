@@ -1,0 +1,124 @@
+# Fire Weather Index from open weather, as a dated raster
+
+Runs the FWI system on a weather table point by point and assembles the
+result into a dated `SpatRaster`, ready for
+[`fev_fwi_percentile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_percentile.md).
+
+## Usage
+
+``` r
+fev_fwi_from_weather(
+  weather,
+  index = "FWI",
+  crs_work = NULL,
+  init = c(ffmc = 85, dmc = 6, dc = 15),
+  reset = c("none", "annual"),
+  reset_month = 1L
+)
+```
+
+## Arguments
+
+- weather:
+
+  A
+  [fev_source](https://pobsteta.github.io/firexpovulnR/reference/fev_data.md)
+  from
+  [`fev_fetch_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_weather.md),
+  or a data frame in the same shape.
+
+- index:
+
+  Which index to return as the raster: `"FWI"` by default, or any column
+  `cffdrs` produces — `"DC"`, `"ISI"`, `"BUI"`, `"DSR"` and so on.
+
+- crs_work:
+
+  EPSG code for the output raster. `NULL` keeps lon/lat, which avoids a
+  reprojection the values do not need.
+
+- init:
+
+  Startup codes, passed through to
+  [`fev_fwi_calc()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_calc.md).
+
+- reset:
+
+  `"none"` (default) integrates the whole record continuously;
+  `"annual"` restarts the moisture codes from `init` at the start of
+  each year.
+
+- reset_month:
+
+  Month the annual restart happens in. Defaults to January.
+
+## Value
+
+A `fev_danger_layer` holding a `SpatRaster` with one dated layer per
+day.
+
+## Why point by point
+
+The moisture codes are cumulative: each day's FFMC, DMC and DC depend on
+the previous day's at the same place. `cffdrs::fwi(batch = TRUE)`
+accumulates them independently per station id — verified: two stations
+given identical startup values but different weather diverge correctly.
+So going through the tabular path gives **per-cell integration**, which
+the gridded path of
+[`fev_fwi_calc()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_calc.md)
+cannot:
+[`cffdrs::fwiRaster()`](https://rdrr.io/pkg/cffdrs/man/fwiRaster.html)
+takes scalar startup codes, so that route carries them forward as
+spatial means and smooths the drought signal.
+
+That is the main reason to prefer this function over rasterising first.
+
+## Startup values, and whether to restart each year
+
+Every point starts from the same `init`, and `cffdrs` warns about it.
+The first weeks of any record are therefore a spin-up rather than a
+result. Start the record earlier than the period you intend to analyse.
+
+By default the codes are integrated **continuously** over the whole
+record, because that is what the Drought Code is built to do: winter
+rain drains it, and a genuinely dry winter should carry over into
+spring. Measured over three years in the Maures, the difference on 16
+August 2021 is DC 643 continuous against 619 restarted each January, and
+FWI 84.3 against 84.2.
+
+`reset = "annual"` restarts from `init` at the beginning of each year,
+which is what operational implementations do at fire-season onset. It is
+worth having for a record that begins mid-season, or to reproduce an
+implementation that does it — not as a routine correction.
+
+A warning about diagnosing this from the FWI: the duration factor
+saturates. `1000 / (25 + 108.64 * exp(-0.023 * BUI))` is 38.3 at BUI 200
+and 39.8 at BUI 300, against an asymptote of 40. Above roughly BUI 250
+the FWI is nearly blind to further drought, so a Drought Code that has
+drifted to twice its physical value does not make the FWI look wrong.
+Check DC and BUI directly.
+
+## See also
+
+[`fev_fetch_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_weather.md),
+[`fev_fwi_percentile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_percentile.md),
+[`fev_fwi_calc()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_calc.md).
+
+## Examples
+
+``` r
+# A two-point, three-day table in the shape fev_fetch_weather() returns.
+w <- expand.grid(id = 1:2, day = 1:3)
+w$lat <- c(43.2, 43.3)[w$id]
+w$long <- c(6.3, 6.4)[w$id]
+w$yr <- 2021
+w$mon <- 8
+w$temp <- c(30, 22)[w$id]
+w$rh <- c(25, 55)[w$id]
+w$ws <- c(20, 8)[w$id]
+w$prec <- 0
+r <- fev_fwi_from_weather(w)
+#> Warning: Same initial data were used for multiple weather stations
+terra::nlyr(fev_data(r))
+#> [1] 3
+```

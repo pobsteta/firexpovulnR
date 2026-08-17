@@ -11,12 +11,12 @@ Source:
 
 Obstétar P (2026). *firexpovulnR: Fire Danger, Exposure and
 Vulnerability Assessment for European Forests*. R package version
-0.11.0, <https://github.com/pobsteta/firexpovulnR>.
+0.12.0, <https://github.com/pobsteta/firexpovulnR>.
 
     @Manual{,
       title = {firexpovulnR: Fire Danger, Exposure and Vulnerability Assessment for European Forests},
       author = {Pascal Obstétar},
       year = {2026},
-      note = {R package version 0.11.0},
+      note = {R package version 0.12.0},
       url = {https://github.com/pobsteta/firexpovulnR},
     }

@@ -65,8 +65,8 @@ and returns an empty table rather than an error when there is nothing.
 A 1 km square in Lambert-93, delivered as **COPC** — Cloud Optimized
 Point Cloud. COPC is octree-indexed and readable by HTTP range request,
 so an extent or a level of detail can be read without pulling the whole
-file. That matters: one tile is of the order of a gigabyte, and a
-Mediterranean massif needs a thousand of them.
+file. That matters: a tile runs 120 to 260 MB — measured, not assumed —
+and a Mediterranean massif needs several hundred of them.
 
 ## See also
 

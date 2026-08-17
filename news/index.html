@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.12.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,50 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.12.0" id="firexpovulnr-0120-2026-08-17">firexpovulnR 0.12.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0120-2026-08-17"></a></h2>
+<div class="section level4">
+<h4 id="la-météo-nest-plus-inventée--et-sans-aucun-jeton-0-12-0">La météo n’est plus inventée — et sans aucun jeton<a class="anchor" aria-label="anchor" href="#la-m%C3%A9t%C3%A9o-nest-plus-invent%C3%A9e--et-sans-aucun-jeton-0-12-0"></a></h4>
+<p>Les deux articles du site tournaient sur une série <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm()</a></code>, parce que le produit historique CEMS demande un jeton Copernicus personnel que le package s’interdit de manipuler. Pour un package dont la première exigence est la traçabilité, livrer deux exemples travaillés reposant sur des nombres inventés était le défaut le plus visible qui restait.</p>
+<ul><li>
+<strong><code><a href="../reference/fev_fetch_weather.html">fev_fetch_weather()</a></code></strong> lit l’archive Open-Meteo, qui re-sert ERA5 et ERA5-Land <strong>sans aucune authentification</strong>. Elle rend les quatre variables du système canadien — température, humidité relative, vent, pluie — au pas horaire, donc l’observation de <strong>midi</strong> que le système exige est disponible et non approximée par un maximum journalier. Grille à 0,1°, soit <strong>2,5 fois plus fine que les 0,25° du CEMS</strong>, et l’archive remonte à 1940.</li>
+<li>
+<strong><code><a href="../reference/fev_fwi_from_weather.html">fev_fwi_from_weather()</a></code></strong> fait tourner le système sur la table point par point et assemble un <code>SpatRaster</code> daté. La voie tabulaire de <code>cffdrs</code> accumule les codes d’humidité <strong>indépendamment par point</strong> ; la voie raster ne sait porter que des codes de départ scalaires et lisserait la sécheresse en moyenne spatiale.</li>
+<li>Le vent est servi en <strong>km/h</strong>, l’unité que le système attend — contrairement au <code>FG</code> d’E-OBS, en m/s, qui est la manière classique de se tromper d’un facteur 3,6 sur l’ISI.</li>
+<li>
+<code><a href="../reference/fev_fetch_fwi.html">fev_fetch_fwi()</a></code> reste la voie de référence quand on a un jeton. Le paquet avertit une fois par session qu’Open-Meteo est un <strong>tiers</strong> entre ECMWF et vous, et l’inscrit dans la provenance à chaque appel : les indices obtenus sont du <code>cffdrs</code> sur entrées Open-Meteo, comparables au produit CEMS, pas identiques.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="deux-pièges-mesurés-et-corrigés-0-12-0">Deux pièges mesurés, et corrigés<a class="anchor" aria-label="anchor" href="#deux-pi%C3%A8ges-mesur%C3%A9s-et-corrig%C3%A9s-0-12-0"></a></h4>
+<ul><li>
+<strong>La pluie est un cumul, pas une observation.</strong> Le système canadien prend la pluie <strong>cumulée sur les 24 heures</strong> précédant midi. La première version lisait la pluie de l’heure de midi, ce qui jette 23 heures par jour. Conséquence mesurée sur trois ans dans les Maures : 10 % de jours de pluie au lieu de 39 %, et un DC de 1 949 le 16 août 2021 au lieu de 619. Un jour supplémentaire est désormais récupéré en tête de chaque tranche pour remplir la fenêtre.</li>
+<li>
+<strong>Et le FWI ne le montre pas.</strong> Le facteur de durée sature : <code>1000 / (25 + 108.64 * exp(-0.023 * BUI))</code> vaut 38,3 à BUI 200 et 39,8 à BUI 300, pour une asymptote de 40. Au-delà d’un BUI de 250 environ, un DC dérivé au double de sa valeur physique <strong>ne fait pas paraître le FWI faux</strong>. Les deux articles le documentent, et <code><a href="../reference/fev_fwi_from_weather.html">fev_fwi_from_weather()</a></code> renvoie n’importe quel code du système pour qu’on puisse le vérifier directement.</li>
+<li>Corollaire : <code>reset = "annual"</code> existe pour redémarrer les codes chaque année, mais <strong>n’est pas le défaut</strong>. Avec la pluie correcte, les pluies d’hiver vidangent le DC d’elles-mêmes — 643 en intégration continue contre 619 redémarré, soit 4 %. Ce qui ressemblait à un redémarrage saisonnier manquant était la pluie jetée.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="robustesse-de-la-voie-réseau-0-12-0">Robustesse de la voie réseau<a class="anchor" aria-label="anchor" href="#robustesse-de-la-voie-r%C3%A9seau-0-12-0"></a></h4>
+<ul><li>Le point demandé, et non la maille servie, est l’identité de station. Plusieurs points peuvent tomber dans la même maille de réanalyse sans partager la même série : Open-Meteo corrige la température de l’altitude du point demandé (trois points de la maille 43,40949 / 6,341829, à 274, 221 et 77 m, ont rendu 34,8, 34,8 et 35,4 °C le 16 août 2021). La maille servie et son altitude voyagent dans la provenance comme diagnostic.</li>
+<li>Les séries sont appariées aux points <strong>par position</strong> — rien dans la réponse ne les y ramène. Un écart de compte est donc une erreur, pas un cas à recycler silencieusement.</li>
+<li>HTTP 429 est réessayé avec attente croissante ; HTTP 400 ne l’est pas, parce qu’attendre ne répare pas une requête malformée. Une courte pause sépare les tranches annuelles — le service est gratuit.</li>
+<li>Une période qui dépasse aujourd’hui est <strong>bornée</strong> avec un message, au lieu d’échouer sur la dernière tranche après avoir téléchargé toutes les autres. Vérifié : l’archive sert 24 heures valides pour aujourd’hui même, en complétant les derniers jours par un modèle de prévision — ce ne sont donc pas des jours ERA5.</li>
+<li>La clé de cache porte un marqueur de schéma : la table stockée est un produit dérivé, donc un changement de sens doit invalider les entrées existantes alors que la requête qui les a produites n’a pas bougé.</li>
+<li>
+<code>fev_period_bounds()</code> accepte les années en caractères — <code>c("2021", "2021")</code> mourait dans <code><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date()</a></code>.</li>
+<li>Le cache sait stocker une table, pas seulement un <code>sf</code> ou un <code>SpatRaster</code>.</li>
+<li>L’avertissement <code>NaNs produced</code> de <code>cffdrs</code> — un <code><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse()</a></code> qui évalue ses deux branches — est étouffé nommément, et la sortie est vérifiée à la place : un NaN réel est signalé au lieu d’être caché derrière du bruit.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="les-deux-articles-refaits-sur-météo-réelle-0-12-0">Les deux articles, refaits sur météo réelle<a class="anchor" aria-label="anchor" href="#les-deux-articles-refaits-sur-m%C3%A9t%C3%A9o-r%C3%A9elle-0-12-0"></a></h4>
+<ul><li>
+<code><a href="../articles/couchey.html">vignette("couchey")</a></code> : le <strong>29 juillet 2026</strong>, jour où la commune a brûlé, sort <strong>2e sur 960 jours</strong> en FWI médian. 34–36 °C et 20 % d’humidité relative en Côte-d’Or.</li>
+<li>
+<code><a href="../articles/maures.html">vignette("maures")</a></code> : le <strong>16 août 2021</strong>, jour du feu de 6 510 ha du Cannet-des-Maures, sort <strong>1er sur 1 096 jours</strong>. 35 °C, 22 % d’humidité, 24 km/h et pas une goutte sur les 24 heures précédentes.</li>
+<li>Aucune donnée de feu n’entre dans le calcul du FWI. Ce n’est pas une validation du modèle de risque — un feu ne fait pas un échantillon, et un jour de canicule est aussi un jour de plus de départs — mais c’est un signal qui tombe au bon endroit sur les deux seuls événements que ces territoires offrent, ce qu’une série <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm()</a></code> ne pouvait par construction jamais montrer.</li>
+<li>Trois ans de référence et non trente : la normale de l’OMM est de trente ans, et c’est une limite de ce qu’il est raisonnable d’embarquer dans <code>inst/extdata</code>, pas du paquet. Un seul appel l’élargit.</li>
+<li>Les tables météo voyagent avec le package (<code>inst/extdata/{couchey,maures}_weather.csv.gz</code>, 134 et 187 Ko), construites par <code>data-raw/build_weather_extracts.R</code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.11.0" id="firexpovulnr-0110-2026-08-17">firexpovulnR 0.11.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0110-2026-08-17"></a></h2>
 <div class="section level4">

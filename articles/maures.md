@@ -332,13 +332,31 @@ d[order(-d$area_ha), c("fire_date", "area_ha", "COMMUNE", "PERCNA2K")][1:6, ]
 Onze incendies, dont le 6 510 ha de 2021 — un échantillon, cette fois,
 là où Couchey n’en avait qu’un.
 
+### La météo, réelle et sans jeton
+
+Trois ans de FWI calculés sur l’archive Open-Meteo, qui re-sert ERA5
+sans authentification. Aucune clé n’a été lue pour produire ce tableau.
+
 ``` r
 
-meteo <- rast(nrows = 8, ncols = 8, extent = ext(vect(study)),
-              crs = "EPSG:2154", nlyr = 730)
-values(meteo) <- matrix(abs(rnorm(64 * 730, mean = 18, sd = 11)), nrow = 64)
-time(meteo) <- seq(as.Date("2019-01-01"), by = "day", length.out = 730)
-danger_pct <- fev_fwi_percentile(meteo, ref_period = c(2019, 2020))
+meteo_tab <- read.csv(gzfile(system.file("extdata", "maures_weather.csv.gz",
+                                         package = "firexpovulnR")))
+jour <- meteo_tab[meteo_tab$yr == 2021 & meteo_tab$mon == 8 &
+                    meteo_tab$day == 16, ]
+round(sapply(jour[, c("temp", "rh", "ws", "prec")], mean), 1)
+#> temp   rh   ws prec 
+#> 35.1 22.3 23.6  0.0
+```
+
+Trente-cinq degrés, 22 % d’humidité relative, 24 km/h de vent et pas une
+goutte sur les vingt-quatre heures précédentes, le jour où 6 510
+hectares ont brûlé.
+
+``` r
+
+meteo <- fev_data(fev_fwi_from_weather(meteo_tab, index = "FWI",
+                                       crs_work = 2154))
+danger_pct <- fev_fwi_percentile(meteo, ref_period = c(2019, 2021))
 
 dernier <- fev_data(danger_pct)[[terra::nlyr(fev_data(danger_pct))]]
 dispo <- fev_fuel_availability(fuel, weights = fev_fuel_weights(quiet = TRUE))
@@ -351,9 +369,84 @@ vuln <- fev_vuln_layer(pile$exposition, method = "percentile_rank",
 risque <- fev_risk(danger, vuln, normalise = "none")
 ```
 
-La météo est synthétique, comme à Couchey et pour la même raison : le
-produit CEMS demande un jeton personnel que le package refuse de
-manipuler.
+### Le jour de l’incendie sort premier de 1 096
+
+C’est la vérification que Couchey ne pouvait pas offrir avec un seul
+feu, et que ni l’une ni l’autre ne pouvait offrir avec une série
+inventée :
+
+``` r
+
+med <- terra::global(meteo, stats::median, na.rm = TRUE)[, 1]
+dates <- as.Date(terra::time(meteo))
+data.frame(date = dates[order(-med)][1:3],
+           fwi_median = round(sort(med, decreasing = TRUE)[1:3], 1))
+#>         date fwi_median
+#> 1 2021-08-16       84.3
+#> 2 2020-08-03       83.6
+#> 3 2020-08-27       76.1
+```
+
+**Le 16 août 2021 est le premier jour sur 1 096.** Aucune donnée de feu
+n’entre dans le calcul : le FWI ne connaît que la température,
+l’humidité, le vent et la pluie servis par la réanalyse.
+
+``` r
+
+par(mar = c(3, 4, 2, 1))
+plot(dates, med, type = "l", col = "grey40", xlab = "", ylab = "FWI médian",
+     main = "FWI médian sur le massif, 2019-2021")
+abline(v = as.Date("2021-08-16"), col = "red", lwd = 2)
+```
+
+![](maures_files/figure-html/plot-serie-1.png)
+
+### Deux pièges mesurés en construisant ce tableau
+
+Le premier est une question d’unité déguisée en question de temps. La
+pluie n’est pas une observation de midi comme les trois autres variables
+: le système canadien prend le **cumul des vingt-quatre heures** qui
+précèdent. Lire la pluie de l’heure de midi jette 23 heures par jour, et
+la conséquence est mesurable ici — 10 % de jours de pluie au lieu de 39
+%, et un DC de 1 949 le 16 août au lieu de 619.
+
+Le second est ce qui rend le premier difficile à voir. Le facteur de
+durée du FWI sature :
+
+``` r
+
+fD <- function(bui) 1000 / (25 + 108.64 * exp(-0.023 * bui))
+round(sapply(c(BUI_150 = 150, BUI_200 = 200, BUI_300 = 300, BUI_600 = 600), fD), 2)
+#> BUI_150 BUI_200 BUI_300 BUI_600 
+#>   35.15   38.33   39.83   40.00
+```
+
+L’asymptote est 40. Au-delà d’un BUI de 250 environ, le FWI est presque
+aveugle à la sécheresse supplémentaire : un DC dérivé au double de sa
+valeur physique **ne fait pas paraître le FWI faux**. Il faut regarder
+le DC et le BUI directement, ce que `fev_fwi_from_weather(index = "DC")`
+permet.
+
+``` r
+
+sapply(c("DMC", "DC", "BUI"), function(ix) {
+  r <- fev_data(fev_fwi_from_weather(meteo_tab, index = ix, crs_work = 2154))
+  round(median(terra::values(r[[which(dates == as.Date("2021-08-16"))]]),
+               na.rm = TRUE))
+})
+#> Warning in cffdrs::fwi(weather, init = init_df, lat.adjust = lat_adjust, : Same
+#> initial data were used for multiple weather stations
+#> Warning in cffdrs::fwi(weather, init = init_df, lat.adjust = lat_adjust, : Same
+#> initial data were used for multiple weather stations
+#> Warning in cffdrs::fwi(weather, init = init_df, lat.adjust = lat_adjust, : Same
+#> initial data were used for multiple weather stations
+#> DMC  DC BUI 
+#> 155 643 199
+```
+
+Un DC de l’ordre de 600 en août dans les Maures est une sécheresse
+profonde et plausible. C’est ce qu’on veut lire : une valeur qu’on peut
+confronter à la littérature, pas un nombre qui a seulement l’air grand.
 
 ``` r
 
@@ -371,19 +464,20 @@ val$auc
 
 val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 #>       class pct_of_area pct_of_burnt ratio
-#> 1   0 - 0.2       18.61         8.67  0.47
-#> 2 0.2 - 0.4       20.96        28.92  1.38
-#> 3 0.4 - 0.6       36.66        37.31  1.02
-#> 4 0.6 - 0.8       21.27        22.23  1.05
-#> 5   0.8 - 1        2.50         2.86  1.14
+#> 1   0 - 0.2       31.84        29.68  0.93
+#> 2 0.2 - 0.4       37.83        39.90  1.05
+#> 3 0.4 - 0.6       30.33        30.43  1.00
+#> 4 0.6 - 0.8        0.00         0.00   NaN
+#> 5   0.8 - 1        0.00         0.00   NaN
 ```
 
 Le biais temporel est le même qu’à Couchey, et pour la même raison : le
 combustible est de 2008, les feux vont de 2017 à 2026. Onze incendies
 valent mieux qu’un, mais ils ont tous brûlé au moins neuf ans après la
-photographie aérienne qui fonde la couche — et l’AUC ci-dessus est
-calculé sur une météo inventée. Il décrit la géométrie du combustible,
-pas une performance de prévision.
+photographie aérienne qui fonde la couche. L’AUC ci-dessus repose
+désormais sur une météo réelle, mais il décrit toujours la géométrie du
+combustible bien plus qu’une performance de prévision : le danger météo
+est modulé par une couche de combustible de 2008.
 
 ## Ce que cette page ajoute à Couchey
 
@@ -394,7 +488,8 @@ pas une performance de prévision.
 | LiDAR HD | **0 dalle** | **505 dalles, 100 %** |
 | Échantillon de feux | 1 feu, 26 ha | **11 feux, 6 927 ha** |
 | Millésime | 2007 / 2010 / 2014 | 2008 / 2014 |
-| Validation | impossible, et c’est le résultat | possible, mais sur météo inventée |
+| Validation | impossible, et c’est le résultat | possible, sur météo réelle |
+| Jour du feu dans le FWI | 2e sur 960 jours | **1er sur 1 096 jours** |
 
 Et une chose que ni l’une ni l’autre ne résout : le LiDAR HD est de
 **2025**, la BD Forêt de 2008. Le registre continu et le registre

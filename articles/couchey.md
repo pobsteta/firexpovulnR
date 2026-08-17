@@ -9,11 +9,12 @@ library(sf)
 
 La vignette
 [principale](https://pobsteta.github.io/firexpovulnR/articles/firexpovulnR.md)
-déroule la chaîne sur un paysage inventé. Celle-ci la déroule sur des
-**données réelles** autour de **Couchey**, en Côte-d’Or — territoire de
-référence du projet voisin `nemetonshiny` — et se termine sur un
-incendie qui a réellement brûlé la commune le **29 juillet 2026**, six
-semaines avant la constitution de cet extrait.
+déroule la chaîne sur un paysage inventé. Celle-ci la déroule de bout en
+bout sur des **données réelles** — végétation, feux et désormais météo —
+autour de **Couchey**, en Côte-d’Or — territoire de référence du projet
+voisin `nemetonshiny` — et se termine sur un incendie qui a réellement
+brûlé la commune le **29 juillet 2026**, six semaines avant la
+constitution de cet extrait.
 
 Le terrain n’a pas été choisi pour flatter le package. Couchey est
 l’inverse de ce pour quoi il a été conçu : chênaie, hêtraie et charmaie
@@ -193,30 +194,102 @@ Le rayon de 500 m vient de travaux albertains, validés depuis au
 Portugal. Sur une mosaïque bourguignonne de bois, cultures et vignes, il
 n’est validé nulle part.
 
-## Danger météorologique — le seul ingrédient inventé
+## Danger météorologique — données réelles, sans aucun jeton
 
 Le produit historique CEMS demande un jeton Copernicus personnel, que le
-package s’interdit de manipuler. La série ci-dessous est donc
-**synthétique**, et c’est la seule chose de cette page qui ne soit pas
-une donnée réelle.
+package s’interdit de manipuler. Ce n’est plus un obstacle :
+[`fev_fetch_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_weather.md)
+lit l’archive Open-Meteo, qui **re-sert ERA5 et ERA5-Land sans aucune
+authentification**. La météo de cette page est donc réelle, et le script
+d’extraction n’a lu aucune clé.
+
+Trois ans à 12:00 UTC, un point par maille de réanalyse, livrés avec le
+package :
 
 ``` r
 
-meteo <- rast(nrows = 6, ncols = 4, extent = ext(vect(study)),
-              crs = "EPSG:2154", nlyr = 730)
-values(meteo) <- matrix(abs(rnorm(24 * 730, mean = 9, sd = 7)), nrow = 24)
-time(meteo) <- seq(as.Date("2019-01-01"), by = "day", length.out = 730)
+meteo_tab <- read.csv(gzfile(system.file("extdata", "couchey_weather.csv.gz",
+                                         package = "firexpovulnR")))
+c(points = length(unique(meteo_tab$id)), jours = nrow(meteo_tab),
+  du = min(meteo_tab$yr), au = max(meteo_tab$yr))
+#> points  jours     du     au 
+#>     16  15360   2024   2026
+```
+
+Le jour de l’incendie, mesuré et non supposé :
+
+``` r
+
+jour <- meteo_tab[meteo_tab$yr == 2026 & meteo_tab$mon == 7 &
+                    meteo_tab$day == 29, ]
+round(sapply(jour[, c("temp", "rh", "ws", "prec")], mean), 1)
+#> temp   rh   ws prec 
+#> 35.5 19.7 14.1  0.0
+```
+
+Trente-cinq degrés et 20 % d’humidité relative en Côte-d’Or : le
+contexte n’est pas anecdotique.
+
+### Un piège que la donnée servie révèle
+
+Le service renvoie les coordonnées de la maille qu’il a lue, et
+**plusieurs points demandés peuvent tomber dans la même** — sans
+partager la même série, parce que la température est corrigée de
+l’altitude du point demandé :
+
+``` r
+
+g <- unique(meteo_tab[, c("id", "lat", "long", "cell_lat", "cell_long",
+                          "elev_m")])
+g[order(g$cell_lat, g$cell_long), ][1:4, ]
+#>       id  lat long cell_lat cell_long elev_m
+#> 14401 16 47.1  5.1 47.06502  5.121951    228
+#> 11521 13 47.1  4.8 47.13532  4.837133    507
+#> 12481 14 47.1  4.9 47.13532  4.837133    328
+#> 13441 15 47.1  5.0 47.13532  4.983713    215
+```
+
+C’est pourquoi le paquet garde le **point demandé** comme identité de
+station, et fait voyager la maille servie comme diagnostic : indexer sur
+les coordonnées renvoyées fusionnerait des séries distinctes et perdrait
+des points.
+
+### Du tableau au FWI
+
+Les codes d’humidité du système canadien sont cumulatifs : le FFMC, le
+DMC et le DC d’un jour dépendent de ceux de la veille **au même
+endroit**.
+[`fev_fwi_from_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_from_weather.md)
+passe par la voie tabulaire de `cffdrs`, où les codes s’accumulent
+indépendamment par point — la voie raster, elle, ne sait porter que des
+codes de départ scalaires et lisserait la sécheresse en moyenne
+spatiale.
+
+``` r
+
+meteo <- fev_data(fev_fwi_from_weather(meteo_tab, index = "FWI",
+                                       crs_work = 2154))
 ```
 
 ``` r
 
-danger_pct <- fev_fwi_percentile(meteo, ref_period = c(2019, 2020))
+danger_pct <- fev_fwi_percentile(meteo, ref_period = c(2024, 2026))
 ```
 
 Sur un FWI bourguignon, les seuils absolus EFFIS placeraient presque
 tout en classe basse toute l’année. C’est exactement ce que la
 calibration en percentiles corrige : un 98e percentile veut dire «
 journée exceptionnelle **ici** ».
+
+Trois ans de référence, pas trente : la normale de l’OMM est de trente
+ans, et c’est ce qu’il faudrait. Ce n’est pas une limite du paquet mais
+de ce qu’il est raisonnable d’embarquer dans `inst/extdata` — un seul
+appel l’élargit, l’archive remontant à 1940 :
+
+``` r
+
+fev_fetch_weather(study, period = c("1996-01-01", "2025-12-31"))
+```
 
 ## Alignement, vulnérabilité, risque
 
@@ -226,10 +299,10 @@ dernier <- fev_data(danger_pct)[[terra::nlyr(fev_data(danger_pct))]]
 dispo <- fev_fuel_availability(fuel, weights = fev_fuel_weights(quiet = TRUE))
 pile <- fev_align(danger = dernier, disponibilite = fev_data(dispo),
                   exposition = fev_data(expo))
-#> Warning: Aligning layers whose cell sizes differ by a factor of 126.4.
-#> ℹ Finest "disponibilite" at 25; coarsest "danger" at 3160.2.
+#> Warning: Aligning layers whose cell sizes differ by a factor of 380.1.
+#> ℹ Finest "disponibilite" at 25; coarsest "danger" at 9502.42.
 #> ℹ Target grid: 25 (finest).
-#> ℹ Each coarse cell is copied across about 16000 fine cells. That adds
+#> ℹ Each coarse cell is copied across about 144000 fine cells. That adds
 #>   resolution, not information.
 #> ℹ The ratio is recorded in the provenance.
 ```
@@ -277,20 +350,24 @@ a mis les trois couches sur exactement la même grille de 25 m, et
 aurait refusé sinon.
 
 Ces dalles sont le **contenu** de la couche de danger, pas un artefact
-d’assemblage. La grille météo synthétique de cette vignette fait 6 × 4
-cellules :
+d’assemblage. La grille météo est celle de la réanalyse, à 0,1° — et sur
+cette emprise elle ne fait que trois cellules de large :
 
 ``` r
 
 c(maille_meteo_m = round(res(meteo)[1]),
   maille_combustible_m = res(pile$exposition)[1],
-  rapport = round(res(meteo)[1] / res(pile$exposition)[1]))
+  rapport = round(res(meteo)[1] / res(pile$exposition)[1]),
+  cellules_meteo = ncol(meteo) * nrow(meteo))
 #>       maille_meteo_m maille_combustible_m              rapport 
-#>                 3160                   25                  126
+#>                 9502                   25                  380 
+#>       cellules_meteo 
+#>                   15
 ```
 
-Une maille météo de 3,2 km recouvre donc environ **126 pixels de
-combustible dans chaque direction**. En les descendant à 25 m,
+Une maille météo de 9,5 km recouvre donc **380 pixels de combustible
+dans chaque direction**, soit environ 144 000 pixels par maille. En les
+descendant à 25 m,
 [`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
 utilise le plus proche voisin — délibérément :
 
@@ -310,11 +387,13 @@ donnée n’a jamais mesurée. Le plus proche voisin laisse voir l’escalier,
 qui est ce que la donnée dit vraiment.
 
 Et il faut lire ces dalles comme une version **atténuée** du problème.
-Avec le vrai produit CEMS à 0,25°, les mailles font environ 19 × 28 km :
+Avec le produit CEMS à 0,25°, les mailles font environ 19 × 28 km :
 toute cette emprise de 12,6 × 23,1 km tiendrait dans **une seule**
 d’entre elles. La carte de risque ne serait alors plus pavée du tout —
 elle serait modulée uniformément par une valeur météo unique, ce qui est
-le même aveu sous une forme moins visible.
+le même aveu sous une forme moins visible. Les trois cellules visibles
+ici sont donc l’avantage de cette voie, pas son défaut : 2,5 fois plus
+fine que la référence.
 
 C’est pour cela que
 [`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
@@ -367,6 +446,47 @@ plot(st_geometry(couchey), add = TRUE, border = "red", lwd = 3)
 ```
 
 ![](couchey_files/figure-html/plot-couchey-1.png)
+
+### Ce que la météo réelle permet enfin de vérifier
+
+Tant que la série était inventée, la seule chose que cette page pouvait
+dire de l’incendie était sa géométrie. Avec trois ans de FWI réel, on
+peut poser la question qui compte : le 29 juillet 2026 était-il un jour
+remarquable ?
+
+``` r
+
+med <- terra::global(meteo, stats::median, na.rm = TRUE)[, 1]
+dates <- as.Date(terra::time(meteo))
+rang <- rank(-med)[dates == as.Date("2026-07-29")]
+c(fwi_median = round(med[dates == as.Date("2026-07-29")], 1),
+  rang = rang, sur_n_jours = length(med))
+#>  fwi_median        rang sur_n_jours 
+#>        50.4         2.0       960.0
+```
+
+**Deuxième jour sur 960.** Sur trois années, un seul jour a été plus
+dangereux que celui où la commune a brûlé — à Couchey, en Bourgogne, où
+les seuils absolus d’EFFIS ne classent presque jamais rien.
+
+Il faut être précis sur ce que cela vaut. Ce n’est pas une validation du
+modèle de risque : aucune donnée de feu n’entre dans le calcul du FWI,
+mais un seul incendie ne fait pas un échantillon, et un jour de canicule
+est un jour où l’on allume aussi plus de départs. Ce que cela montre,
+c’est que la voie Open-Meteo → `cffdrs` produit un signal qui tombe au
+bon endroit sur le seul événement que ce territoire offre — ce qu’une
+série [`rnorm()`](https://rdrr.io/r/stats/Normal.html) ne pouvait par
+construction jamais montrer.
+
+``` r
+
+par(mar = c(3, 4, 2, 1))
+plot(dates, med, type = "l", col = "grey40", xlab = "", ylab = "FWI médian",
+     main = "FWI médian sur l'emprise, 2024-2026")
+abline(v = as.Date("2026-07-29"), col = "red", lwd = 2)
+```
+
+![](couchey_files/figure-html/plot-serie-1.png)
 
 ## Validation — et la conclusion honnête
 
@@ -427,14 +547,14 @@ ne peut pas être validée avec cette donnée** :
 ``` r
 
 val$auc
-#> [1] 0.8291124
+#> [1] 0.8624976
 val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 #>       class pct_of_area pct_of_burnt ratio
-#> 1   0 - 0.2       58.59        24.96  0.43
-#> 2 0.2 - 0.4       27.89        13.04  0.47
-#> 3 0.4 - 0.6        9.94        18.42  1.85
-#> 4 0.6 - 0.8        3.32        29.07  8.76
-#> 5   0.8 - 1        0.26        14.50 55.87
+#> 1   0 - 0.2       51.53         0.40  0.01
+#> 2 0.2 - 0.4       29.77        37.24  1.25
+#> 3 0.4 - 0.6       16.11        26.92  1.67
+#> 4 0.6 - 0.8        2.59        35.45 13.68
+#> 5   0.8 - 1        0.00         0.00   NaN
 ```
 
 Le chiffre existe, il est dans l’objet, et il n’a pas de valeur probante
@@ -449,6 +569,7 @@ agréable et moins utile.
 | La chaîne, les grilles, la provenance | Les poids de disponibilité, ordonnés pour le méditerranéen |
 | La récupération du millésime | Son ambiguïté, ici entre trois campagnes |
 | La calibration en percentiles | Les seuils FWI absolus, peu discriminants en Bourgogne |
+| La météo réelle sans jeton, et le FWI qui tombe juste | Trois ans de référence au lieu de trente, et un tiers dans la chaîne de provenance |
 | Le contrôle de biais temporel, qui fait son travail | Le rayon de 500 m, validé ni ici ni ailleurs sur ce combustible |
 | Les vignes non brûlables, sur la Côte | La même hypothèse sur des terrasses abandonnées |
 

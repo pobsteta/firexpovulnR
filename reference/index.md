@@ -101,8 +101,14 @@ sont justifiées ligne par ligne et intégralement surchargeables.
 
 Le cœur méthodologique est la calibration en percentiles : un seuil FWI
 absolu redessine surtout la climatologie, alors qu’un rang percentile
-dit la même chose dans le Var et en Bretagne.
+dit la même chose dans le Var et en Bretagne. La météo elle-même
+s’obtient sans aucun jeton via
+[`fev_fetch_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_weather.md).
 
+- [`fev_fetch_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_weather.md)
+  : Fire weather from the open Open-Meteo archive
+- [`fev_fwi_from_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_from_weather.md)
+  : Fire Weather Index from open weather, as a dated raster
 - [`fev_fwi_calc()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_calc.md)
   : Fire Weather Index from weather forcings
 - [`fev_fwi_percentile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_percentile.md)
