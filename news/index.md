@@ -1,5 +1,74 @@
 # Changelog
 
+## firexpovulnR 0.11.0 (2026-08-17)
+
+#### Article « Les Maures » — le LiDAR voit ce que la classe ignore
+
+- [`vignette("maures")`](https://pobsteta.github.io/firexpovulnR/articles/maures.md)
+  fait tourner la chaîne là où le package a été conçu pour travailler,
+  sur données réelles : 2 333 formations BD Forêt, 201 polygones CORINE,
+  **11 incendies EFFIS dont celui du Cannet-des-Maures du 16 août 2021,
+  6 510 ha**, et surtout **505 dalles LiDAR HD couvrant 100 % de
+  l’emprise** — contre zéro à Couchey.
+
+- Le combustible est enfin méditerranéen : `LA4`, la lande, est la
+  classe dominante, devant pin maritime et chêne vert. C’est ici que les
+  poids par défaut et les rayons d’exposition sont le plus près de leur
+  base de preuves.
+
+- **La démonstration centrale.** Deux carrés de 500 m, l’un dans le
+  périmètre brûlé de 2021, l’autre 2 km plus loin, choisis pour que la
+  BD Forêt leur donne **la même classe** (`FF1-00-00`, même type de
+  combustible, même poids 0,95, même valeur dans le masque brûlable). Le
+  LiDAR mesure entre eux :
+
+  | Métrique                               | Rapport témoin / brûlé |
+  |----------------------------------------|------------------------|
+  | `Height` hauteur de canopée            | **1,0**                |
+  | `TFL` charge totale                    | 3,8                    |
+  | `MFL` charge de sous-étage             | 4,5                    |
+  | `H_Bush` sommet de la strate arbustive | 5,1                    |
+  | `FL_1_3` charge entre 1 et 3 m         | **6,7**                |
+
+  La hauteur de canopée est identique — donc un CHM issu d’ortho ou de
+  satellite, la solution qu’on propose souvent pour rafraîchir un
+  inventaire, aurait conclu que ces deux endroits se valent. Tout
+  l’écart est dans la strate basse, celle où un feu de surface se
+  propage.
+
+- Trois raisons cumulées pour lesquelles la couche catégorielle ne
+  pouvait pas le savoir, et aucune n’est un défaut de la BD Forêt : son
+  millésime est 2008, le feu est de 2021 ; sa nomenclature ne contient
+  pas le sous-étage, même à jour ; et la hauteur de canopée n’aurait pas
+  suffi.
+
+#### Données livrées
+
+- `inst/extdata/maures.gpkg` (3,6 Mo, sept couches) et deux GeoTIFF de
+  métriques LiDAR réelles à 25 m, construits par
+  `data-raw/build_maures_extract.R`. Les nuages de points, 120 et 205
+  Mo, ne sont pas embarqués — les métriques qu’ils produisent pèsent
+  quelques dizaines de kilooctets, ce qui est tout l’argument pour les
+  dériver une fois dans le script.
+- Traitement par carrés de 500 m et non par dalle entière :
+  `fPCpretreatment` sur 24 millions de points a épuisé 31 Go de RAM. Un
+  quart de dalle à densité intacte est la réduction honnête — une
+  surface plus petite, pas un nuage éclairci.
+
+#### Corrections
+
+- La taille des dalles LiDAR HD annoncée dans la documentation était
+  fausse : « de l’ordre du gigaoctet » alors que la mesure donne **120 à
+  260 Mo**. Corrigé partout, y compris dans le refus de
+  [`fev_fetch_lidarhd()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_lidarhd.md)
+  au-delà de `max_tiles`, qui estimait donc un téléchargement quatre
+  fois trop lourd.
+- Densités réelles constatées : 24 à 27 impulsions/m², largement
+  au-dessus des 10 spécifiées. Le rapport points/impulsions vaut 1,06
+  dans le brûlé contre 1,25 dans le témoin — la végétation intercepte à
+  plusieurs niveaux, le sol nu renvoie une fois. C’est un signal de
+  végétation avant tout traitement.
+
 ## firexpovulnR 0.10.0 (2026-08-17)
 
 Phase 8 — LiDAR HD. Le registre continu, en place et testé depuis la

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.10.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.11.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -18,6 +18,7 @@
       <ul class="navbar-nav me-auto"><li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/couchey.html">Couchey : la chaîne sur données réelles, et l'incendie du 29 juillet 2026</a></li>
+    <li><a class="dropdown-item" href="../articles/maures.html">Les Maures : le LiDAR voit le sous-étage que la BD Forêt ignore</a></li>
   </ul></li>
 <li class="nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="active nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
@@ -36,6 +37,47 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.11.0" id="firexpovulnr-0110-2026-08-17">firexpovulnR 0.11.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0110-2026-08-17"></a></h2>
+<div class="section level4">
+<h4 id="article--les-maures---le-lidar-voit-ce-que-la-classe-ignore-0-11-0">Article « Les Maures » — le LiDAR voit ce que la classe ignore<a class="anchor" aria-label="anchor" href="#article--les-maures---le-lidar-voit-ce-que-la-classe-ignore-0-11-0"></a></h4>
+<ul><li><p><code><a href="../articles/maures.html">vignette("maures")</a></code> fait tourner la chaîne là où le package a été conçu pour travailler, sur données réelles : 2 333 formations BD Forêt, 201 polygones CORINE, <strong>11 incendies EFFIS dont celui du Cannet-des-Maures du 16 août 2021, 6 510 ha</strong>, et surtout <strong>505 dalles LiDAR HD couvrant 100 % de l’emprise</strong> — contre zéro à Couchey.</p></li>
+<li><p>Le combustible est enfin méditerranéen : <code>LA4</code>, la lande, est la classe dominante, devant pin maritime et chêne vert. C’est ici que les poids par défaut et les rayons d’exposition sont le plus près de leur base de preuves.</p></li>
+<li>
+<p><strong>La démonstration centrale.</strong> Deux carrés de 500 m, l’un dans le périmètre brûlé de 2021, l’autre 2 km plus loin, choisis pour que la BD Forêt leur donne <strong>la même classe</strong> (<code>FF1-00-00</code>, même type de combustible, même poids 0,95, même valeur dans le masque brûlable). Le LiDAR mesure entre eux :</p>
+<table class="table"><thead><tr><th>Métrique</th>
+<th>Rapport témoin / brûlé</th>
+</tr></thead><tbody><tr><td>
+<code>Height</code> hauteur de canopée</td>
+<td><strong>1,0</strong></td>
+</tr><tr><td>
+<code>TFL</code> charge totale</td>
+<td>3,8</td>
+</tr><tr><td>
+<code>MFL</code> charge de sous-étage</td>
+<td>4,5</td>
+</tr><tr><td>
+<code>H_Bush</code> sommet de la strate arbustive</td>
+<td>5,1</td>
+</tr><tr><td>
+<code>FL_1_3</code> charge entre 1 et 3 m</td>
+<td><strong>6,7</strong></td>
+</tr></tbody></table><p>La hauteur de canopée est identique — donc un CHM issu d’ortho ou de satellite, la solution qu’on propose souvent pour rafraîchir un inventaire, aurait conclu que ces deux endroits se valent. Tout l’écart est dans la strate basse, celle où un feu de surface se propage.</p>
+</li>
+<li><p>Trois raisons cumulées pour lesquelles la couche catégorielle ne pouvait pas le savoir, et aucune n’est un défaut de la BD Forêt : son millésime est 2008, le feu est de 2021 ; sa nomenclature ne contient pas le sous-étage, même à jour ; et la hauteur de canopée n’aurait pas suffi.</p></li>
+</ul></div>
+<div class="section level4">
+<h4 id="données-livrées-0-11-0">Données livrées<a class="anchor" aria-label="anchor" href="#donn%C3%A9es-livr%C3%A9es-0-11-0"></a></h4>
+<ul><li>
+<code>inst/extdata/maures.gpkg</code> (3,6 Mo, sept couches) et deux GeoTIFF de métriques LiDAR réelles à 25 m, construits par <code>data-raw/build_maures_extract.R</code>. Les nuages de points, 120 et 205 Mo, ne sont pas embarqués — les métriques qu’ils produisent pèsent quelques dizaines de kilooctets, ce qui est tout l’argument pour les dériver une fois dans le script.</li>
+<li>Traitement par carrés de 500 m et non par dalle entière : <code>fPCpretreatment</code> sur 24 millions de points a épuisé 31 Go de RAM. Un quart de dalle à densité intacte est la réduction honnête — une surface plus petite, pas un nuage éclairci.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="corrections-0-11-0">Corrections<a class="anchor" aria-label="anchor" href="#corrections-0-11-0"></a></h4>
+<ul><li>La taille des dalles LiDAR HD annoncée dans la documentation était fausse : « de l’ordre du gigaoctet » alors que la mesure donne <strong>120 à 260 Mo</strong>. Corrigé partout, y compris dans le refus de <code><a href="../reference/fev_fetch_lidarhd.html">fev_fetch_lidarhd()</a></code> au-delà de <code>max_tiles</code>, qui estimait donc un téléchargement quatre fois trop lourd.</li>
+<li>Densités réelles constatées : 24 à 27 impulsions/m², largement au-dessus des 10 spécifiées. Le rapport points/impulsions vaut 1,06 dans le brûlé contre 1,25 dans le témoin — la végétation intercepte à plusieurs niveaux, le sol nu renvoie une fois. C’est un signal de végétation avant tout traitement.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.10.0" id="firexpovulnr-0100-2026-08-17">firexpovulnR 0.10.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0100-2026-08-17"></a></h2>
 <p>Phase 8 — LiDAR HD. Le registre continu, en place et testé depuis la phase 4, reçoit enfin un producteur. Rien du module combustible n’a eu besoin d’être réécrit, ce qui était l’objet de la contrainte posée avant la phase 4.</p>
