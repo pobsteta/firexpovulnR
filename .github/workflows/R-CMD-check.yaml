@@ -1,8 +1,12 @@
 # Integration checks: version coherence, R CMD check, coverage.
 #
-# Ported from the nemeton pipeline, minus its dependency workarounds (lidR /
-# r-universe, dissUtils, spinR, the Rfast oneTBB rebuild) which are specific to
-# that package's Imports and have no counterpart here.
+# Ported from the nemeton pipeline, minus the workarounds specific to its own
+# Imports (dissUtils, spinR, the Rfast oneTBB rebuild).
+#
+# Its lidR / r-universe workaround WAS dropped as having no counterpart here,
+# and phase 8 proved that wrong: lidR is not on CRAN, so the extra repository is
+# back below. Ported workarounds are worth re-reading when the dependency set
+# changes.
 #
 # One deliberate difference: nemeton runs testthat in a job of its own because
 # R CMD check exhibits a terra anomaly on GitHub runners. This package keeps the
@@ -82,6 +86,11 @@ jobs:
         with:
           r-version: 'release'
           use-public-rspm: true
+          # lidR is NOT on CRAN -- it lives on r-lidar's r-universe. The
+          # comment at the top of this file used to say nemeton's
+          # extra-repositories workaround had no counterpart here; phase 8
+          # proved otherwise.
+          extra-repositories: 'https://r-lidar.r-universe.dev'
 
       - name: Install system dependencies
         # The geospatial toolchain the brief requires: terra and sf are built
@@ -95,7 +104,10 @@ jobs:
             libudunits2-dev \
             libssl-dev \
             libcurl4-openssl-dev \
-            libxml2-dev
+            libxml2-dev \
+            libglu1-mesa-dev \
+            libgl1-mesa-dev \
+            libx11-dev
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
@@ -140,13 +152,19 @@ jobs:
         with:
           r-version: 'release'
           use-public-rspm: true
+          # lidR is NOT on CRAN -- it lives on r-lidar's r-universe. The
+          # comment at the top of this file used to say nemeton's
+          # extra-repositories workaround had no counterpart here; phase 8
+          # proved otherwise.
+          extra-repositories: 'https://r-lidar.r-universe.dev'
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             libgdal-dev libgeos-dev libproj-dev libudunits2-dev \
-            libssl-dev libcurl4-openssl-dev libxml2-dev
+            libssl-dev libcurl4-openssl-dev libxml2-dev \
+            libglu1-mesa-dev libgl1-mesa-dev libx11-dev
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:

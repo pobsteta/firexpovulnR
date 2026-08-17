@@ -44,7 +44,7 @@ Suggests:
     testthat (>= 3.0.0),
     withr
 Remotes:
-    oliviermartin7/LidarForFuel
+    lidarforfuel=oliviermartin7/LidarForFuel
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://github.com/pobsteta/firexpovulnR,
