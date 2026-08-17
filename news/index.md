@@ -1,5 +1,19 @@
 # Changelog
 
+## firexpovulnR 0.12.1 (2026-08-17)
+
+#### Correctif : les tests réseau ne tournaient pas là où on croyait
+
+- `skip_unless_network()` testait
+  [`nzchar()`](https://rdrr.io/r/base/nchar.html) sur
+  `FIREXPOVULNR_TEST_NETWORK`, alors que le workflow y pose `"0"` pour
+  dire « désactivé » — et `nzchar("0")` est vrai. **Tous les tests
+  réseau tournaient donc dans le CI**, et n’étaient verts que tant que
+  l’IGN et EFFIS l’étaient. Le premier délai DNS sur `data.geopf.fr` a
+  fait rougir le check, ce que le brief interdit précisément.
+  L’activation demande désormais une valeur explicite (`1`, `true`,
+  `yes`), comme le faisait déjà la garde du test de charge.
+
 ## firexpovulnR 0.12.0 (2026-08-17)
 
 #### La météo n’est plus inventée — et sans aucun jeton
@@ -89,18 +103,6 @@ inventés était le défaut le plus visible qui restait.
   [`ifelse()`](https://rdrr.io/r/base/ifelse.html) qui évalue ses deux
   branches — est étouffé nommément, et la sortie est vérifiée à la place
   : un NaN réel est signalé au lieu d’être caché derrière du bruit.
-
-#### Les tests réseau ne tournaient pas là où on croyait
-
-- `skip_unless_network()` testait
-  [`nzchar()`](https://rdrr.io/r/base/nchar.html) sur
-  `FIREXPOVULNR_TEST_NETWORK`, alors que le workflow y pose `"0"` pour
-  dire « désactivé » — et `nzchar("0")` est vrai. **Tous les tests
-  réseau tournaient donc dans le CI**, et n’étaient verts que tant que
-  l’IGN et EFFIS l’étaient. Le premier délai DNS sur `data.geopf.fr` a
-  fait rougir le check, ce que le brief interdit précisément.
-  L’activation demande désormais une valeur explicite (`1`, `true`,
-  `yes`), comme le faisait déjà la garde du test de charge.
 
 #### Les deux articles, refaits sur météo réelle
 
