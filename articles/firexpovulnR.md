@@ -227,12 +227,36 @@ values(grille_meteo) <- matrix(
 time(grille_meteo) <- seq(as.Date("2019-01-01"), by = "day", length.out = 730)
 ```
 
-En production, la série vient du produit historique CEMS :
+Ici tout le paysage est inventé, la météo comprise. En production il y a
+deux voies, et il faut dire laquelle on a prise.
+
+Sans jeton,
+[`fev_fetch_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_weather.md)
+lit l’archive Open-Meteo — qui re-sert ERA5 à 0,1°, soit deux fois et
+demie plus fin que le CEMS — et les indices sont calculés ici par
+`cffdrs`, point par point pour que les codes d’humidité s’accumulent au
+bon endroit :
+
+``` r
+
+meteo <- fev_fetch_weather(aoi, period = c("1996-01-01", "2025-12-31"))
+fwi <- fev_fwi_from_weather(meteo)
+```
+
+Avec un jeton Copernicus,
+[`fev_fetch_fwi()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_fwi.md)
+télécharge le produit de référence, déjà calculé par l’ECMWF :
 
 ``` r
 
 fwi <- fev_fetch_fwi(aoi, period = c("1991-01-01", "2020-12-31"))
 ```
+
+Les deux sont comparables, pas identiques. Les articles
+[Couchey](https://pobsteta.github.io/firexpovulnR/articles/couchey.md)
+et [Les
+Maures](https://pobsteta.github.io/firexpovulnR/articles/maures.md)
+déroulent la première sur données réelles.
 
 ``` r
 

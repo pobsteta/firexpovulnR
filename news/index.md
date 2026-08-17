@@ -111,6 +111,9 @@ inventés était le défaut le plus visible qui restait.
   trente ans, et c’est une limite de ce qu’il est raisonnable
   d’embarquer dans `inst/extdata`, pas du paquet. Un seul appel
   l’élargit.
+- [`vignette("firexpovulnR")`](https://pobsteta.github.io/firexpovulnR/articles/firexpovulnR.md)
+  et le README présentent désormais les **deux voies** — sans jeton via
+  Open-Meteo, avec jeton via le CEMS — et le caveat du tiers.
 - Les tables météo voyagent avec le package
   (`inst/extdata/{couchey,maures}_weather.csv.gz`, 134 et 187 Ko),
   construites par `data-raw/build_weather_extracts.R`.

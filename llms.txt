@@ -75,6 +75,18 @@ n’est pas validée :
   charge de combustible. Deux peuplements de structure verticale
   radicalement différente y sont identiques, alors que la propagation de
   surface en dépend directement.
+- La **voie météo sans jeton**
+  ([`fev_fetch_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_weather.md))
+  passe par Open-Meteo, un **tiers** qui re-sert ERA5. Les indices
+  obtenus sont du `cffdrs` sur entrées Open-Meteo : comparables au
+  produit CEMS de référence
+  ([`fev_fetch_fwi()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_fwi.md),
+  qui demande un jeton Copernicus), pas identiques. Le service corrige
+  en outre la température de l’altitude du point demandé, ce qui aide en
+  relief et n’est plus une extraction brute de réanalyse. Le package
+  l’avertit une fois par session et l’inscrit dans la provenance à
+  chaque appel — dites laquelle des deux voies vos résultats ont
+  utilisée.
 
 Ces limites sont détaillées dans la vignette.
 

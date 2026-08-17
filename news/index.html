@@ -78,6 +78,8 @@
 <code><a href="../articles/maures.html">vignette("maures")</a></code> : le <strong>16 août 2021</strong>, jour du feu de 6 510 ha du Cannet-des-Maures, sort <strong>1er sur 1 096 jours</strong>. 35 °C, 22 % d’humidité, 24 km/h et pas une goutte sur les 24 heures précédentes.</li>
 <li>Aucune donnée de feu n’entre dans le calcul du FWI. Ce n’est pas une validation du modèle de risque — un feu ne fait pas un échantillon, et un jour de canicule est aussi un jour de plus de départs — mais c’est un signal qui tombe au bon endroit sur les deux seuls événements que ces territoires offrent, ce qu’une série <code><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm()</a></code> ne pouvait par construction jamais montrer.</li>
 <li>Trois ans de référence et non trente : la normale de l’OMM est de trente ans, et c’est une limite de ce qu’il est raisonnable d’embarquer dans <code>inst/extdata</code>, pas du paquet. Un seul appel l’élargit.</li>
+<li>
+<code><a href="../articles/firexpovulnR.html">vignette("firexpovulnR")</a></code> et le README présentent désormais les <strong>deux voies</strong> — sans jeton via Open-Meteo, avec jeton via le CEMS — et le caveat du tiers.</li>
 <li>Les tables météo voyagent avec le package (<code>inst/extdata/{couchey,maures}_weather.csv.gz</code>, 134 et 187 Ko), construites par <code>data-raw/build_weather_extracts.R</code>.</li>
 </ul></div>
 </div>
