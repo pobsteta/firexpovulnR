@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,12 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.9.3" id="firexpovulnr-093-2026-08-17">firexpovulnR 0.9.3 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-093-2026-08-17"></a></h2>
+<ul><li>Vignette Couchey : une section explique les grands rectangles visibles sur la carte de risque. Ce ne sont pas des dalles de calcul mal raccordées — les trois couches sont sur exactement la même grille de 25 m, et <code><a href="../reference/fev_risk.html">fev_risk()</a></code> aurait refusé sinon. Ce sont les <strong>mailles de la grille météo</strong>, 3,2 × 3,9 km, descendues à 25 m au plus proche voisin : un rapport de 126 pour 1. Le bilinéaire aurait lissé l’escalier en dessinant une variation que la donnée n’a jamais mesurée.</li>
+<li>La section ajoute la comparaison qui remet l’échelle en place : avec le vrai produit CEMS à 0,25°, les mailles font environ 19 × 28 km et <strong>toute l’emprise de l’étude tiendrait dans une seule</strong>. La carte ne serait alors plus pavée du tout, ce qui est le même aveu sous une forme moins visible.</li>
+<li>Un graphique côte à côte montre le danger météo et la disponibilité en combustible à la même résolution, pour que la différence de contenu soit lisible.</li>
+</ul></div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.9.2" id="firexpovulnr-092-2026-08-17">firexpovulnR 0.9.2 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-092-2026-08-17"></a></h2>
 <ul><li>Vignette Couchey : les périmètres d’incendie sont tracés en <strong>rouge</strong> et non plus en noir, sur les trois cartes. Le noir se confondait avec les traits de contour du raster ; le rouge se lit sur la palette continue comme sur le masque binaire, et c’est la convention à laquelle un lecteur s’attend pour une surface brûlée.</li>

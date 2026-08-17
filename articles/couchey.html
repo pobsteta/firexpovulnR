@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.9.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -278,11 +278,54 @@ journée exceptionnelle <strong>ici</strong> ».</p>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_geometry</a></span><span class="op">(</span><span class="va">commune</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, border <span class="op">=</span> <span class="st">"white"</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_geometry</a></span><span class="op">(</span><span class="va">feux</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, border <span class="op">=</span> <span class="st">"red"</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="couchey_files/figure-html/plot-risk-1.png" class="r-plt" alt="" width="672"></p>
+<div class="section level3">
+<h3 id="les-dalles-rectangulaires-sont-la-grille-météo-et-elles-sont-voulues">Les dalles rectangulaires sont la grille météo, et elles sont
+voulues<a class="anchor" aria-label="anchor" href="#les-dalles-rectangulaires-sont-la-grille-m%C3%A9t%C3%A9o-et-elles-sont-voulues"></a>
+</h3>
+<p>La carte ci-dessus est visiblement pavée de grands rectangles. Ce
+n’est <strong>pas</strong> un défaut d’harmonisation des grilles :
+<code><a href="../reference/fev_align.html">fev_align()</a></code> a mis les trois couches sur exactement la même
+grille de 25 m, et <code><a href="../reference/fev_risk.html">fev_risk()</a></code> aurait refusé sinon.</p>
+<p>Ces dalles sont le <strong>contenu</strong> de la couche de danger,
+pas un artefact d’assemblage. La grille météo synthétique de cette
+vignette fait 6 × 4 cellules :</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>maille_meteo_m <span class="op">=</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">res</a></span><span class="op">(</span><span class="va">meteo</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>  maille_combustible_m <span class="op">=</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">res</a></span><span class="op">(</span><span class="va">pile</span><span class="op">$</span><span class="va">exposition</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
+<span>  rapport <span class="op">=</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">res</a></span><span class="op">(</span><span class="va">meteo</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">/</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">res</a></span><span class="op">(</span><span class="va">pile</span><span class="op">$</span><span class="va">exposition</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;       maille_meteo_m maille_combustible_m              rapport </span></span>
+<span><span class="co">#&gt;                 3160                   25                  126</span></span></code></pre></div>
+<p>Une maille météo de 3,2 km recouvre donc environ <strong>126 pixels
+de combustible dans chaque direction</strong>. En les descendant à 25 m,
+<code><a href="../reference/fev_align.html">fev_align()</a></code> utilise le plus proche voisin — délibérément
+:</p>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mfrow <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span>, mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">pile</span><span class="op">$</span><span class="va">danger</span>, main <span class="op">=</span> <span class="st">"Danger météo à 25 m"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">dispo</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Disponibilité en combustible"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="couchey_files/figure-html/plot-danger-1.png" class="r-plt" alt="" width="672"></p>
+<p>À gauche, la météo telle qu’elle est réellement résolue. À droite, le
+combustible. Le bilinéaire aurait dessiné un dégradé lisse entre les
+centres de mailles — plus joli, et représentant une variation que la
+donnée n’a jamais mesurée. Le plus proche voisin laisse voir l’escalier,
+qui est ce que la donnée dit vraiment.</p>
+<p>Et il faut lire ces dalles comme une version
+<strong>atténuée</strong> du problème. Avec le vrai produit CEMS à
+0,25°, les mailles font environ 19 × 28 km : toute cette emprise de 12,6
+× 23,1 km tiendrait dans <strong>une seule</strong> d’entre elles. La
+carte de risque ne serait alors plus pavée du tout — elle serait modulée
+uniformément par une valeur météo unique, ce qui est le même aveu sous
+une forme moins visible.</p>
+<p>C’est pour cela que <code><a href="../reference/fev_align.html">fev_align()</a></code> inscrit le rapport
+d’échelle dans la provenance et avertit à chaque appel : descendre le
+danger sur la grille du combustible ajoute de la résolution, pas de
+l’information.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="lincendie-du-29-juillet-2026">L’incendie du 29 juillet 2026<a class="anchor" aria-label="anchor" href="#lincendie-du-29-juillet-2026"></a>
 </h2>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_drop_geometry</a></span><span class="op">(</span><span class="va">feux</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"fire_date"</span>, <span class="st">"area_ha"</span>, <span class="st">"COMMUNE"</span>, <span class="st">"CLASS"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;    fire_date area_ha             COMMUNE      CLASS</span></span>
 <span><span class="co">#&gt; 1 2020-07-31      26    Velars-sur-Ouche FireSeason</span></span>
@@ -290,7 +333,7 @@ journée exceptionnelle <strong>ici</strong> ».</p>
 <span><span class="co">#&gt; 3 2026-07-29     124             Couchey     30DAYS</span></span></code></pre></div>
 <p>Trois incendies, tous ceux que l’endpoint public EFFIS sert dans un
 rayon de 20 km. Le troisième a brûlé <strong>Couchey même</strong>.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">couchey</span> <span class="op">&lt;-</span> <span class="va">feux</span><span class="op">[</span><span class="va">feux</span><span class="op">$</span><span class="va">COMMUNE</span> <span class="op">==</span> <span class="st">"Couchey"</span>, <span class="op">]</span></span>
 <span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_drop_geometry</a></span><span class="op">(</span><span class="va">couchey</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"FIREDATE"</span>, <span class="st">"FINALDATE"</span>, <span class="st">"area_ha"</span>, <span class="st">"PERCNA2K"</span>,</span>
 <span>                              <span class="st">"BROADLEA"</span>, <span class="st">"MIXED"</span>, <span class="st">"OTHERNATLC"</span><span class="op">)</span><span class="op">]</span></span>
@@ -305,7 +348,7 @@ site Natura 2000. Et l’occupation du sol brûlée, telle qu’EFFIS la
 ventile, est à 60 % de feuillus et 17 % de forêt mixte.</p>
 <p>C’est-à-dire exactement le combustible que les poids par défaut du
 package classent en bas de leur échelle.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">zone</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://r-spatial.github.io/sf/reference/geos_unary.html" class="external-link">st_buffer</a></span><span class="op">(</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_geometry</a></span><span class="op">(</span><span class="va">couchey</span><span class="op">)</span>, <span class="fl">1500</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/crop.html" class="external-link">crop</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">expo</span><span class="op">)</span>, <span class="fu"><a href="https://rspatial.github.io/terra/reference/vect.html" class="external-link">vect</a></span><span class="op">(</span><span class="va">zone</span><span class="op">)</span><span class="op">)</span>,</span>
@@ -317,7 +360,7 @@ package classent en bas de leur échelle.</p>
 <div class="section level2">
 <h2 id="validation-et-la-conclusion-honnête">Validation — et la conclusion honnête<a class="anchor" aria-label="anchor" href="#validation-et-la-conclusion-honn%C3%AAte"></a>
 </h2>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_validate.html">fev_validate</a></span><span class="op">(</span><span class="va">risque</span>, <span class="va">feux</span>, millesime <span class="op">=</span> <span class="va">millesime_prudent</span><span class="op">)</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">temporal</span><span class="op">$</span><span class="va">table</span></span>
 <span><span class="co">#&gt;                        lag_years n_fires area_ha pct_area</span></span>
@@ -330,7 +373,7 @@ Couchey a brûlé <strong>dix-neuf ans</strong> après la prise de vue la
 plus ancienne de l’emprise, douze ans après la plus récente. Entre les
 deux, le peuplement a poussé, a été coupé, s’est refermé — la couche de
 combustible sous cette carte décrit un paysage d’une autre époque.</p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>commune <span class="op">=</span> <span class="va">feux</span><span class="op">$</span><span class="va">COMMUNE</span>, annee <span class="op">=</span> <span class="va">feux</span><span class="op">$</span><span class="va">fire_year</span>,</span>
 <span>           ecart_2007 <span class="op">=</span> <span class="va">feux</span><span class="op">$</span><span class="va">fire_year</span> <span class="op">-</span> <span class="fl">2007</span>,</span>
 <span>           ecart_2014 <span class="op">=</span> <span class="va">feux</span><span class="op">$</span><span class="va">fire_year</span> <span class="op">-</span> <span class="fl">2014</span><span class="op">)</span></span>
@@ -339,7 +382,7 @@ combustible sous cette carte décrit un paysage d’une autre époque.</p>
 <span><span class="co">#&gt; 2 Nuits-Saint-Georges  2026         19         12</span></span>
 <span><span class="co">#&gt; 3             Couchey  2026         19         12</span></span></code></pre></div>
 <p>Le filtrage à cinq ans ne laisse donc rien :</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/fev_validate.html">fev_validate</a></span><span class="op">(</span><span class="va">risque</span>, <span class="va">feux</span>, millesime <span class="op">=</span> <span class="va">millesime_prudent</span>, max_lag_years <span class="op">=</span> <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: 100% of the burnt area in this sample postdates the fuel vintage (2007) by more</span></span>
 <span><span class="co">#&gt; than 5 years.</span></span>
@@ -361,7 +404,7 @@ après ;</li>
 <li>et l’ambiguïté 2007 / 2010 / 2014 fait varier cet écart de sept ans
 sans qu’on puisse la lever.</li>
 </ul>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span><span class="op">$</span><span class="va">auc</span></span>
 <span><span class="co">#&gt; [1] 0.8291124</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">classes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"pct_of_area"</span>, <span class="st">"pct_of_burnt"</span>, <span class="st">"ratio"</span><span class="op">)</span><span class="op">]</span></span>
