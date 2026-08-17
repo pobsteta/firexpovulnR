@@ -93,6 +93,9 @@ traçabilité, livrer deux exemples travaillés reposant sur des nombres invent�
 * Trois ans de référence et non trente : la normale de l'OMM est de trente ans,
   et c'est une limite de ce qu'il est raisonnable d'embarquer dans
   `inst/extdata`, pas du paquet. Un seul appel l'élargit.
+* `vignette("firexpovulnR")` et le README présentent désormais les **deux
+  voies** — sans jeton via Open-Meteo, avec jeton via le CEMS — et le caveat du
+  tiers.
 * Les tables météo voyagent avec le package
   (`inst/extdata/{couchey,maures}_weather.csv.gz`, 134 et 187 Ko), construites
   par `data-raw/build_weather_extracts.R`.
