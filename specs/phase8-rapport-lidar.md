@@ -70,9 +70,22 @@ Constaté par `GetFeature` réel sur le Var (bbox `6.30,43.20,6.35,43.25`) :
 
 **Le format COPC change la stratégie.** Cloud Optimized Point Cloud est indexé
 en octree et lisible par plages HTTP : on peut lire une emprise ou un niveau de
-détail sans télécharger la dalle entière. Une dalle LiDAR HD pèse de l'ordre du
-gigaoctet ; à 1 016 dalles pour les Maures, le téléchargement intégral n'est pas
-une option raisonnable et la lecture partielle en est une.
+détail sans télécharger la dalle entière. Constaté le 2026-08-17 :
+`lidR::readLAS()` lit directement une URL COPC.
+
+**Taille réelle des dalles, mesurée et non supposée.** Deux dalles des Maures
+pèsent **120 Mo et 256 Mo**, pas le gigaoctet que la première rédaction de ce
+rapport annonçait. L'écart entre les deux est lui-même un signal : la dalle la
+plus légère est celle qui tombe dans le périmètre brûlé de 2021, où il reste
+moins de végétation pour renvoyer des échos. À 505 dalles pour l'emprise
+d'étude des Maures, le téléchargement intégral représente une centaine de
+gigaoctets — lourd mais pas irréaliste, contrairement à ce que le chiffre
+initial laissait croire.
+
+**Densités constatées sur ces deux dalles** : 22,4 et 27,3 impulsions/m², donc
+largement au-dessus des 10 spécifiées. Le rapport points/impulsions vaut 1,09
+dans le brûlé contre 1,53 dans le témoin — la végétation intercepte à plusieurs
+niveaux, le sol nu ne renvoie qu'une fois.
 
 **Piège d'axes, encore.** Ces couches veulent un BBOX **longitude d'abord** même
 en EPSG:4326, comme toutes les autres de cette Géoplateforme. Demander latitude

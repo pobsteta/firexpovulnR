@@ -24,8 +24,8 @@
 #' A 1 km square in Lambert-93, delivered as **COPC** — Cloud Optimized Point
 #' Cloud. COPC is octree-indexed and readable by HTTP range request, so an
 #' extent or a level of detail can be read without pulling the whole file. That
-#' matters: one tile is of the order of a gigabyte, and a Mediterranean massif
-#' needs a thousand of them.
+#' matters: a tile runs 120 to 260 MB — measured, not assumed — and a
+#' Mediterranean massif needs several hundred of them.
 #'
 #' @param aoi Area of interest: `sf`, `sfc`, `bbox`, `SpatVector` or
 #'   `SpatRaster`. Must carry a CRS.
@@ -204,11 +204,12 @@ print.fev_lidarhd_index <- function(x, ...) {
   vintages <- sort(unique(substr(as.character(x$timestamp), 1, 10)))
   cli::cli_li("{length(chantiers)} acquisition block{?s}: {.val {chantiers}}")
   cli::cli_li("{length(vintages)} vintage{?s}: {.val {vintages}}")
-  size <- nrow(x) * 1  # tiles are of the order of 1 GB each
+  # 0.2 GB per tile: measured on two Maures tiles, 120 MB and 256 MB.
+  size <- round(nrow(x) * 0.2)
   cli::cli_text("")
   cli::cli_alert_info(
-    "Downloading all of these is on the order of {size} GB. COPC is readable \\
-     by HTTP range request -- see {.fn fev_fetch_lidarhd}."
+    "Downloading all of these is roughly {size} GB. COPC is readable by HTTP \\
+     range request -- see {.fn fev_fetch_lidarhd}."
   )
   invisible(x)
 }
@@ -221,11 +222,13 @@ print.fev_lidarhd_index <- function(x, ...) {
 #' interrupted run can be resumed.
 #'
 #' @section Volume, and resuming:
-#' One tile is of the order of a gigabyte. A Mediterranean massif is a thousand
-#' tiles, so a departmental job is a terabyte-scale download that will be
-#' interrupted at least once. Files already on disk with a plausible size are
-#' therefore skipped rather than refetched, which makes re-running the same call
-#' the way to resume.
+#' A tile runs 120 to 260 MB, measured on two Maures tiles on 2026-08-17 — the
+#' burnt one is half the size of the unburnt one, because there is less
+#' vegetation to return from. Five hundred tiles cover a massif, so a
+#' departmental job is a hundred-gigabyte download that will be interrupted at
+#' least once. Files already on disk with a plausible size are therefore skipped
+#' rather than refetched, which makes re-running the same call the way to
+#' resume.
 #'
 #' Nothing here parallelises the download on purpose: hammering a public service
 #' with concurrent requests is how access gets withdrawn for everyone.
@@ -281,8 +284,8 @@ fev_fetch_lidarhd <- function(aoi,
   if (nrow(idx) > max_tiles) {
     fev_abort(c(
       "{nrow(idx)} tiles is more than {.arg max_tiles} = {max_tiles}.",
-      i = "At roughly a gigabyte each that is about {nrow(idx)} GB and some \\
-           hours.",
+      i = "At 120 to 260 MB each that is roughly \\
+           {round(nrow(idx) * 0.2)} GB.",
       i = "Raise {.arg max_tiles} deliberately, or read the COPC tiles over \\
            HTTP instead of downloading them -- see {.fn fev_fuel_lidar}."
     ), class = "fev_too_many_tiles", .envir = environment())

@@ -93,7 +93,8 @@
 # Tiles are 1 km squares in Lambert-93, delivered as Cloud Optimized Point
 # Cloud. COPC is octree-indexed and readable by HTTP range request, so an
 # extent can be read without pulling the whole tile -- which matters when one
-# tile is of the order of a gigabyte and the Maures need a thousand of them.
+# tile runs 120 to 260 MB (measured on two Maures tiles, 2026-08-17) and the
+# Maures need five hundred of them.
 .FEV_LIDARHD_TILE_M <- 1000L
 
 # Canonical output of lidarforfuel::fCBDprofile_fuelmetrics(), read from the
