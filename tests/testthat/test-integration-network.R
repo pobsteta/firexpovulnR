@@ -13,8 +13,14 @@
 # If one of these fails, re-verify the endpoint and update
 # specs/phase2-rapport-faisabilite.md along with R/constants.R.
 
+# Opt-in is an explicit truthy value, not merely a non-empty one. The workflow
+# sets FIREXPOVULNR_TEST_NETWORK: "0" to mean off, and nzchar("0") is TRUE -- so
+# every one of these ran in CI, and stayed green only for as long as IGN and
+# EFFIS did. The first DNS timeout at data.geopf.fr turned the check red, which
+# is precisely what the brief forbids.
 skip_unless_network <- function() {
-  if (!nzchar(Sys.getenv("FIREXPOVULNR_TEST_NETWORK"))) {
+  if (!tolower(Sys.getenv("FIREXPOVULNR_TEST_NETWORK")) %in%
+        c("1", "true", "yes")) {
     skip("network tests disabled (set FIREXPOVULNR_TEST_NETWORK=1)")
   }
   testthat::skip_if_offline()
