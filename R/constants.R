@@ -25,7 +25,19 @@
 
   # CEMS Early Warning Data Store, reached through ecmwfr's "cems" service.
   # Confirmed in ecmwfr 2.0.3 source, R/zzz.R.
-  ewds_api = "https://ewds.climate.copernicus.eu/api"
+  ewds_api = "https://ewds.climate.copernicus.eu/api",
+
+  # Open-Meteo historical archive, re-serving ERA5 and ERA5-Land. NO API KEY,
+  # which is the whole reason it is here: the CEMS route needs a personal
+  # Copernicus token, and that barrier is why both shipped articles ran on an
+  # invented weather series until phase 9.
+  #
+  # Verified 2026-08-17 by real calls: HTTP 200 without credentials, hourly
+  # temperature_2m (C), relative_humidity_2m (%), wind_speed_10m (KM/H -- the
+  # unit the FWI system wants) and precipitation (mm); 1991 available, so a WMO
+  # 30-year normal is reachable; multi-point requests return a JSON array, one
+  # object per point.
+  open_meteo = "https://archive-api.open-meteo.com/v1/archive"
 )
 
 # WFS layer names, verified by DescribeFeatureType on 2026-08-15.

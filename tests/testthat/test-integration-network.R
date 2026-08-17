@@ -180,3 +180,86 @@ test_that("millesime = auto reaches fev_fetch_bdforet", {
   expect_false(all(is.na(rec$millesime)))
   expect_true(rec$millesime %in% 2007:2018)
 })
+
+# --- Open-Meteo, the token-free weather route ---------------------------------
+
+test_that("Open-Meteo still serves the four FWI variables without a key", {
+  skip_unless_network()
+  # The whole point of this route is that it needs no credential. If that ever
+  # changes, this is where it shows -- and no key is read here, deliberately.
+  w <- suppressMessages(suppressWarnings(
+    fev_fetch_weather(maures_aoi(), period = c("2021-08-14", "2021-08-16"),
+                      cache = FALSE)
+  ))
+  tab <- fev_data(w)
+  expect_s3_class(w, "fev_source")
+  expect_setequal(unique(tab$day), c(14L, 15L, 16L))
+  expect_true(all(c("temp", "rh", "ws", "prec") %in% names(tab)))
+  expect_true(isTRUE(w$source$third_party))
+})
+
+test_that("the Maures on 16 August 2021 come back as recorded in phase 9", {
+  skip_unless_network()
+  # Observed 2026-08-17 at the reanalysis point nearest the Cannet-des-Maures
+  # fire, 43.3 N / 6.4 E: 33.8 C, 21 % relative humidity, 25.6 km/h.
+  #
+  # Pinned because these four numbers are what the shipped Maures article's
+  # danger map rests on. A drift here means the archive was revised, and the
+  # article's figures need regenerating rather than quietly disagreeing with
+  # their caption.
+  w <- suppressMessages(suppressWarnings(
+    fev_fetch_weather(maures_aoi(), period = c("2021-08-16", "2021-08-16"),
+                      cache = FALSE)
+  ))
+  tab <- fev_data(w)
+  row <- tab[abs(tab$lat - 43.3) < 1e-8 & abs(tab$long - 6.4) < 1e-8, ]
+  expect_equal(nrow(row), 1L)
+  expect_equal(row$temp, 33.8, tolerance = 0.05)
+  expect_equal(row$rh, 21, tolerance = 0.05)
+  expect_equal(row$ws, 25.6, tolerance = 0.05)
+  expect_equal(row$prec, 0, tolerance = 1e-8)
+})
+
+test_that("wind is served in km/h, not m/s", {
+  skip_unless_network()
+  # The single most consequential unit trap in the FWI system: E-OBS serves FG
+  # in m/s, and treating it as km/h understates ISI by a factor of 3.6. A
+  # August afternoon in the Maures at 25 km/h would be 25 m/s -- 90 km/h -- if
+  # this ever silently changed.
+  w <- suppressMessages(suppressWarnings(
+    fev_fetch_weather(maures_aoi(), period = c("2021-08-16", "2021-08-16"),
+                      cache = FALSE)
+  ))
+  ws <- fev_data(w)$ws
+  expect_true(max(ws) > 10)
+  expect_true(max(ws) < 150)
+})
+
+test_that("the archive reaches back far enough for a WMO normal", {
+  skip_unless_network()
+  # fev_fwi_percentile() calibrates against a reference climatology, and the
+  # WMO normal is 30 years. 1991 has to be reachable for 1991-2020 to be.
+  w <- suppressMessages(suppressWarnings(
+    fev_fetch_weather(maures_aoi(), period = c("1991-07-01", "1991-07-02"),
+                      cache = FALSE)
+  ))
+  expect_true(all(fev_data(w)$yr == 1991L))
+})
+
+test_that("the day of the Cannet-des-Maures fire is the season's worst", {
+  skip_unless_network()
+  # An end-to-end check with no fire data in it: weather in, FWI out, and the
+  # 6 510 ha fire of 16 August 2021 comes out first of 153 days on median FWI
+  # over the massif. Verified 2026-08-17.
+  #
+  # This is the closest thing to external validation the danger module has --
+  # the ranking is produced by ERA5 and cffdrs alone.
+  w <- suppressMessages(suppressWarnings(
+    fev_fetch_weather(maures_aoi(), period = c("2021-05-01", "2021-09-30"))
+  ))
+  r <- suppressWarnings(fev_fwi_from_weather(w, index = "FWI"))
+  d <- fev_data(r)
+  med <- terra::global(d, stats::median, na.rm = TRUE)[, 1]
+  expect_equal(as.Date(terra::time(d))[which.max(med)], as.Date("2021-08-16"))
+  expect_gt(max(med), 50)  # EFFIS "extreme" begins at 50
+})

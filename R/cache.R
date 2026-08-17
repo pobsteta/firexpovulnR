@@ -93,6 +93,11 @@ fev_cache_write <- function(key, data, source_record, ext = "gpkg") {
     sf::st_write(data, p$data, delete_dsn = TRUE, quiet = TRUE)
   } else if (inherits(data, "SpatRaster")) {
     terra::writeRaster(data, p$data, overwrite = TRUE)
+  } else if (is.data.frame(data)) {
+    # Weather arrives as a point-day table rather than a geometry or a grid.
+    # Stored as RDS so the integer day/month columns and the row order survive
+    # the round trip, which a CSV would not guarantee.
+    saveRDS(data, p$data)
   } else {
     fev_abort("Cannot cache an object of class {.cls {class(data)[1]}}.")
   }
@@ -105,6 +110,8 @@ fev_cache_read <- function(key, ext = "gpkg") {
   p <- fev_cache_paths(key, ext)
   data <- if (ext == "gpkg") {
     sf::st_read(p$data, quiet = TRUE)
+  } else if (ext == "rds") {
+    readRDS(p$data)
   } else {
     terra::rast(p$data)
   }

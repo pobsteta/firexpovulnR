@@ -321,11 +321,25 @@ fev_period_bounds <- function(period) {
   if (length(period) != 2L) {
     fev_abort("{.arg ref_period} must have two elements.")
   }
-  if (is.numeric(period)) {
-    return(c(as.Date(sprintf("%d-01-01", period[1])),
-             as.Date(sprintf("%d-12-31", period[2]))))
+  # Years, as numbers or as the strings the rest of the package passes around
+  # ("2016", "2026" in fev_fetch_burnt), widen to the whole calendar year. Only
+  # accepting numeric years meant c("2021", "2021") died inside as.Date() with
+  # "character string is not in a standard unambiguous format".
+  chr <- as.character(period)
+  if (is.numeric(period) || all(grepl("^[0-9]{4}$", chr))) {
+    return(c(as.Date(sprintf("%s-01-01", chr[1])),
+             as.Date(sprintf("%s-12-31", chr[2]))))
   }
-  as.Date(as.character(period))
+  out <- as.Date(chr, optional = TRUE)
+  if (anyNA(out)) {
+    bad <- chr[is.na(out)]
+    fev_abort(c(
+      "Cannot read {.val {bad}} as a date or a year.",
+      i = "Give {.code c(\"2021-05-01\", \"2021-09-30\")} or \
+           {.code c(2021, 2021)}."
+    ), class = "fev_bad_period", .envir = environment())
+  }
+  out
 }
 
 #' @noRd

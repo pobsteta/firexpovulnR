@@ -1,3 +1,102 @@
+# firexpovulnR 0.12.0 (2026-08-17)
+
+### La météo n'est plus inventée — et sans aucun jeton
+
+Les deux articles du site tournaient sur une série `rnorm()`, parce que le
+produit historique CEMS demande un jeton Copernicus personnel que le package
+s'interdit de manipuler. Pour un package dont la première exigence est la
+traçabilité, livrer deux exemples travaillés reposant sur des nombres inventés
+était le défaut le plus visible qui restait.
+
+* **`fev_fetch_weather()`** lit l'archive Open-Meteo, qui re-sert ERA5 et
+  ERA5-Land **sans aucune authentification**. Elle rend les quatre variables du
+  système canadien — température, humidité relative, vent, pluie — au pas
+  horaire, donc l'observation de **midi** que le système exige est disponible et
+  non approximée par un maximum journalier. Grille à 0,1°, soit **2,5 fois plus
+  fine que les 0,25° du CEMS**, et l'archive remonte à 1940.
+* **`fev_fwi_from_weather()`** fait tourner le système sur la table point par
+  point et assemble un `SpatRaster` daté. La voie tabulaire de `cffdrs` accumule
+  les codes d'humidité **indépendamment par point** ; la voie raster ne sait
+  porter que des codes de départ scalaires et lisserait la sécheresse en moyenne
+  spatiale.
+* Le vent est servi en **km/h**, l'unité que le système attend — contrairement au
+  `FG` d'E-OBS, en m/s, qui est la manière classique de se tromper d'un facteur
+  3,6 sur l'ISI.
+* `fev_fetch_fwi()` reste la voie de référence quand on a un jeton. Le paquet
+  avertit une fois par session qu'Open-Meteo est un **tiers** entre ECMWF et
+  vous, et l'inscrit dans la provenance à chaque appel : les indices obtenus sont
+  du `cffdrs` sur entrées Open-Meteo, comparables au produit CEMS, pas
+  identiques.
+
+### Deux pièges mesurés, et corrigés
+
+* **La pluie est un cumul, pas une observation.** Le système canadien prend la
+  pluie **cumulée sur les 24 heures** précédant midi. La première version lisait
+  la pluie de l'heure de midi, ce qui jette 23 heures par jour. Conséquence
+  mesurée sur trois ans dans les Maures : 10 % de jours de pluie au lieu de
+  39 %, et un DC de 1 949 le 16 août 2021 au lieu de 619. Un jour supplémentaire
+  est désormais récupéré en tête de chaque tranche pour remplir la fenêtre.
+* **Et le FWI ne le montre pas.** Le facteur de durée sature :
+  `1000 / (25 + 108.64 * exp(-0.023 * BUI))` vaut 38,3 à BUI 200 et 39,8 à BUI
+  300, pour une asymptote de 40. Au-delà d'un BUI de 250 environ, un DC dérivé
+  au double de sa valeur physique **ne fait pas paraître le FWI faux**. Les deux
+  articles le documentent, et `fev_fwi_from_weather()` renvoie n'importe quel
+  code du système pour qu'on puisse le vérifier directement.
+* Corollaire : `reset = "annual"` existe pour redémarrer les codes chaque année,
+  mais **n'est pas le défaut**. Avec la pluie correcte, les pluies d'hiver
+  vidangent le DC d'elles-mêmes — 643 en intégration continue contre 619
+  redémarré, soit 4 %. Ce qui ressemblait à un redémarrage saisonnier manquant
+  était la pluie jetée.
+
+### Robustesse de la voie réseau
+
+* Le point demandé, et non la maille servie, est l'identité de station.
+  Plusieurs points peuvent tomber dans la même maille de réanalyse sans partager
+  la même série : Open-Meteo corrige la température de l'altitude du point
+  demandé (trois points de la maille 43,40949 / 6,341829, à 274, 221 et 77 m, ont
+  rendu 34,8, 34,8 et 35,4 °C le 16 août 2021). La maille servie et son altitude
+  voyagent dans la provenance comme diagnostic.
+* Les séries sont appariées aux points **par position** — rien dans la réponse ne
+  les y ramène. Un écart de compte est donc une erreur, pas un cas à recycler
+  silencieusement.
+* HTTP 429 est réessayé avec attente croissante ; HTTP 400 ne l'est pas, parce
+  qu'attendre ne répare pas une requête malformée. Une courte pause sépare les
+  tranches annuelles — le service est gratuit.
+* Une période qui dépasse aujourd'hui est **bornée** avec un message, au lieu
+  d'échouer sur la dernière tranche après avoir téléchargé toutes les autres.
+  Vérifié : l'archive sert 24 heures valides pour aujourd'hui même, en
+  complétant les derniers jours par un modèle de prévision — ce ne sont donc pas
+  des jours ERA5.
+* La clé de cache porte un marqueur de schéma : la table stockée est un produit
+  dérivé, donc un changement de sens doit invalider les entrées existantes alors
+  que la requête qui les a produites n'a pas bougé.
+* `fev_period_bounds()` accepte les années en caractères — `c("2021", "2021")`
+  mourait dans `as.Date()`.
+* Le cache sait stocker une table, pas seulement un `sf` ou un `SpatRaster`.
+* L'avertissement `NaNs produced` de `cffdrs` — un `ifelse()` qui évalue ses deux
+  branches — est étouffé nommément, et la sortie est vérifiée à la place : un NaN
+  réel est signalé au lieu d'être caché derrière du bruit.
+
+### Les deux articles, refaits sur météo réelle
+
+* `vignette("couchey")` : le **29 juillet 2026**, jour où la commune a brûlé,
+  sort **2e sur 960 jours** en FWI médian. 34–36 °C et 20 % d'humidité relative
+  en Côte-d'Or.
+* `vignette("maures")` : le **16 août 2021**, jour du feu de 6 510 ha du
+  Cannet-des-Maures, sort **1er sur 1 096 jours**. 35 °C, 22 % d'humidité,
+  24 km/h et pas une goutte sur les 24 heures précédentes.
+* Aucune donnée de feu n'entre dans le calcul du FWI. Ce n'est pas une validation
+  du modèle de risque — un feu ne fait pas un échantillon, et un jour de canicule
+  est aussi un jour de plus de départs — mais c'est un signal qui tombe au bon
+  endroit sur les deux seuls événements que ces territoires offrent, ce qu'une
+  série `rnorm()` ne pouvait par construction jamais montrer.
+* Trois ans de référence et non trente : la normale de l'OMM est de trente ans,
+  et c'est une limite de ce qu'il est raisonnable d'embarquer dans
+  `inst/extdata`, pas du paquet. Un seul appel l'élargit.
+* Les tables météo voyagent avec le package
+  (`inst/extdata/{couchey,maures}_weather.csv.gz`, 134 et 187 Ko), construites
+  par `data-raw/build_weather_extracts.R`.
+
 # firexpovulnR 0.11.0 (2026-08-17)
 
 ### Article « Les Maures » — le LiDAR voit ce que la classe ignore

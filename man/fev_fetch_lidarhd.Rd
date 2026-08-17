@@ -39,11 +39,13 @@ interrupted run can be resumed.
 }
 \section{Volume, and resuming}{
 
-One tile is of the order of a gigabyte. A Mediterranean massif is a thousand
-tiles, so a departmental job is a terabyte-scale download that will be
-interrupted at least once. Files already on disk with a plausible size are
-therefore skipped rather than refetched, which makes re-running the same call
-the way to resume.
+A tile runs 120 to 260 MB, measured on two Maures tiles on 2026-08-17 — the
+burnt one is half the size of the unburnt one, because there is less
+vegetation to return from. Five hundred tiles cover a massif, so a
+departmental job is a hundred-gigabyte download that will be interrupted at
+least once. Files already on disk with a plausible size are therefore skipped
+rather than refetched, which makes re-running the same call the way to
+resume.
 
 Nothing here parallelises the download on purpose: hammering a public service
 with concurrent requests is how access gets withdrawn for everyone.

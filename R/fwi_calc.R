@@ -156,8 +156,33 @@ fev_fwi_calc_table <- function(weather, init, lat_adjust, out) {
                                       ignore.case = TRUE)[1]]], na.rm = TRUE)
   )
 
-  res <- cffdrs::fwi(weather, init = init_df, lat.adjust = lat_adjust,
-                     out = out)
+  # cffdrs builds the moisture codes with ifelse(), which evaluates both arms of
+  # every branch, so `log(wmr - 20)` runs on rows where its result is thrown
+  # away and emits "NaNs produced". Harmless upstream noise, and misleading:
+  # verified on 1 836 point-days over the Maures that no NaN reaches any of the
+  # seven output columns. It is muffled narrowly by message, and the output is
+  # then checked directly -- a genuine NaN is reported here rather than hidden.
+  res <- withCallingHandlers(
+    cffdrs::fwi(weather, init = init_df, lat.adjust = lat_adjust, out = out),
+    warning = function(w) {
+      if (grepl("NaNs produced", conditionMessage(w), fixed = TRUE)) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
+
+  indices <- intersect(c("FFMC", "DMC", "DC", "ISI", "BUI", "FWI", "DSR"),
+                       names(res))
+  n_nan <- sum(vapply(res[indices], function(x) sum(!is.finite(x)), integer(1)))
+  if (n_nan > 0L) {
+    fev_warn(c(
+      "{n_nan} index value{?s} came out non-finite.",
+      i = "Check the input for a humidity of 0, a negative wind or a gap in \\
+           the series at a single point.",
+      i = "Those cells will be empty in any raster built from this."
+    ), class = "fev_nonfinite_index", .envir = environment())
+  }
+
   attr(res, "fev_params") <- list(init = as.list(init_df),
                                   lat_adjust = lat_adjust, out = out,
                                   n_rows = nrow(weather))

@@ -81,8 +81,11 @@ reference:
     desc: >
       Le cœur méthodologique est la calibration en percentiles : un seuil FWI
       absolu redessine surtout la climatologie, alors qu'un rang percentile
-      dit la même chose dans le Var et en Bretagne.
+      dit la même chose dans le Var et en Bretagne. La météo elle-même
+      s'obtient sans aucun jeton via `fev_fetch_weather()`.
     contents:
+    - fev_fetch_weather
+    - fev_fwi_from_weather
     - fev_fwi_calc
     - fev_fwi_percentile
     - fev_fwi_thresholds
