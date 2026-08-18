@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -159,7 +159,33 @@ rapporté à la fin.</p>
 <span>                              aoi <span class="op">=</span> <span class="va">study</span>, millesime <span class="op">=</span> <span class="fl">2018</span><span class="op">)</span></span>
 <span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_merge.html">fev_fuel_merge</a></span><span class="op">(</span><span class="va">primaire</span>, <span class="va">auxiliaire</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #0000BB;">"clc_2018"</span> filled <span style="color: #0000BB;">278830</span> cells (59.3%) that</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">"bdforet_v2"</span> left unmapped.</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #0000BB;">"bdforet_v2"</span> left unmapped.</span></span>
+<span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_fill_gaps.html">fev_fuel_fill_gaps</a></span><span class="op">(</span><span class="va">fuel</span><span class="op">)</span></span>
+<span><span class="co">#&gt; 42 empty cells in 33 gaps.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> 42 filled: below 25 ha, so no component could have mapped them.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Largest gap: 0.25 ha.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Class from the modal 3x3 neighbour; the source layer records them as</span></span>
+<span><span class="co">#&gt;   <span style="color: #0000BB;">"gap_filled"</span> rather than claiming a dataset mapped them.</span></span></code></pre></div>
+<p>Cette seconde ligne répare 42 cellules sur 469 989 — un dix-millième
+de la grille — et ce n’est pas cosmétique. Rastériser une couverture
+polygonale par appartenance du centre de cellule laisse des esquilles :
+là où deux polygones CORINE partagent une frontière, le centre peut ne
+tomber dans ni l’un ni l’autre. Or <code><a href="../reference/fev_exposure.html">fev_exposure()</a></code> propage
+tout vide à travers sa fenêtre focale, donc <strong>chaque cellule vide
+isolée en efface un disque de 500 m de rayon autour d’elle</strong> :
+mesuré ici, 42 cellules en effaçaient 26 303, une amplification de
+626.</p>
+<p>Ce qui autorise à les combler est l’unité minimale de cartographie.
+CORINE ne peut rien représenter sous 25 ha — le plus petit polygone de
+cet extrait mesure 24,92 ha, donc la spécification est observée et pas
+seulement affirmée. Un trou de 0,25 ha à l’intérieur de l’emprise CORINE
+<strong>ne peut pas</strong> être un objet réel : c’est un artefact de
+grille, et le sol y est certainement l’un des voisins. Au-dessus de
+l’UMC, la fonction refuse et le dit — le trou pourrait alors être une
+vraie lacune.</p>
+<p>Les cellules réparées restent identifiables : la couche
+<code>source</code> du registre les note <code>gap_filled</code> plutôt
+que de prétendre qu’un jeu de données les a cartographiées.</p>
 <p>La couche de provenance par pixel dit ce que chaque source apporte
 :</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
@@ -168,8 +194,8 @@ rapporté à la fin.</p>
 <span><span class="va">tab</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">lv</span><span class="op">$</span><span class="va">class</span><span class="op">[</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/match.html" class="external-link">match</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/values.html" class="external-link">values</a></span><span class="op">(</span><span class="va">src</span><span class="op">)</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>, <span class="va">lv</span><span class="op">$</span><span class="va">id</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fl">100</span> <span class="op">*</span> <span class="va">tab</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">tab</span><span class="op">)</span>, <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; bdforet_v2   clc_2018 </span></span>
-<span><span class="co">#&gt;       40.7       59.3</span></span></code></pre></div>
+<span><span class="co">#&gt; bdforet_v2   clc_2018 gap_filled </span></span>
+<span><span class="co">#&gt;       40.7       59.3        0.0</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="où-les-défauts-du-package-sont-mal-à-laise">Où les défauts du package sont mal à l’aise<a class="anchor" aria-label="anchor" href="#o%C3%B9-les-d%C3%A9fauts-du-package-sont-mal-%C3%A0-laise"></a>
 </h3>
@@ -178,10 +204,10 @@ rapporté à la fin.</p>
 <span><span class="va">freq</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/freq.html" class="external-link">freq</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">ft</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/headtail.html" class="external-link">head</a></span><span class="op">(</span><span class="va">freq</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">freq</span><span class="op">$</span><span class="va">count</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"value"</span>, <span class="st">"count"</span><span class="op">)</span><span class="op">]</span>, <span class="fl">5</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               value  count</span></span>
-<span><span class="co">#&gt; 5          cropland 190865</span></span>
-<span><span class="co">#&gt; 1  broadleaf_closed 148556</span></span>
-<span><span class="co">#&gt; 10         non_fuel  68296</span></span>
-<span><span class="co">#&gt; 3    conifer_closed  23655</span></span>
+<span><span class="co">#&gt; 5          cropland 190882</span></span>
+<span><span class="co">#&gt; 1  broadleaf_closed 148560</span></span>
+<span><span class="co">#&gt; 10         non_fuel  68311</span></span>
+<span><span class="co">#&gt; 3    conifer_closed  23656</span></span>
 <span><span class="co">#&gt; 7      mixed_closed  16721</span></span></code></pre></div>
 <p>Le peuplement dominant est du feuillu fermé, auquel
 <code><a href="../reference/fev_fuel_weights.html">fev_fuel_weights()</a></code> attribue <strong>0,60</strong> — contre
@@ -218,7 +244,7 @@ abandonnées.</p>
 <code class="sourceCode R"><span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">brulable</span>, radius <span class="op">=</span> <span class="fl">500</span>, type <span class="op">=</span> <span class="st">"ember"</span>, quiet <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/global.html" class="external-link">global</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">expo</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"max"</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               mean max</span></span>
-<span><span class="co">#&gt; exposure 0.4623234   1</span></span></code></pre></div>
+<span><span class="co">#&gt; exposure 0.4550941   1</span></span></code></pre></div>
 <p>Le rayon de 500 m vient de travaux albertains, validés depuis au
 Portugal. Sur une mosaïque bourguignonne de bois, cultures et vignes, il
 n’est validé nulle part.</p>
@@ -504,13 +530,13 @@ sans qu’on puisse la lever.</li>
 </ul>
 <div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span><span class="op">$</span><span class="va">auc</span></span>
-<span><span class="co">#&gt; [1] 0.8624976</span></span>
+<span><span class="co">#&gt; [1] 0.8672535</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">classes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"pct_of_area"</span>, <span class="st">"pct_of_burnt"</span>, <span class="st">"ratio"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       class pct_of_area pct_of_burnt ratio</span></span>
-<span><span class="co">#&gt; 1   0 - 0.2       51.53         0.40  0.01</span></span>
-<span><span class="co">#&gt; 2 0.2 - 0.4       29.77        37.24  1.25</span></span>
-<span><span class="co">#&gt; 3 0.4 - 0.6       16.11        26.92  1.67</span></span>
-<span><span class="co">#&gt; 4 0.6 - 0.8        2.59        35.45 13.68</span></span>
+<span><span class="co">#&gt; 1   0 - 0.2       52.57         0.40  0.01</span></span>
+<span><span class="co">#&gt; 2 0.2 - 0.4       28.95        36.48  1.26</span></span>
+<span><span class="co">#&gt; 3 0.4 - 0.6       16.02        27.63  1.72</span></span>
+<span><span class="co">#&gt; 4 0.6 - 0.8        2.45        35.49 14.46</span></span>
 <span><span class="co">#&gt; 5   0.8 - 1        0.00         0.00   NaN</span></span></code></pre></div>
 <p>Le chiffre existe, il est dans l’objet, et il n’a pas de valeur
 probante ici. Il est montré pour que ce soit dit explicitement plutôt

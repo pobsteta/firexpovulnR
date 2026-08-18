@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,34 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.14.0" id="firexpovulnr-0140-2026-08-17">firexpovulnR 0.14.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0140-2026-08-17"></a></h2>
+<div class="section level4">
+<h4 id="fev_fuel_fill_gaps--réparer-les-esquilles-de-rastérisation-0-14-0">
+<code>fev_fuel_fill_gaps()</code> — réparer les esquilles de rastérisation<a class="anchor" aria-label="anchor" href="#fev_fuel_fill_gaps--r%C3%A9parer-les-esquilles-de-rast%C3%A9risation-0-14-0"></a></h4>
+<p>Rastériser une couverture polygonale par appartenance du centre de cellule laisse des trous : là où deux polygones CORINE partagent une frontière, le centre peut ne tomber dans ni l’un ni l’autre. 42 cellules sur 469 989 à Couchey, 18 sur 677 846 aux Maures — un dix-millième de la grille.</p>
+<p>Ce n’était pas anodin. <code><a href="../reference/fev_exposure.html">fev_exposure()</a></code> propage tout vide à travers sa fenêtre focale, donc <strong>chaque cellule vide isolée en effaçait un disque du rayon de la fenêtre</strong> : amplification mesurée de <strong>626</strong>, et 17,5 % de la carte de risque de Couchey blanche.</p>
+<ul><li>
+<strong>Ce qui autorise la réparation est l’unité minimale de cartographie.</strong> CORINE ne peut rien représenter sous 25 ha — le plus petit polygone des deux extraits mesure 24,92 et 24,93 ha, donc la spécification est <em>observée</em>, pas seulement affirmée. Un trou de 0,25 ha à l’intérieur de l’emprise CORINE ne peut pas être un objet réel. Le seuil est donc une propriété de la donnée et non un réglage, ce qu’exige le brief de tout seuil du paquet.</li>
+<li>Au-dessus de l’UMC, la fonction <strong>refuse, signale et passe</strong> : un trou de cette taille peut être une vraie lacune, et le combler serait une hypothèse.</li>
+<li>Une source à <strong>couverture partielle</strong> ne peut jamais justifier un comblement. BD Forêt v2 ne cartographie que les formations végétales : son silence signifie « pas de forêt », ce qui est une information. Son UMC de 0,5 ha n’est donc jamais utilisée, et la fonction le dit.</li>
+<li>Les cellules réparées <strong>restent identifiables dans la donnée</strong> : la couche <code>source</code> du registre les note <code>gap_filled</code> au lieu de prétendre qu’un jeu de données les a cartographiées.</li>
+<li>
+<code>.FEV_FUEL_MMU</code> enregistre par source l’UMC, la largeur minimale et la complétude de couverture, avec leurs références.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="fev_exposure-annonce-ce-que-les-vides-vont-coûter-0-14-0">
+<code>fev_exposure()</code> annonce ce que les vides vont coûter<a class="anchor" aria-label="anchor" href="#fev_exposure-annonce-ce-que-les-vides-vont-co%C3%BBter-0-14-0"></a></h4>
+<ul><li>Un avertissement avant le calcul : combien de cellules vides, en combien d’amas distincts — un amas coûte une fenêtre, cent singletons en coûtent cent — et une borne supérieure du nombre de cellules qui reviendront vides.</li>
+<li>Le comportement ne change pas : propager est le bon défaut. <code>na_rm = TRUE</code> calcule des fenêtres tronquées au bord de l’emprise, ce qui sous-estime l’exposition d’environ 30 % (mesuré 0,32 contre 0,46) <strong>et invisiblement</strong>. Le trou blanc est plus honnête que ce chiffre-là.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="les-deux-articles-0-14-0">Les deux articles<a class="anchor" aria-label="anchor" href="#les-deux-articles-0-14-0"></a></h4>
+<ul><li>Les deux appellent <code><a href="../reference/fev_fuel_fill_gaps.html">fev_fuel_fill_gaps()</a></code> après la fusion. Les disques blancs disparaissent, et laissent voir ce qu’ils masquaient : les dégradés circulaires doux sont la signature de l’anneau d’exposition autour des taches de combustible isolées — du contenu, pas des trous.</li>
+<li>Vérifié : l’écart avec la carte non réparée est <strong>exactement nul</strong> partout où celle-ci produisait une valeur. La réparation ne déplace aucun nombre existant, sinon ce serait une interpolation.</li>
+<li>Reste le cadre de bord de 500 m, qui est un effet de bord réel et documenté comme tel.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.13.0" id="firexpovulnr-0130-2026-08-17">firexpovulnR 0.13.0 (2026-08-17)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0130-2026-08-17"></a></h2>
 <div class="section level4">

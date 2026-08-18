@@ -114,7 +114,35 @@ auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
 fuel <- fev_fuel_merge(primaire, auxiliaire)
 #> "clc_2018" filled 278830 cells (59.3%) that
 #> "bdforet_v2" left unmapped.
+fuel <- fev_fuel_fill_gaps(fuel)
+#> 42 empty cells in 33 gaps.
+#> ✔ 42 filled: below 25 ha, so no component could have mapped them.
+#> ℹ Largest gap: 0.25 ha.
+#> ℹ Class from the modal 3x3 neighbour; the source layer records them as
+#>   "gap_filled" rather than claiming a dataset mapped them.
 ```
+
+Cette seconde ligne répare 42 cellules sur 469 989 — un dix-millième de
+la grille — et ce n’est pas cosmétique. Rastériser une couverture
+polygonale par appartenance du centre de cellule laisse des esquilles :
+là où deux polygones CORINE partagent une frontière, le centre peut ne
+tomber dans ni l’un ni l’autre. Or
+[`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md)
+propage tout vide à travers sa fenêtre focale, donc **chaque cellule
+vide isolée en efface un disque de 500 m de rayon autour d’elle** :
+mesuré ici, 42 cellules en effaçaient 26 303, une amplification de 626.
+
+Ce qui autorise à les combler est l’unité minimale de cartographie.
+CORINE ne peut rien représenter sous 25 ha — le plus petit polygone de
+cet extrait mesure 24,92 ha, donc la spécification est observée et pas
+seulement affirmée. Un trou de 0,25 ha à l’intérieur de l’emprise CORINE
+**ne peut pas** être un objet réel : c’est un artefact de grille, et le
+sol y est certainement l’un des voisins. Au-dessus de l’UMC, la fonction
+refuse et le dit — le trou pourrait alors être une vraie lacune.
+
+Les cellules réparées restent identifiables : la couche `source` du
+registre les note `gap_filled` plutôt que de prétendre qu’un jeu de
+données les a cartographiées.
 
 La couche de provenance par pixel dit ce que chaque source apporte :
 
@@ -125,8 +153,8 @@ lv <- terra::levels(src)[[1]]
 tab <- table(lv$class[match(terra::values(src)[, 1], lv$id)])
 round(100 * tab / sum(tab), 1)
 #> 
-#> bdforet_v2   clc_2018 
-#>       40.7       59.3
+#> bdforet_v2   clc_2018 gap_filled 
+#>       40.7       59.3        0.0
 ```
 
 ### Où les défauts du package sont mal à l’aise
@@ -137,10 +165,10 @@ ft <- fev_fuel_type(fuel)
 freq <- terra::freq(fev_data(ft))
 head(freq[order(-freq$count), c("value", "count")], 5)
 #>               value  count
-#> 5          cropland 190865
-#> 1  broadleaf_closed 148556
-#> 10         non_fuel  68296
-#> 3    conifer_closed  23655
+#> 5          cropland 190882
+#> 1  broadleaf_closed 148560
+#> 10         non_fuel  68311
+#> 3    conifer_closed  23656
 #> 7      mixed_closed  16721
 ```
 
@@ -187,7 +215,7 @@ Trait blanc, la commune. Traits rouges, les trois incendies.
 expo <- fev_exposure(brulable, radius = 500, type = "ember", quiet = TRUE)
 terra::global(fev_data(expo), c("mean", "max"), na.rm = TRUE)
 #>               mean max
-#> exposure 0.4623234   1
+#> exposure 0.4550941   1
 ```
 
 Le rayon de 500 m vient de travaux albertains, validés depuis au
@@ -547,13 +575,13 @@ ne peut pas être validée avec cette donnée** :
 ``` r
 
 val$auc
-#> [1] 0.8624976
+#> [1] 0.8672535
 val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 #>       class pct_of_area pct_of_burnt ratio
-#> 1   0 - 0.2       51.53         0.40  0.01
-#> 2 0.2 - 0.4       29.77        37.24  1.25
-#> 3 0.4 - 0.6       16.11        26.92  1.67
-#> 4 0.6 - 0.8        2.59        35.45 13.68
+#> 1   0 - 0.2       52.57         0.40  0.01
+#> 2 0.2 - 0.4       28.95        36.48  1.26
+#> 3 0.4 - 0.6       16.02        27.63  1.72
+#> 4 0.6 - 0.8        2.45        35.49 14.46
 #> 5   0.8 - 1        0.00         0.00   NaN
 ```
 

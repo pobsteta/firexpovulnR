@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.13.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.14.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -139,7 +139,19 @@ méditerranéenne derrière eux.</p>
 <span>                              aoi <span class="op">=</span> <span class="va">study</span>, millesime <span class="op">=</span> <span class="fl">2018</span><span class="op">)</span></span>
 <span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_merge.html">fev_fuel_merge</a></span><span class="op">(</span><span class="va">primaire</span>, <span class="va">auxiliaire</span><span class="op">)</span></span>
 <span><span class="co">#&gt; <span style="color: #0000BB;">"clc_2018"</span> filled <span style="color: #0000BB;">128472</span> cells (19%) that</span></span>
-<span><span class="co">#&gt; <span style="color: #0000BB;">"bdforet_v2"</span> left unmapped.</span></span></code></pre></div>
+<span><span class="co">#&gt; <span style="color: #0000BB;">"bdforet_v2"</span> left unmapped.</span></span>
+<span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_fill_gaps.html">fev_fuel_fill_gaps</a></span><span class="op">(</span><span class="va">fuel</span><span class="op">)</span></span>
+<span><span class="co">#&gt; 18 empty cells in 16 gaps.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> 18 filled: below 25 ha, so no component could have mapped them.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Largest gap: 0.12 ha.</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Class from the modal 3x3 neighbour; the source layer records them as</span></span>
+<span><span class="co">#&gt;   <span style="color: #0000BB;">"gap_filled"</span> rather than claiming a dataset mapped them.</span></span></code></pre></div>
+<p>La seconde ligne répare 18 cellules non cartographiées — des
+esquilles de rastérisation sur les liserés entre polygones CORINE. C’est
+expliqué en détail dans l’<a href="couchey.html">article Couchey</a> ;
+l’essentiel est que <code><a href="../reference/fev_exposure.html">fev_exposure()</a></code> propage tout vide à
+travers sa fenêtre, donc une cellule isolée en efface un disque de 500 m
+de rayon.</p>
 <p>Deux campagnes BD ORTHO, <strong>2008 et 2014</strong>. Retenez ce
 chiffre : le grand feu est de 2021.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
@@ -163,7 +175,7 @@ emplacements dont il sera question en section 4.</p>
 <code class="sourceCode R"><span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">brulable</span>, radius <span class="op">=</span> <span class="fl">500</span>, type <span class="op">=</span> <span class="st">"ember"</span>, quiet <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/global.html" class="external-link">global</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">expo</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"mean"</span>, <span class="st">"max"</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               mean max</span></span>
-<span><span class="co">#&gt; exposure 0.8719655   1</span></span></code></pre></div>
+<span><span class="co">#&gt; exposure 0.8645515   1</span></span></code></pre></div>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">2</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">expo</span><span class="op">)</span>, main <span class="op">=</span> <span class="st">"Exposition, rayon 500 m"</span><span class="op">)</span></span>
@@ -410,12 +422,16 @@ hectares ont brûlé.</p>
 risque moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors,
 un facteur 6,5. Les périmètres rouges sont les onze incendies, les deux
 carrés blancs les placettes LiDAR.</p>
-<p>Les disques blancs ne sont pas des données manquantes du terrain : ce
-sont <strong>18 cellules non cartographiées</strong> — des esquilles de
-rastérisation sur les liserés entre polygones CORINE — amplifiées par la
-fenêtre focale de 500 m, qui propage tout vide. Avec le cadre de bord de
-même origine, 11,8 % de la carte est vide. Voir
-<code>fev_exposure(na_rm = )</code>.</p>
+<p>Le cadre blanc de 500 m sur le pourtour est un effet de bord réel,
+non un artefact : la fenêtre focale y déborde de l’emprise, et il n’y a
+effectivement pas de donnée au-delà. Il est préférable au remède
+apparent <code>na_rm = TRUE</code>, qui calculerait des fenêtres
+tronquées — mesuré sur ces données, une exposition moyenne de 0,32 dans
+le cadre contre 0,46 à l’intérieur, soit 30 % de sous-estimation
+invisible. Le trou blanc est plus honnête que ce chiffre-là.</p>
+<p>Pour le supprimer sans rien inventer, il faut récupérer le
+combustible sur l’emprise tamponnée du rayon d’exposition, puis recadrer
+après le calcul focal.</p>
 </div>
 <div class="section level3">
 <h3 id="le-jour-de-lincendie-sort-premier-de-1-096">Le jour de l’incendie sort premier de 1 096<a class="anchor" aria-label="anchor" href="#le-jour-de-lincendie-sort-premier-de-1-096"></a>
@@ -490,13 +506,13 @@ grand.</p>
 <span><span class="co">#&gt; 2                         1 to 5       0       0        0</span></span>
 <span><span class="co">#&gt; 3                            &gt; 5      11    6927      100</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">auc</span></span>
-<span><span class="co">#&gt; [1] 0.5304155</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.5345634</span></span></code></pre></div>
 <div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span><span class="op">$</span><span class="va">classes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"pct_of_area"</span>, <span class="st">"pct_of_burnt"</span>, <span class="st">"ratio"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       class pct_of_area pct_of_burnt ratio</span></span>
-<span><span class="co">#&gt; 1   0 - 0.2       31.84        29.68  0.93</span></span>
-<span><span class="co">#&gt; 2 0.2 - 0.4       37.83        39.90  1.05</span></span>
-<span><span class="co">#&gt; 3 0.4 - 0.6       30.33        30.43  1.00</span></span>
+<span><span class="co">#&gt; 1   0 - 0.2       31.94        28.55  0.89</span></span>
+<span><span class="co">#&gt; 2 0.2 - 0.4       23.89        27.14  1.14</span></span>
+<span><span class="co">#&gt; 3 0.4 - 0.6       44.17        44.31  1.00</span></span>
 <span><span class="co">#&gt; 4 0.6 - 0.8        0.00         0.00   NaN</span></span>
 <span><span class="co">#&gt; 5   0.8 - 1        0.00         0.00   NaN</span></span></code></pre></div>
 <p>Le biais temporel est le même qu’à Couchey, et pour la même raison :

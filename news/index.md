@@ -1,5 +1,68 @@
 # Changelog
 
+## firexpovulnR 0.14.0 (2026-08-17)
+
+#### `fev_fuel_fill_gaps()` — réparer les esquilles de rastérisation
+
+Rastériser une couverture polygonale par appartenance du centre de
+cellule laisse des trous : là où deux polygones CORINE partagent une
+frontière, le centre peut ne tomber dans ni l’un ni l’autre. 42 cellules
+sur 469 989 à Couchey, 18 sur 677 846 aux Maures — un dix-millième de la
+grille.
+
+Ce n’était pas anodin.
+[`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md)
+propage tout vide à travers sa fenêtre focale, donc **chaque cellule
+vide isolée en effaçait un disque du rayon de la fenêtre** :
+amplification mesurée de **626**, et 17,5 % de la carte de risque de
+Couchey blanche.
+
+- **Ce qui autorise la réparation est l’unité minimale de
+  cartographie.** CORINE ne peut rien représenter sous 25 ha — le plus
+  petit polygone des deux extraits mesure 24,92 et 24,93 ha, donc la
+  spécification est *observée*, pas seulement affirmée. Un trou de 0,25
+  ha à l’intérieur de l’emprise CORINE ne peut pas être un objet réel.
+  Le seuil est donc une propriété de la donnée et non un réglage, ce
+  qu’exige le brief de tout seuil du paquet.
+- Au-dessus de l’UMC, la fonction **refuse, signale et passe** : un trou
+  de cette taille peut être une vraie lacune, et le combler serait une
+  hypothèse.
+- Une source à **couverture partielle** ne peut jamais justifier un
+  comblement. BD Forêt v2 ne cartographie que les formations végétales :
+  son silence signifie « pas de forêt », ce qui est une information. Son
+  UMC de 0,5 ha n’est donc jamais utilisée, et la fonction le dit.
+- Les cellules réparées **restent identifiables dans la donnée** : la
+  couche `source` du registre les note `gap_filled` au lieu de prétendre
+  qu’un jeu de données les a cartographiées.
+- `.FEV_FUEL_MMU` enregistre par source l’UMC, la largeur minimale et la
+  complétude de couverture, avec leurs références.
+
+#### `fev_exposure()` annonce ce que les vides vont coûter
+
+- Un avertissement avant le calcul : combien de cellules vides, en
+  combien d’amas distincts — un amas coûte une fenêtre, cent singletons
+  en coûtent cent — et une borne supérieure du nombre de cellules qui
+  reviendront vides.
+- Le comportement ne change pas : propager est le bon défaut.
+  `na_rm = TRUE` calcule des fenêtres tronquées au bord de l’emprise, ce
+  qui sous-estime l’exposition d’environ 30 % (mesuré 0,32 contre 0,46)
+  **et invisiblement**. Le trou blanc est plus honnête que ce
+  chiffre-là.
+
+#### Les deux articles
+
+- Les deux appellent
+  [`fev_fuel_fill_gaps()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_fill_gaps.md)
+  après la fusion. Les disques blancs disparaissent, et laissent voir ce
+  qu’ils masquaient : les dégradés circulaires doux sont la signature de
+  l’anneau d’exposition autour des taches de combustible isolées — du
+  contenu, pas des trous.
+- Vérifié : l’écart avec la carte non réparée est **exactement nul**
+  partout où celle-ci produisait une valeur. La réparation ne déplace
+  aucun nombre existant, sinon ce serait une interpolation.
+- Reste le cadre de bord de 500 m, qui est un effet de bord réel et
+  documenté comme tel.
+
 ## firexpovulnR 0.13.0 (2026-08-17)
 
 #### L’AUC publié était `NA`, par débordement d’entier

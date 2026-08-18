@@ -74,6 +74,8 @@ sont justifiées ligne par ligne et intégralement surchargeables.
   : Build a fuel source
 - [`fev_fuel_merge()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_merge.md)
   : Merge a primary and an auxiliary fuel source
+- [`fev_fuel_fill_gaps()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_fill_gaps.md)
+  : Repair rasterisation gaps in a categorical fuel layer
 - [`fev_fuel_binary()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_binary.md)
   : Burnable / non-burnable mask
 - [`fev_fuel_type()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_type.md)

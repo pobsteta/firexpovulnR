@@ -87,7 +87,22 @@ auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
 fuel <- fev_fuel_merge(primaire, auxiliaire)
 #> "clc_2018" filled 128472 cells (19%) that
 #> "bdforet_v2" left unmapped.
+fuel <- fev_fuel_fill_gaps(fuel)
+#> 18 empty cells in 16 gaps.
+#> ✔ 18 filled: below 25 ha, so no component could have mapped them.
+#> ℹ Largest gap: 0.12 ha.
+#> ℹ Class from the modal 3x3 neighbour; the source layer records them as
+#>   "gap_filled" rather than claiming a dataset mapped them.
 ```
+
+La seconde ligne répare 18 cellules non cartographiées — des esquilles
+de rastérisation sur les liserés entre polygones CORINE. C’est expliqué
+en détail dans l’[article
+Couchey](https://pobsteta.github.io/firexpovulnR/articles/couchey.md) ;
+l’essentiel est que
+[`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md)
+propage tout vide à travers sa fenêtre, donc une cellule isolée en
+efface un disque de 500 m de rayon.
 
 Deux campagnes BD ORTHO, **2008 et 2014**. Retenez ce chiffre : le grand
 feu est de 2021.
@@ -119,7 +134,7 @@ dont il sera question en section 4.
 expo <- fev_exposure(brulable, radius = 500, type = "ember", quiet = TRUE)
 terra::global(fev_data(expo), c("mean", "max"), na.rm = TRUE)
 #>               mean max
-#> exposure 0.8719655   1
+#> exposure 0.8645515   1
 ```
 
 ``` r
@@ -384,11 +399,17 @@ risque moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors,
 un facteur 6,5. Les périmètres rouges sont les onze incendies, les deux
 carrés blancs les placettes LiDAR.
 
-Les disques blancs ne sont pas des données manquantes du terrain : ce
-sont **18 cellules non cartographiées** — des esquilles de rastérisation
-sur les liserés entre polygones CORINE — amplifiées par la fenêtre
-focale de 500 m, qui propage tout vide. Avec le cadre de bord de même
-origine, 11,8 % de la carte est vide. Voir `fev_exposure(na_rm = )`.
+Le cadre blanc de 500 m sur le pourtour est un effet de bord réel, non
+un artefact : la fenêtre focale y déborde de l’emprise, et il n’y a
+effectivement pas de donnée au-delà. Il est préférable au remède
+apparent `na_rm = TRUE`, qui calculerait des fenêtres tronquées — mesuré
+sur ces données, une exposition moyenne de 0,32 dans le cadre contre
+0,46 à l’intérieur, soit 30 % de sous-estimation invisible. Le trou
+blanc est plus honnête que ce chiffre-là.
+
+Pour le supprimer sans rien inventer, il faut récupérer le combustible
+sur l’emprise tamponnée du rayon d’exposition, puis recadrer après le
+calcul focal.
 
 ### Le jour de l’incendie sort premier de 1 096
 
@@ -478,16 +499,16 @@ val$temporal$table
 #> 2                         1 to 5       0       0        0
 #> 3                            > 5      11    6927      100
 val$auc
-#> [1] 0.5304155
+#> [1] 0.5345634
 ```
 
 ``` r
 
 val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 #>       class pct_of_area pct_of_burnt ratio
-#> 1   0 - 0.2       31.84        29.68  0.93
-#> 2 0.2 - 0.4       37.83        39.90  1.05
-#> 3 0.4 - 0.6       30.33        30.43  1.00
+#> 1   0 - 0.2       31.94        28.55  0.89
+#> 2 0.2 - 0.4       23.89        27.14  1.14
+#> 3 0.4 - 0.6       44.17        44.31  1.00
 #> 4 0.6 - 0.8        0.00         0.00   NaN
 #> 5   0.8 - 1        0.00         0.00   NaN
 ```
