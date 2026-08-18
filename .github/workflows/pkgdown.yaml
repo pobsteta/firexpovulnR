@@ -79,7 +79,11 @@ jobs:
         # manual dispatch build the site without deploying it, so a branch can
         # be validated without overwriting what is live.
         if: github.event_name == 'push' || github.event_name == 'release'
-        uses: JamesIves/github-pages-deploy-action@v4.5.0
+        # v4.9.0 runs on node24. v4.5.0 declared node20, which the runners now
+        # force onto node24 anyway while warning about it -- so this only makes
+        # explicit what was already happening. The three inputs below are
+        # unchanged in the interval.
+        uses: JamesIves/github-pages-deploy-action@v4.9.0
         with:
           clean: false
           branch: gh-pages
