@@ -24,6 +24,10 @@
 #                  250 est un bon depart : une dalle entiere prend des heures.
 #   --res=M        taille de cellule                (defaut : 25)
 #   --max=N        nombre de dalles pour CETTE session (defaut : toutes)
+#   --no-spread    prendre les dalles dans l'ordre de l'index plutot que
+#                  reparties sur l'emprise. A EVITER : l'index est en ordre
+#                  spatial, donc les huit premieres sont huit voisines dans un
+#                  coin, et vous echantillonnez un seul contexte huit fois.
 #   --keep-las     garder les nuages telecharges    (defaut : supprimes)
 #   --dry-run      afficher le plan et s'arreter
 #
@@ -88,13 +92,19 @@ plan <- fev_lidar_batch(
   res       = res,
   window    = window,
   max_tiles = max_tiles,
+  spread    = !flag("no-spread"),
   keep_las  = flag("keep-las"),
   dry_run   = flag("dry-run")
 )
 
 if (flag("dry-run")) {
-  cat("\n--- plan ---\n")
-  print(utils::head(plan[plan$status == "todo", c("tile", "status")], 20))
-  cat(sum(plan$status == "todo"), "dalle(s) a traiter,",
-      sum(plan$status == "done"), "deja faite(s)\n")
+  nxt <- plan[plan$status == "next", c("rank", "tile")]
+  nxt <- nxt[order(nxt$rank), ]
+  cat("\n--- dalles que CETTE session traiterait ---\n")
+  print(utils::head(nxt, 30), row.names = FALSE)
+  cat("\n", nrow(nxt), " dalle(s) cette session, ",
+      sum(plan$status == "todo"), " en attente, ",
+      sum(plan$status == "done"), " deja faite(s)\n", sep = "")
+  cat("ordre : traversee du plus eloigne, deterministe — une reprise",
+      "poursuit la repartition\n")
 }

@@ -38,6 +38,18 @@
 #' Spread beats contiguity for anything you intend to compare against a
 #' classification — which is what [fev_fuel_profile()] does.
 #'
+#' @section Why the order is not the index order:
+#' `max_tiles` without `spread` would hand you the first N tiles of an index
+#' that is itself in spatial order — eight neighbours in one corner of the
+#' massif, sampling one context eight times. `spread = TRUE` walks the tiles by
+#' farthest-point traversal instead: each tile chosen is the one furthest from
+#' everything chosen so far.
+#'
+#' The traversal is deterministic and computed over the whole set, so every
+#' prefix of it is well spread **and** resume continues the spread rather than
+#' re-drawing it. Eight tiles tonight and eight tomorrow give sixteen spread
+#' tiles, not two clusters of eight.
+#'
 #' @section Do not thin the cloud to go faster:
 #' It is the obvious optimisation and it destroys the measurement. As pulse
 #' density falls the understorey stratum is the first thing to disappear, so
@@ -54,6 +66,10 @@
 #'   metres. `NULL` processes the whole tile.
 #' @param max_tiles Stop after this many tiles in one run — a way to take an
 #'   overnight job in shifts. `NULL` for no limit.
+#' @param spread Choose those tiles spread across the area rather than in index
+#'   order. On by default, and it matters: the index is in spatial order, so the
+#'   first eight tiles of it are eight neighbours in one corner. See the section
+#'   below.
 #' @param keep_las Keep the downloaded point clouds instead of deleting each one
 #'   after its tile is inverted. Off by default: at roughly 200 MB a tile, a
 #'   departmental run would fill a disk.
@@ -62,7 +78,11 @@
 #' @param quiet Suppress progress reporting.
 #'
 #' @return A data frame, one row per tile: `tile`, `status`, `points`,
-#'   `seconds`, `path`. Also written to `manifest.csv` in `out_dir` after every
+#'   `seconds`, `path`, `rank`. `status` is `"done"` for a tile whose raster
+#'   already exists, `"next"` for one this run will take, `"todo"` for one left
+#'   for a later run, and `"written"` or `"failed"` afterwards. `rank` gives the
+#'   position in the traversal, so a dry run shows the actual batch rather than
+#'   the index order. Also written to `manifest.csv` in `out_dir` after every
 #'   tile, so an interrupted run leaves a readable record.
 #'
 #' @seealso [fev_fuel_lidar()] for the inversion and what it costs,
@@ -85,6 +105,7 @@ fev_lidar_batch <- function(aoi,
                             res = 25,
                             window = NULL,
                             max_tiles = NULL,
+                            spread = TRUE,
                             keep_las = FALSE,
                             dry_run = FALSE,
                             quiet = FALSE) {
@@ -127,10 +148,25 @@ fev_lidar_batch <- function(aoi,
     stringsAsFactors = FALSE
   )
 
-  todo <- which(!done)
+  # Order the WHOLE set once, then take the first undone ones. Index order is
+  # spatial -- 0966_6257, 0966_6258, 0966_6259 -- so taking the first N of it
+  # would hand back eight adjacent tiles in one corner of the massif, which is
+  # the contiguity this function's own documentation argues against.
+  #
+  # The order is deterministic, and that matters for resume: run two must
+  # continue the spread rather than re-draw it, or the union of several nights
+  # is no better spread than one.
+  order_all <- if (isTRUE(spread)) fev_lidar_spread_order(idx) else seq_len(nrow(plan))
+  todo <- order_all[!done[order_all]]
   if (!is.null(max_tiles) && length(todo) > max_tiles) {
     todo <- todo[seq_len(max_tiles)]
   }
+
+  # A dry run that does not say WHICH tiles it would take is misleading: the
+  # plan is in index order, the traversal is not, and `max_tiles` cuts the
+  # latter. Mark the selection so the caller sees the actual next batch.
+  plan$status[todo] <- "next"
+  plan$rank <- match(seq_len(nrow(plan)), todo)
 
   if (!quiet) {
     fev_inform(c(
@@ -241,4 +277,37 @@ fev_lidar_centre_window <- function(las, window) {
   cy <- (h$`Min Y` + h$`Max Y`) / 2
   lidR::clip_rectangle(las, cx - window / 2, cy - window / 2,
                        cx + window / 2, cy + window / 2)
+}
+
+
+#' A deterministic, well-spread traversal of the tiles
+#'
+#' Farthest-point traversal: start from the tile nearest the centroid, then
+#' repeatedly take whichever tile is furthest from everything taken so far. No
+#' randomness, so two runs of this agree, which is what lets resume continue a
+#' spread instead of starting a new one.
+#'
+#' @noRd
+fev_lidar_spread_order <- function(idx) {
+  n <- nrow(idx)
+  if (n < 3L) {
+    return(seq_len(n))
+  }
+  xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(idx)))
+  centre <- colMeans(xy)
+  first <- which.min(colSums((t(xy) - centre)^2))
+
+  ord <- integer(n)
+  ord[1] <- first
+  # Distance to the nearest already-chosen tile, updated as we go: cheaper than
+  # rescanning every pair, and exactly what "furthest from all chosen" needs.
+  nearest <- colSums((t(xy) - xy[first, ])^2)
+  nearest[first] <- -Inf
+  for (k in 2:n) {
+    pick <- which.max(nearest)
+    ord[k] <- pick
+    nearest <- pmin(nearest, colSums((t(xy) - xy[pick, ])^2))
+    nearest[pick] <- -Inf
+  }
+  ord
 }

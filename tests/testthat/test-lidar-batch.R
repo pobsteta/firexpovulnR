@@ -25,13 +25,47 @@ fake_index <- function(names) {
   structure(idx, class = c("fev_lidarhd_index", class(idx)))
 }
 
+grid_index <- function(n = 6) {
+  g <- expand.grid(i = seq_len(n), j = seq_len(n))
+  geom <- sf::st_sfc(lapply(seq_len(nrow(g)), function(k) {
+    x <- g$i[k] * 1000; y <- g$j[k] * 1000
+    sf::st_polygon(list(cbind(c(x, x + 1000, x + 1000, x, x),
+                              c(y, y, y + 1000, y + 1000, y))))
+  }), crs = 2154)
+  nm <- sprintf("t%02d_%02d", g$i, g$j)
+  structure(
+    sf::st_sf(name = nm, url = paste0("https://example.invalid/", nm, ".laz"),
+              geometry = geom),
+    class = c("fev_lidarhd_index", "sf", "data.frame")
+  )
+}
+
+spacing <- function(idx, sel) {
+  xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(idx)))[sel, ]
+  min(stats::dist(xy))
+}
+
 test_that("a dry run reports the plan and downloads nothing", {
   d <- withr::local_tempdir()
   plan <- fev_lidar_batch(fake_index(c("a", "b", "c")), d, dry_run = TRUE,
                           quiet = TRUE)
   expect_equal(nrow(plan), 3L)
-  expect_true(all(plan$status == "todo"))
+  # With no cap, every tile is in this run's batch: "next", not "todo".
+  expect_true(all(plan$status == "next"))
   expect_false(file.exists(file.path(d, "manifest.csv")))
+})
+
+test_that("the plan separates this run's batch from what is left for later", {
+  # A dry run that does not say WHICH tiles it would take is misleading: the
+  # plan is in index order and the traversal is not.
+  d <- withr::local_tempdir()
+  plan <- fev_lidar_batch(grid_index(), d, max_tiles = 4, dry_run = TRUE,
+                          quiet = TRUE)
+  expect_equal(sum(plan$status == "next"), 4L)
+  expect_equal(sum(plan$status == "todo"), nrow(plan) - 4L)
+  # And rank orders the batch, so a caller can print it in the order it runs.
+  expect_setequal(plan$rank[plan$status == "next"], 1:4)
+  expect_true(all(is.na(plan$rank[plan$status == "todo"])))
 })
 
 test_that("a tile whose raster exists is treated as done", {
@@ -42,7 +76,7 @@ test_that("a tile whose raster exists is treated as done", {
   plan <- fev_lidar_batch(fake_index(c("a", "b", "c")), d, dry_run = TRUE,
                           quiet = TRUE)
   expect_equal(plan$status[plan$tile == "b"], "done")
-  expect_equal(plan$status[plan$tile == "a"], "todo")
+  expect_equal(plan$status[plan$tile == "a"], "next")
   # And the done one carries its path, so a caller can read it straight away.
   expect_true(nzchar(plan$path[plan$tile == "b"]))
 })
@@ -101,4 +135,51 @@ test_that("the runnable script ships with the package", {
   # The warning against thinning must survive any future edit of the header.
   expect_true(any(grepl("NE REDUISEZ PAS la densite", txt)))
   expect_true(any(grepl("--dry-run", txt)))
+})
+
+# --------------------------------------------------------------------------
+# The traversal order, which is what makes a partial run useful
+# --------------------------------------------------------------------------
+
+
+test_that("the traversal spreads far better than index order", {
+  # The index is itself in spatial order, so its first N are N neighbours in
+  # one corner -- one context sampled N times.
+  idx <- grid_index()
+  ord <- firexpovulnR:::fev_lidar_spread_order(idx)
+  expect_gt(spacing(idx, ord[1:6]), spacing(idx, 1:6))
+})
+
+test_that("the traversal is deterministic, so resume continues it", {
+  idx <- grid_index()
+  a <- firexpovulnR:::fev_lidar_spread_order(idx)
+  b <- firexpovulnR:::fev_lidar_spread_order(idx)
+  expect_identical(a, b)
+})
+
+test_that("every prefix is spread, not just the first batch", {
+  # Eight tonight and eight tomorrow must give sixteen spread tiles, not two
+  # clusters of eight.
+  idx <- grid_index(8)
+  ord <- firexpovulnR:::fev_lidar_spread_order(idx)
+  expect_gt(spacing(idx, ord[1:16]), spacing(idx, 1:16))
+})
+
+test_that("it visits every tile exactly once", {
+  idx <- grid_index()
+  ord <- firexpovulnR:::fev_lidar_spread_order(idx)
+  expect_setequal(ord, seq_len(nrow(idx)))
+  expect_equal(anyDuplicated(ord), 0L)
+})
+
+test_that("a handful of tiles needs no traversal", {
+  expect_equal(firexpovulnR:::fev_lidar_spread_order(fake_index(c("a", "b"))),
+               1:2)
+})
+
+test_that("spread can be turned off, and then index order applies", {
+  d <- withr::local_tempdir()
+  plan <- fev_lidar_batch(grid_index(), d, spread = FALSE, max_tiles = 3,
+                          dry_run = TRUE, quiet = TRUE)
+  expect_equal(nrow(plan), 36L)
 })

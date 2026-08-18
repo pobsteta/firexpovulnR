@@ -10,6 +10,7 @@ fev_lidar_batch(
   res = 25,
   window = NULL,
   max_tiles = NULL,
+  spread = TRUE,
   keep_las = FALSE,
   dry_run = FALSE,
   quiet = FALSE
@@ -30,6 +31,11 @@ metres. \code{NULL} processes the whole tile.}
 \item{max_tiles}{Stop after this many tiles in one run — a way to take an
 overnight job in shifts. \code{NULL} for no limit.}
 
+\item{spread}{Choose those tiles spread across the area rather than in index
+order. On by default, and it matters: the index is in spatial order, so the
+first eight tiles of it are eight neighbours in one corner. See the section
+below.}
+
 \item{keep_las}{Keep the downloaded point clouds instead of deleting each one
 after its tile is inverted. Off by default: at roughly 200 MB a tile, a
 departmental run would fill a disk.}
@@ -41,7 +47,11 @@ downloading anything.}
 }
 \value{
 A data frame, one row per tile: \code{tile}, \code{status}, \code{points},
-\code{seconds}, \code{path}. Also written to \code{manifest.csv} in \code{out_dir} after every
+\code{seconds}, \code{path}, \code{rank}. \code{status} is \code{"done"} for a tile whose raster
+already exists, \code{"next"} for one this run will take, \code{"todo"} for one left
+for a later run, and \code{"written"} or \code{"failed"} afterwards. \code{rank} gives the
+position in the traversal, so a dry run shows the actual batch rather than
+the index order. Also written to \code{manifest.csv} in \code{out_dir} after every
 tile, so an interrupted run leaves a readable record.
 }
 \description{
@@ -74,6 +84,20 @@ one, for a fraction of the cost.
 
 Spread beats contiguity for anything you intend to compare against a
 classification — which is what \code{\link[=fev_fuel_profile]{fev_fuel_profile()}} does.
+}
+
+\section{Why the order is not the index order}{
+
+\code{max_tiles} without \code{spread} would hand you the first N tiles of an index
+that is itself in spatial order — eight neighbours in one corner of the
+massif, sampling one context eight times. \code{spread = TRUE} walks the tiles by
+farthest-point traversal instead: each tile chosen is the one furthest from
+everything chosen so far.
+
+The traversal is deterministic and computed over the whole set, so every
+prefix of it is well spread \strong{and} resume continues the spread rather than
+re-drawing it. Eight tiles tonight and eight tomorrow give sixteen spread
+tiles, not two clusters of eight.
 }
 
 \section{Do not thin the cloud to go faster}{
