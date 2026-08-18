@@ -79,6 +79,7 @@ reference:
     - fev_fuel_weights
     - fev_fuel_registers
     - fev_fuel_lidar
+    - fev_lidar_batch
     - fev_fuel_attach
     - fev_lidar_density
 
