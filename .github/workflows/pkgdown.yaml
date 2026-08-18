@@ -85,6 +85,16 @@ jobs:
         # unchanged in the interval.
         uses: JamesIves/github-pages-deploy-action@v4.9.0
         with:
-          clean: false
+          # clean: true prunes what the site no longer contains. With `false`
+          # the deploy only ever added and overwrote, so a function removed from
+          # the package kept its reference page live -- fev_fetch_clcplus.html
+          # was still served with HTTP 200 after the function was deleted, which
+          # is worse than a 404: a reader arriving from a search engine reads
+          # documentation for something that no longer exists.
+          #
+          # Safe here because gh-pages holds the pkgdown site and nothing else:
+          # every file on it, lightswitch.js and llms.txt included, is generated
+          # into docs/ by build_site_github_pages(). Verified 2026-08-18.
+          clean: true
           branch: gh-pages
           folder: docs
