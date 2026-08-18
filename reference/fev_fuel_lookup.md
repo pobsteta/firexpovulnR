@@ -7,7 +7,7 @@ type each one is.
 ## Usage
 
 ``` r
-fev_fuel_lookup(type = c("bdforet_v2", "clc"), file = NULL)
+fev_fuel_lookup(type = c("bdforet_v2", "clc", "clcplus"), file = NULL)
 ```
 
 ## Source
@@ -22,12 +22,19 @@ nomenclature guidelines,
 verified 2026-08-16 against the 2019 illustrated guidelines, which agree
 on all 44 rows.
 
+CLCplus Backbone codes and labels: European Environment Agency catalogue
+record for the 2023 vintage,
+[doi:10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2](https://doi.org/10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2)
+, verified 2026-08-18. Nomenclature derived from the EAGLE Land Cover
+Components.
+
 ## Arguments
 
 - type:
 
-  Nomenclature to load: `"bdforet_v2"` or `"clc"`. The CORINE table is
-  vintage-independent, so `"clc_2018"` and friends resolve to `"clc"`.
+  Nomenclature to load: `"bdforet_v2"`, `"clc"` or `"clcplus"`. Both
+  land cover tables are vintage-independent, so `"clc_2018"` and
+  `"clcplus_2023"` resolve to `"clc"` and `"clcplus"`.
 
 - file:
 
@@ -112,4 +119,12 @@ table(clc$fuel_type, clc$burnable)
 #>   sparse_vegetation       0    1
 #>   transitional_shrub      0    1
 #>   urban_vegetation        0    2
+
+# CLCplus splits what CORINE 311 could not: deciduous from evergreen
+# broadleaf, which is the sclerophyll distinction the Mediterranean needs.
+cpl <- fev_fuel_lookup("clcplus")
+cpl[cpl$code %in% c("3", "4"), c("code", "label", "fuel_type")]
+#>   code                               label          fuel_type
+#> 3    3 Woody - broadleaved deciduous trees   broadleaf_closed
+#> 4    4 Woody - broadleaved evergreen trees sclerophyll_closed
 ```

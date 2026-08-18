@@ -10,7 +10,7 @@ for which vintage.
 ``` r
 fev_fuel_source(
   x,
-  type = c("bdforet_v2", "clc_2018", "lidarhd", "custom"),
+  type = c("bdforet_v2", "clc_2018", "clcplus_2023", "lidarhd", "custom"),
   res = 25,
   crs_work = 2154,
   field = NULL,
@@ -39,7 +39,8 @@ fev_fuel_source(
 - type:
 
   Source type: `"bdforet_v2"`, `"clc_2018"` (and the other CORINE
-  vintages), `"lidarhd"` (phase 8, not implemented) or `"custom"`.
+  vintages), `"clcplus_2023"` (and 2018, 2021), `"lidarhd"` (phase 8,
+  not implemented) or `"custom"`.
 
 - res:
 
@@ -111,12 +112,20 @@ to see which are populated.
 
 ## On the target resolution
 
-`res` defaults to 25 m. Below 20 m nothing is gained: BD Forêt v2's
-minimum mapped width is 20 m, so a finer grid resolves boundaries the
-source never had. At 100 m the advantage over CORINE — whose native
-raster is 100 m — disappears entirely, and with it the reason for
-preferring BD Forêt. Between those, the cost is quadratic in memory and
-in focal-window time.
+`res` defaults to 25 m, and the floor below which it buys nothing is a
+property of the source, not a constant: BD Forêt v2's minimum mapped
+width is 20 m, CLCplus Backbone's is 10 m. Below its source's own width
+a grid resolves boundaries the data never had. At 100 m the advantage
+over CORINE — whose native raster is 100 m — disappears entirely.
+Between those, the cost is quadratic in memory and in focal-window time.
+
+One resolution earns its cost for a reason unrelated to detail.
+[`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md)
+requires `res <= radius / 3`, so the 30 m radiant-heat radius is
+**refused** at 25 m and becomes computable at 10 m — exactly, since 10 =
+30 / 3. A 10 m source is therefore the only way to reach that scale at
+all, and it costs about 39 times the focal work of 25 m: 6.25 times the
+cells, each with 6.25 times the window.
 
 ## On the vintage
 

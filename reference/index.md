@@ -47,6 +47,8 @@ différents ne peuvent pas se confondre.
   : Fetch BD Forêt v2 (primary fuel source)
 - [`fev_fetch_corine()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_corine.md)
   : Fetch CORINE Land Cover (auxiliary fuel source)
+- [`fev_fetch_clcplus()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_clcplus.md)
+  : Import CLCplus Backbone (10 m raster land cover)
 - [`fev_fetch_burnt()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.md)
   : Fetch EFFIS burnt area perimeters
 - [`fev_bdforet_millesime()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdforet_millesime.md)
