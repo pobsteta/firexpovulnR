@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.18.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.18.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,24 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.18.1" id="firexpovulnr-0181-2026-08-18">firexpovulnR 0.18.1 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0181-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="les-libellés-clcplus-sont-vérifiés-chez-le-producteur-0-18-1">Les libellés CLCplus sont vérifiés chez le producteur<a class="anchor" aria-label="anchor" href="#les-libell%C3%A9s-clcplus-sont-v%C3%A9rifi%C3%A9s-chez-le-producteur-0-18-1"></a></h4>
+<p>Le <code>GetLegendGraphic</code> du WMS rend les onze libellés, plus 253 et 254, directement depuis le style publié. Ils correspondent à la table livrée. C’était le point ouvert le plus gênant de la phase 10 — les libellés venaient d’un résultat de recherche — et deux routes indépendantes concordent désormais. Une seule correction, de ponctuation : « Non and sparsely vegetated ».</p>
+<p>La légende donne aussi la clé de lecture du produit : <strong>la classe 5, le maquis, est le brun</strong>.</p>
+</div>
+<div class="section level4">
+<h4 id="fev_clcplus_tiles-ne-rend-plus-de-fausse-tuile-outre-mer-0-18-1">
+<code>fev_clcplus_tiles()</code> ne rend plus de fausse tuile outre-mer<a class="anchor" aria-label="anchor" href="#fev_clcplus_tiles-ne-rend-plus-de-fausse-tuile-outre-mer-0-18-1"></a></h4>
+<p>CLCplus couvre les départements d’outre-mer, mais comme <strong>produits séparés dans leur propre zone UTM</strong> — la liste des couches WMS nomme <code>GF/32622</code>, <code>GP/32620</code>, <code>MQ/32620</code>, <code>RE/32740</code> et <code>YT/32738</code>. Ils ne sont pas sur la grille EEA.</p>
+<p>La fonction projetait pourtant tout en EPSG:3035, une projection centrée sur l’Europe. La Réunion en ressortait avec le code <code>E99N-31</code> : arithmétiquement correct, géographiquement absurde, et surtout <strong>plausible</strong>. Un code qui ressemble à une tuile et n’en nomme aucune est pire qu’un refus. Elle refuse maintenant, et dit où chercher les produits d’outre-mer.</p>
+</div>
+<div class="section level4">
+<h4 id="il-nexiste-pas-de-route-ouverte-vers-les-valeurs-0-18-1">Il n’existe pas de route ouverte vers les valeurs<a class="anchor" aria-label="anchor" href="#il-nexiste-pas-de-route-ouverte-vers-les-valeurs-0-18-1"></a></h4>
+<p>Vérifié : le WCS du GeoServer répond <code>Service WCS is disabled</code>. Le WMS reste ouvert mais rend des images. Inverser la palette d’un PNG indexé pour en tirer des codes de classe produirait un rendu déguisé en donnée — résolution rééchantillonnée, provenance mensongère — et le paquet ne le fera pas. Le téléchargement passe par EU Login, et c’est le seul geste de la phase 10 qui demande une main humaine.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.18.0" id="firexpovulnr-0180-2026-08-18">firexpovulnR 0.18.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0180-2026-08-18"></a></h2>
 <div class="section level4">

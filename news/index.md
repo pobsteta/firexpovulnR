@@ -1,5 +1,42 @@
 # Changelog
 
+## firexpovulnR 0.18.1 (2026-08-18)
+
+#### Les libellés CLCplus sont vérifiés chez le producteur
+
+Le `GetLegendGraphic` du WMS rend les onze libellés, plus 253 et 254,
+directement depuis le style publié. Ils correspondent à la table livrée.
+C’était le point ouvert le plus gênant de la phase 10 — les libellés
+venaient d’un résultat de recherche — et deux routes indépendantes
+concordent désormais. Une seule correction, de ponctuation : « Non and
+sparsely vegetated ».
+
+La légende donne aussi la clé de lecture du produit : **la classe 5, le
+maquis, est le brun**.
+
+#### `fev_clcplus_tiles()` ne rend plus de fausse tuile outre-mer
+
+CLCplus couvre les départements d’outre-mer, mais comme **produits
+séparés dans leur propre zone UTM** — la liste des couches WMS nomme
+`GF/32622`, `GP/32620`, `MQ/32620`, `RE/32740` et `YT/32738`. Ils ne
+sont pas sur la grille EEA.
+
+La fonction projetait pourtant tout en EPSG:3035, une projection centrée
+sur l’Europe. La Réunion en ressortait avec le code `E99N-31` :
+arithmétiquement correct, géographiquement absurde, et surtout
+**plausible**. Un code qui ressemble à une tuile et n’en nomme aucune
+est pire qu’un refus. Elle refuse maintenant, et dit où chercher les
+produits d’outre-mer.
+
+#### Il n’existe pas de route ouverte vers les valeurs
+
+Vérifié : le WCS du GeoServer répond `Service WCS is disabled`. Le WMS
+reste ouvert mais rend des images. Inverser la palette d’un PNG indexé
+pour en tirer des codes de classe produirait un rendu déguisé en donnée
+— résolution rééchantillonnée, provenance mensongère — et le paquet ne
+le fera pas. Le téléchargement passe par EU Login, et c’est le seul
+geste de la phase 10 qui demande une main humaine.
+
 ## firexpovulnR 0.18.0 (2026-08-18)
 
 #### `fev_clcplus_tiles()` — quelles tuiles télécharger
