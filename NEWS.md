@@ -1,3 +1,28 @@
+# firexpovulnR 0.18.0 (2026-08-18)
+
+### `fev_clcplus_tiles()` — quelles tuiles télécharger
+
+CLCplus est diffusé en tuiles de **100 x 100 km** en GeoTIFF nuage-optimisé sur
+la grille de référence EEA. Puisque le téléchargement est manuel — le produit est
+derrière EU Login — le moins que ce paquet puisse faire est de dire exactement
+quelles tuiles prendre, plutôt que de laisser le calcul à faire sur une carte.
+
+Le code de cellule EEA est la taille suivie du coin inférieur gauche exprimé en
+unités de cette taille, en EPSG:3035 : une tuile de 100 km dont le coin est à
+4 000 000 m est et 2 200 000 m nord s'appelle `E40N22`.
+
+Pour les deux emprises embarquées : **les Maures tiennent dans une seule tuile,
+`E40N22`** ; **Couchey en chevauche deux**, `E39N26` et `E39N27`, parce que
+l'emprise traverse le northing 2 700 000 — une seule tuile y laisserait un trou.
+
+Le refus de `fev_fetch_clcplus()` nomme désormais ces tuiles quand un `aoi` lui
+est passé. Nommer la tuile est la chose la plus utile qu'un refus puisse faire
+quand la récupération doit se faire à la main.
+
+L'arithmétique est le système de codage documenté de la grille EEA ; **le préfixe
+exact que le CLMS met devant dans ses noms de fichiers n'a pas été vérifié**,
+donc cherchez la partie `E..N..` dans la liste de téléchargement.
+
 # firexpovulnR 0.17.0 (2026-08-18)
 
 ### `fev_fetch_forms()` — la hauteur de canopée pour toute la France

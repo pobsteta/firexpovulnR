@@ -300,3 +300,64 @@ test_that("a 10 m source is exactly what the radiant radius needs", {
   expect_true(10 <= r30 / 3)
   expect_false(25 <= r30 / 3)
 })
+
+# --------------------------------------------------------------------------
+# Which tiles to download, since the download is manual
+# --------------------------------------------------------------------------
+
+aoi_2154 <- function(xmin, ymin, xmax, ymax) {
+  sf::st_sf(geometry = sf::st_sfc(
+    sf::st_polygon(list(cbind(c(xmin, xmax, xmax, xmin, xmin),
+                              c(ymin, ymin, ymax, ymax, ymin)))),
+    crs = 2154
+  ))
+}
+
+test_that("the tile code is size plus corner in units of that size", {
+  # A 100 km tile with its corner at 4 000 000 E, 2 200 000 N is E40N22.
+  tiles <- fev_clcplus_tiles(aoi_2154(972000, 6252000, 975000, 6255000))
+  expect_equal(nrow(tiles), 1L)
+  expect_equal(tiles$tile, "E40N22")
+  expect_equal(tiles$xmin, 4.0e6)
+  expect_equal(tiles$ymin, 2.2e6)
+  expect_equal(tiles$xmax - tiles$xmin, 1e5)
+})
+
+test_that("an area straddling a boundary gets every tile, not just one", {
+  gpkg <- system.file("extdata", "couchey.gpkg", package = "firexpovulnR")
+  skip_if(!nzchar(gpkg), "Couchey extract not installed")
+  # Couchey crosses the 2 700 000 m northing, so one tile would leave a gap.
+  tiles <- fev_clcplus_tiles(sf::st_read(gpkg, "study_area", quiet = TRUE))
+  expect_setequal(tiles$tile, c("E39N26", "E39N27"))
+})
+
+test_that("the Maures fit in a single tile", {
+  gpkg <- system.file("extdata", "maures.gpkg", package = "firexpovulnR")
+  skip_if(!nzchar(gpkg), "Maures extract not installed")
+  tiles <- fev_clcplus_tiles(sf::st_read(gpkg, "study_area", quiet = TRUE))
+  expect_equal(tiles$tile, "E40N22")
+})
+
+test_that("the returned bounds actually contain the area", {
+  aoi <- aoi_2154(972000, 6252000, 975000, 6255000)
+  tiles <- fev_clcplus_tiles(aoi)
+  bb <- sf::st_bbox(sf::st_transform(aoi, 3035))
+  expect_lte(min(tiles$xmin), bb[["xmin"]])
+  expect_gte(max(tiles$xmax), bb[["xmax"]])
+  expect_lte(min(tiles$ymin), bb[["ymin"]])
+  expect_gte(max(tiles$ymax), bb[["ymax"]])
+})
+
+test_that("an AOI without a CRS is refused rather than assumed", {
+  bad <- sf::st_sf(geometry = sf::st_sfc(
+    sf::st_polygon(list(cbind(c(0, 1, 1, 0, 0), c(0, 0, 1, 1, 0))))
+  ))
+  expect_error(fev_clcplus_tiles(bad))
+})
+
+test_that("the manual refusal names the tiles when an AOI is given", {
+  aoi <- aoi_2154(972000, 6252000, 975000, 6255000)
+  expect_error(fev_fetch_clcplus(aoi = aoi, year = 2023), regexp = "E40N22")
+  # And says how to get that help when it cannot.
+  expect_error(fev_fetch_clcplus(year = 2023), regexp = "name the tiles")
+})

@@ -156,6 +156,12 @@
 # 2023 vintage, verified 2026-08-18. 253 is a real class of sorts -- seawater --
 # while 254 and 255 are the absence of one, and the fetcher separates them:
 # "outside the product area" and "no data" are unknown ground, not land cover.
+# CLCplus is distributed as 100 x 100 km tiles on the EEA reference grid, whose
+# cell code is the cell size followed by the lower-left coordinate in units of
+# that size, in EPSG:3035. Verified 2026-08-18 on the CLMS product page (tiling)
+# and the EEA reference grid documentation (coding).
+.FEV_EEA_TILE_M <- 1e5
+
 .FEV_CLCPLUS_NODATA <- c(254L, 255L)
 .FEV_CLCPLUS_SEAWATER <- 253L
 

@@ -126,6 +126,14 @@ fev_fetch_clcplus <- function(file = NULL,
            personal tokens.",
       i = "Download the {.val {year}} raster for your area from the CLMS \\
            portal or WEkEO, then pass its path as {.arg file}.",
+      # Naming the tiles is the most useful thing a refusal can do when the
+      # fetch has to be done by hand, and an AOI is all it takes.
+      i = if (is.null(aoi)) {
+        "Pass {.arg aoi} here and this message will name the tiles you need."
+      } else {
+        paste0("Tiles covering your area: ",
+               "{.val {fev_clcplus_tiles(aoi)$tile}} (100 km, EPSG:3035).")
+      },
       i = "The manual route is recorded in the provenance, so the analysis \\
            stays reproducible even though the fetch is not automated."
     ), class = "fev_clcplus_manual", .envir = environment())
@@ -338,4 +346,65 @@ fev_clcplus_report <- function(r, year, n_absent) {
          CLCplus vegetation row {.val ambiguous}.",
     i = "Shown once per session; the caveat is in the lookup table every time."
   ), class = "fev_clcplus_weak_class", .envir = environment()))
+}
+
+#' Which CLCplus tiles cover an area
+#'
+#' CLCplus Backbone is distributed as 100 x 100 km cloud-optimised GeoTIFF tiles
+#' on the EEA reference grid. Since the download is manual — the product sits
+#' behind EU Login — the least this package can do is say exactly which tiles to
+#' fetch, rather than leaving you to work it out from a map.
+#'
+#' @section How the tile code is built:
+#' The EEA reference grid codes a cell as its size followed by its lower-left
+#' coordinate expressed in units of that size, in EPSG:3035. A 100 km tile whose
+#' corner sits at 4 000 000 m east and 2 200 000 m north is therefore `E40N22`.
+#' The arithmetic is the documented coding system; **the exact filename prefix
+#' CLMS puts in front of it was not verified**, so match on the `E..N..` part
+#' when you browse the download list.
+#'
+#' @param aoi Area of interest: `sf`, `sfc`, `bbox`, `SpatVector` or
+#'   `SpatRaster`. Must carry a CRS.
+#'
+#' @return A data frame with one row per tile: `tile`, and the tile's bounds in
+#'   EPSG:3035 (`xmin`, `ymin`, `xmax`, `ymax`).
+#'
+#' @seealso [fev_fetch_clcplus()], which imports a tile once you have it.
+#'
+#' @source
+#' EEA reference grid coding system: European Environment Agency, *About the
+#' EEA reference grid*, ETRS89-LAEA (EPSG:3035), false easting 4 321 000 m,
+#' false northing 3 210 000 m. Tiling of the product as 100 km cloud-optimised
+#' GeoTIFF: CLMS product page for CLCplus Backbone 2023. Both read 2026-08-18.
+#'
+#' @examples
+#' aoi <- sf::st_sf(
+#'   geometry = sf::st_sfc(
+#'     sf::st_polygon(list(cbind(c(970000, 975000, 975000, 970000, 970000),
+#'                               c(6252000, 6252000, 6256000, 6256000, 6252000)))),
+#'     crs = 2154
+#'   )
+#' )
+#' fev_clcplus_tiles(aoi)
+#'
+#' @export
+fev_clcplus_tiles <- function(aoi) {
+  bb <- fev_bbox(sf::st_transform(fev_as_aoi(aoi), 3035))
+  size <- .FEV_EEA_TILE_M
+
+  # floor() on both corners, then every tile between them: an AOI that straddles
+  # a tile boundary needs both, and Couchey does exactly that.
+  ex <- seq(floor(bb[["xmin"]] / size), floor(bb[["xmax"]] / size))
+  ny <- seq(floor(bb[["ymin"]] / size), floor(bb[["ymax"]] / size))
+  grid <- expand.grid(e = ex, n = ny, KEEP.OUT.ATTRS = FALSE)
+
+  out <- data.frame(
+    tile = sprintf("E%02dN%02d", grid$e, grid$n),
+    xmin = grid$e * size,
+    ymin = grid$n * size,
+    xmax = (grid$e + 1) * size,
+    ymax = (grid$n + 1) * size,
+    stringsAsFactors = FALSE
+  )
+  out[order(out$tile), ]
 }
