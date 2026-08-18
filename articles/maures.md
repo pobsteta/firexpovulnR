@@ -294,6 +294,58 @@ d’ortho ou de satellite — la solution qu’on propose souvent pour
 rafraîchir un inventaire — aurait conclu que ces deux endroits se
 valent.
 
+### Mettre un chiffre dessus
+
+L’argument tient sur deux carrés.
+[`fev_fuel_profile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_profile.md)
+le généralise : il confronte chaque classe de la couche catégorielle aux
+métriques que le LiDAR a mesurées, et rapporte la part de variance que
+l’appartenance de classe explique.
+
+``` r
+
+lidar_deux <- merge(brule, temoin)
+zone <- st_union(st_buffer(carres, 25))
+
+p_prim <- fev_fuel_source(bdforet, type = "bdforet_v2", res = 25,
+                          aoi = zone, millesime = min(mil$year))
+p_aux  <- fev_fuel_source(corine, type = "clc_2018", res = 25,
+                          aoi = zone, millesime = 2018)
+profil <- fev_fuel_profile(fev_fuel_merge(p_prim, p_aux), lidar_deux,
+                           quiet = TRUE)
+#> "clc_2018" filled 100 cells (4.2%) that
+#> "bdforet_v2" left unmapped.
+profil$explained
+#>    metric   n n_classes  explained
+#> 1  H_Bush 566         9 0.17459515
+#> 2  FL_0_1 566         9 0.16503238
+#> 3  FL_1_3 566         9 0.08356245
+#> 4   Cover 566         9 0.42623555
+#> 5 PAI_tot 566         9 0.14757963
+```
+
+Le résultat est l’argument de cette page, réduit à cinq nombres :
+
+| Métrique  | Ce qu’elle décrit              | Variance expliquée |
+|-----------|--------------------------------|--------------------|
+| `Cover`   | couvert de houppier            | **42,6 %**         |
+| `H_Bush`  | hauteur de la strate arbustive | 17,5 %             |
+| `FL_0_1`  | charge sous 1 m                | 16,5 %             |
+| `PAI_tot` | indice de surface végétale     | 14,8 %             |
+| `FL_1_3`  | **charge 1-3 m**               | **8,4 %**          |
+
+La classification restitue **ce que ses sources enregistrent** — le
+couvert de houppier, à 42,6 % — et laisse la charge de la strate 1-3 m
+indéterminée à **92 %**. Or c’est cette strate-là qui porte le feu de
+surface.
+
+Ce n’est pas une critique de la BD Forêt : elle fait ce pour quoi elle
+est faite. C’est la mesure du prix à payer quand on s’en sert seule pour
+du combustible, et la raison pour laquelle le registre continu existe.
+
+Neuf classes, 566 cellules, deux placettes d’un seul massif : un ordre
+de grandeur et une méthode, pas une validation générale.
+
 ## Greffe sur le registre catégoriel
 
 ``` r

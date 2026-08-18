@@ -13,7 +13,7 @@ and complete coverage of the EEA area."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.16.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.17.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,9 +68,11 @@ and complete coverage of the EEA area.</p>
 catalogue record for CLCplus Backbone 2023,
 <a href="https://doi.org/10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2" class="external-link">doi:10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2</a>
 , verified 2026-08-18.</p>
-<p>Accuracy figures and the higher tolerance on classes 5 and 8: Copernicus
-Land Monitoring Service, CLCplus Backbone product documentation, read at
-summary level 2026-08-18. Not read in the Product User Manual itself.</p>
+<p>Accuracy figures and the three regionally weaker classes: Copernicus Land
+Monitoring Service, CLCplus Backbone product documentation, read at summary
+level 2026-08-18. The ATBD was read directly and carries no per-class figure;
+the Product User Manual was not reachable, and the validation reports are
+announced as forthcoming.</p>
     </div>
     <div class="section level2">
     <h2 id="arguments">Arguments<a class="anchor" aria-label="anchor" href="#arguments"></a></h2>
@@ -137,13 +139,19 @@ a replacement for it.</p>
 
 
 <p>Independent validation of the 2018 and 2021 rasters gave overall accuracies
-of 85.2% and 85.3%, both within 0.5%. But the producers state that class 5
-(low-growing woody plants) and class 8 (lichens and mosses) carry <strong>higher
-error tolerances</strong> than the other nine, from fuzzy class definition, limited
-spectral-temporal separability and sparse reference data.</p>
+of 85.2% and 85.3%, both within 0.5%. Producer's and user's accuracies meet
+the per-class target of at least 85% for every class <strong>except three</strong>, stated
+to be regionally lower: 5 (low-growing woody plants), 8 (lichens and mosses)
+and 9 (non- and sparsely vegetated). The reasons given are fuzzy class
+definition, limited spectral-temporal separability and sparse reference data.</p>
 <p>Class 5 is maquis and garrigue. The weakest class of the product is the one
 that carries fire in the Var, so this function says so on import rather than
-leaving it in a PDF. Validate it locally before relying on it.</p>
+leaving it in a PDF. Validate it locally before relying on it —
+<code><a href="fev_fuel_profile.html">fev_fuel_profile()</a></code> is what that validation looks like.</p>
+<p><strong>By how much they fall short is not public.</strong> The Algorithm Theoretical
+Basis Document was read and carries no per-class figure; the validation
+reports are announced as forthcoming. So the package records <em>which</em> classes
+are weak, not <em>how</em> weak, which is the honest limit of what is known.</p>
     </div>
     <div class="section level2">
     <h2 id="absence-is-not-a-class">Absence is not a class<a class="anchor" aria-label="anchor" href="#absence-is-not-a-class"></a></h2>
