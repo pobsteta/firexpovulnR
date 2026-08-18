@@ -79,7 +79,14 @@ primaire <- fev_fuel_source(bdforet, type = "bdforet_v2", res = 25,
 auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
                               aoi = study, millesime = 2018)
 fuel <- fev_fuel_merge(primaire, auxiliaire)
+fuel <- fev_fuel_fill_gaps(fuel)
 ```
+
+La seconde ligne répare 18 cellules non cartographiées — des esquilles de
+rastérisation sur les liserés entre polygones CORINE. C'est expliqué en détail
+dans l'[article Couchey](couchey.html) ; l'essentiel est que `fev_exposure()`
+propage tout vide à travers sa fenêtre, donc une cellule isolée en efface un
+disque de 500 m de rayon.
 
 Deux campagnes BD ORTHO, **2008 et 2014**. Retenez ce chiffre : le grand feu est
 de 2021.
@@ -303,11 +310,15 @@ moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors, un facteur
 6,5. Les périmètres rouges sont les onze incendies, les deux carrés blancs les
 placettes LiDAR.
 
-Les disques blancs ne sont pas des données manquantes du terrain : ce sont
-**18 cellules non cartographiées** — des esquilles de rastérisation sur les
-liserés entre polygones CORINE — amplifiées par la fenêtre focale de 500 m, qui
-propage tout vide. Avec le cadre de bord de même origine, 11,8 % de la carte est
-vide. Voir `fev_exposure(na_rm = )`.
+Le cadre blanc de 500 m sur le pourtour est un effet de bord réel, non un
+artefact : la fenêtre focale y déborde de l'emprise, et il n'y a effectivement
+pas de donnée au-delà. Il est préférable au remède apparent `na_rm = TRUE`, qui
+calculerait des fenêtres tronquées — mesuré sur ces données, une exposition
+moyenne de 0,32 dans le cadre contre 0,46 à l'intérieur, soit 30 % de
+sous-estimation invisible. Le trou blanc est plus honnête que ce chiffre-là.
+
+Pour le supprimer sans rien inventer, il faut récupérer le combustible sur
+l'emprise tamponnée du rayon d'exposition, puis recadrer après le calcul focal.
 
 ### Le jour de l'incendie sort premier de 1 096
 

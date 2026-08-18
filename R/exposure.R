@@ -152,6 +152,7 @@ fev_exposure <- function(fuel,
   }
 
   fev_check_focal_cost(haz, n_ring, res, radius, quiet)
+  fev_check_focal_gaps(haz, radius, res, na_rm, quiet)
 
   if (!isTRUE(quiet)) {
     fev_once("exposure_radii", fev_inform(c(
@@ -200,6 +201,53 @@ fev_exposure <- function(fuel,
   new_fev_layer(exposure, role = "exposure", provenance = prov,
                 units = "proportion of surrounding fuel, 0-1",
                 class = "fev_exposure_layer")
+}
+
+#' Say what the empty cells are about to cost
+#'
+#' With `na_rm = FALSE` the focal window propagates `NA`, so one isolated empty
+#' input cell empties a whole window around itself. On the Couchey extract 42
+#' empty cells out of 469 989 -- 0.009% -- emptied 26 303, an amplification of
+#' 626, and blanked 17.5% of the risk map once the legitimate edge frame is
+#' counted. Nothing announced it.
+#'
+#' The count is announced rather than the behaviour changed, because propagating
+#' is the right default: `na_rm = TRUE` computes truncated windows at the extent
+#' edge instead, which understates exposure there by about 30% (measured 0.3165
+#' against 0.4551 on the same data) and does so invisibly.
+#'
+#' @noRd
+fev_check_focal_gaps <- function(haz, radius, res, na_rm, quiet) {
+  if (isTRUE(quiet) || isTRUE(na_rm)) {
+    return(invisible(TRUE))
+  }
+  n_na <- as.numeric(terra::global(is.na(haz[[1]]), "sum", na.rm = TRUE)[1, 1])
+  if (!is.finite(n_na) || n_na == 0) {
+    return(invisible(TRUE))
+  }
+
+  # Clusters, not cells: a hundred cells in one blob cost one window, a hundred
+  # scattered singletons cost a hundred. The distinction is the whole point.
+  gaps <- terra::patches(terra::ifel(is.na(haz[[1]]), 1, NA), directions = 8,
+                         zeroAsNA = TRUE)
+  n_gaps <- nrow(as.data.frame(terra::freq(gaps)))
+  per_window <- ceiling(pi * (radius / res)^2)
+  # An upper bound, and said to be one: scattered gaps whose windows overlap, or
+  # gaps near the edge, cost less than the product.
+  bound <- min(as.numeric(n_gaps) * per_window, terra::ncell(haz))
+
+  fev_warn(c(
+    "The fuel layer has {n_na} empty cell{?s}.",
+    i = "They fall in {n_gaps} separate gap{?s}, and this window propagates \\
+         every one of them.",
+    i = "Up to {bound} cells of the result -- at most \\
+         {round(100 * bound / terra::ncell(haz), 1)}% -- will come back empty.",
+    i = "{.fn fev_fuel_fill_gaps} repairs gaps below the source\'s minimum \\
+         mapping unit, which is what rasterisation slivers are.",
+    i = "{.code na_rm = TRUE} ignores them instead, but then also computes \\
+         truncated windows at the extent edge."
+  ), class = "fev_focal_gaps", .envir = environment())
+  invisible(TRUE)
 }
 
 #' Refuse to start a focal pass that will not finish today

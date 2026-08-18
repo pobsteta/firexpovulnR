@@ -81,6 +81,40 @@
 # fed the initial production of any department -- only an update.
 .FEV_BDFORET_V2_WINDOW <- c(2007L, 2018L)
 
+# Minimum mapping unit per source, with whether the source claims COMPLETE
+# coverage of its extent. Both matter for repairing rasterisation gaps.
+#
+# The reasoning: a source cannot represent an object smaller than its own minimum
+# mapping unit. So a hole smaller than the MMU, inside the extent of a source that
+# claims complete coverage, cannot be a real land-cover unit -- it is a
+# sub-cell topological gap left by rasterising polygons that share a boundary.
+# Above the MMU the hole may be genuine and must stay empty.
+#
+# This is what makes fev_fuel_fill_gaps() a repair rather than a guess, and why
+# the threshold is a property of the data rather than a tuning knob.
+#
+# Verified on the shipped extracts 2026-08-17: the smallest CORINE polygon is
+# 24.92 ha (Couchey) and 24.93 ha (Maures), against a specified 25 ha -- so the
+# figure below is not merely documented, it is observed. The largest residual gap
+# was 0.25 ha, a hundredfold smaller.
+#
+#   CORINE Land Cover: MMU 25 ha, minimum width 100 m, complete coverage of the
+#     EEA area. Copernicus Land Monitoring Service product specification.
+#   BD Foret v2: MMU 0.5 ha, minimum mapped width 20 m -- but it maps FORMATIONS
+#     VEGETALES ONLY, so its silence means "not forest", which is information
+#     rather than a gap. Never used to justify a fill.
+.FEV_FUEL_MMU <- list(
+  bdforet_v2 = list(mmu_ha = 0.5, min_width_m = 20, complete = FALSE),
+  clc        = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
+  clc_1990   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
+  clc_2000   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
+  clc_2006   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
+  clc_2012   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
+  clc_2018   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
+  lidarhd    = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE),
+  custom     = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE)
+)
+
 # LiDAR HD, verified 2026-08-17 by GetCapabilities, DescribeFeatureType and real
 # GetFeature requests. See specs/phase8-rapport-lidar.md.
 #

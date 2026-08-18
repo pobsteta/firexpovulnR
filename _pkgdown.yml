@@ -66,6 +66,7 @@ reference:
     contents:
     - fev_fuel_source
     - fev_fuel_merge
+    - fev_fuel_fill_gaps
     - fev_fuel_binary
     - fev_fuel_type
     - fev_fuel_availability

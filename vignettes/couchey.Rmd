@@ -99,7 +99,28 @@ primaire <- fev_fuel_source(bdforet, type = "bdforet_v2", res = 25,
 auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
                               aoi = study, millesime = 2018)
 fuel <- fev_fuel_merge(primaire, auxiliaire)
+fuel <- fev_fuel_fill_gaps(fuel)
 ```
+
+Cette seconde ligne répare 42 cellules sur 469 989 — un dix-millième de la
+grille — et ce n'est pas cosmétique. Rastériser une couverture polygonale par
+appartenance du centre de cellule laisse des esquilles : là où deux polygones
+CORINE partagent une frontière, le centre peut ne tomber dans ni l'un ni l'autre.
+Or `fev_exposure()` propage tout vide à travers sa fenêtre focale, donc **chaque
+cellule vide isolée en efface un disque de 500 m de rayon autour d'elle** :
+mesuré ici, 42 cellules en effaçaient 26 303, une amplification de 626.
+
+Ce qui autorise à les combler est l'unité minimale de cartographie. CORINE ne
+peut rien représenter sous 25 ha — le plus petit polygone de cet extrait mesure
+24,92 ha, donc la spécification est observée et pas seulement affirmée. Un trou
+de 0,25 ha à l'intérieur de l'emprise CORINE **ne peut pas** être un objet réel :
+c'est un artefact de grille, et le sol y est certainement l'un des voisins.
+Au-dessus de l'UMC, la fonction refuse et le dit — le trou pourrait alors être
+une vraie lacune.
+
+Les cellules réparées restent identifiables : la couche `source` du registre les
+note `gap_filled` plutôt que de prétendre qu'un jeu de données les a
+cartographiées.
 
 La couche de provenance par pixel dit ce que chaque source apporte :
 
