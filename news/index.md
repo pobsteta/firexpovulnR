@@ -1,5 +1,47 @@
 # Changelog
 
+## firexpovulnR 0.20.0 (2026-08-18)
+
+#### `fev_fuel_attach()` garde les deux, au lieu d’en sacrifier une
+
+Réponse à la conséquence livrée en 0.19.0 : WorldCover placé au-dessus
+prend **tous** les pixels, et l’essence et le taux de couvert de la BD
+Forêt disparaissent avec elle.
+
+La fonction accepte désormais une source **catégorielle** en second
+argument, et non plus seulement un registre continu. Ce qu’elle porte
+décide où elle atterrit — des métriques continues vont au registre
+continu, une couche de classes devient une couche nommée du registre
+catégoriel. Dans les deux cas elle **n’arbitre aucun pixel**, ce qui est
+toute la différence avec
+[`fev_fuel_merge()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_merge.md).
+
+``` r
+
+fuel <- fev_fuel_merge(bdforet, worldcover)   # WorldCover décide `class`
+fuel <- fev_fuel_attach(fuel, bdforet)        # l'essence survit à côté
+```
+
+Mesuré sur les Maures : `class` reste à WorldCover au 10 m, et la couche
+`bdforet_v2` attachée conserve **27 classes TFV sur 81,1 % des cellules
+cartographiées** — dont le chêne vert, `FF1G06-06`, sur 1 520 475
+cellules, que la nomenclature WorldCover ne sait pas exprimer.
+
+- La couche attachée ne décide rien :
+  [`fev_fuel_binary()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_binary.md),
+  [`fev_fuel_type()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_type.md)
+  et toute la chaîne d’exposition lisent `class` et l’ignorent.
+- [`fev_fuel_fill_gaps()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_fill_gaps.md)
+  la laisse intacte. Ses `NA` signifient « pas de forêt ici », ce qui
+  est une information ; les combler depuis un voisin modal inventerait
+  des essences.
+- Un nom déjà pris est refusé plutôt que doublé silencieusement.
+
+**Changement de contrat.** Attacher une source catégorielle levait
+auparavant `fev_missing_register` ; c’est maintenant la fonctionnalité.
+Le second paramètre est renommé `lidar` → `extra`, l’usage positionnel
+étant inchangé.
+
 ## firexpovulnR 0.19.0 (2026-08-18)
 
 #### `fev_fetch_worldcover()` — la première source 10 m que le paquet sait chercher

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.19.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.20.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,24 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.20.0" id="firexpovulnr-0200-2026-08-18">firexpovulnR 0.20.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0200-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="fev_fuel_attach-garde-les-deux-au-lieu-den-sacrifier-une-0-20-0">
+<code>fev_fuel_attach()</code> garde les deux, au lieu d’en sacrifier une<a class="anchor" aria-label="anchor" href="#fev_fuel_attach-garde-les-deux-au-lieu-den-sacrifier-une-0-20-0"></a></h4>
+<p>Réponse à la conséquence livrée en 0.19.0 : WorldCover placé au-dessus prend <strong>tous</strong> les pixels, et l’essence et le taux de couvert de la BD Forêt disparaissent avec elle.</p>
+<p>La fonction accepte désormais une source <strong>catégorielle</strong> en second argument, et non plus seulement un registre continu. Ce qu’elle porte décide où elle atterrit — des métriques continues vont au registre continu, une couche de classes devient une couche nommée du registre catégoriel. Dans les deux cas elle <strong>n’arbitre aucun pixel</strong>, ce qui est toute la différence avec <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code>.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_merge.html">fev_fuel_merge</a></span><span class="op">(</span><span class="va">bdforet</span>, <span class="va">worldcover</span><span class="op">)</span>   <span class="co"># WorldCover décide `class`</span></span>
+<span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_attach.html">fev_fuel_attach</a></span><span class="op">(</span><span class="va">fuel</span>, <span class="va">bdforet</span><span class="op">)</span>        <span class="co"># l'essence survit à côté</span></span></code></pre></div>
+<p>Mesuré sur les Maures : <code>class</code> reste à WorldCover au 10 m, et la couche <code>bdforet_v2</code> attachée conserve <strong>27 classes TFV sur 81,1 % des cellules cartographiées</strong> — dont le chêne vert, <code>FF1G06-06</code>, sur 1 520 475 cellules, que la nomenclature WorldCover ne sait pas exprimer.</p>
+<ul><li>La couche attachée ne décide rien : <code><a href="../reference/fev_fuel_binary.html">fev_fuel_binary()</a></code>, <code><a href="../reference/fev_fuel_type.html">fev_fuel_type()</a></code> et toute la chaîne d’exposition lisent <code>class</code> et l’ignorent.</li>
+<li>
+<code><a href="../reference/fev_fuel_fill_gaps.html">fev_fuel_fill_gaps()</a></code> la laisse intacte. Ses <code>NA</code> signifient « pas de forêt ici », ce qui est une information ; les combler depuis un voisin modal inventerait des essences.</li>
+<li>Un nom déjà pris est refusé plutôt que doublé silencieusement.</li>
+</ul><p><strong>Changement de contrat.</strong> Attacher une source catégorielle levait auparavant <code>fev_missing_register</code> ; c’est maintenant la fonctionnalité. Le second paramètre est renommé <code>lidar</code> → <code>extra</code>, l’usage positionnel étant inchangé.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.19.0" id="firexpovulnr-0190-2026-08-18">firexpovulnR 0.19.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0190-2026-08-18"></a></h2>
 <div class="section level4">
