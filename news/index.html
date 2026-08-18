@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.23.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.24.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,31 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.24.0" id="firexpovulnr-0240-2026-08-18">firexpovulnR 0.24.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0240-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="fev_lidar_batch--le-traitement-par-lots-que-la-phase-réclamait-0-24-0">
+<code>fev_lidar_batch()</code> — le traitement par lots que la phase 8 réclamait<a class="anchor" aria-label="anchor" href="#fev_lidar_batch--le-traitement-par-lots-que-la-phase-r%C3%A9clamait-0-24-0"></a></h4>
+<p>Le brief de phase 8 le demandait — <em>« prévois un mode de reprise après interruption »</em> — et il n’avait jamais été écrit. Les chronométrages de la 0.23.0 l’ont rendu indispensable plutôt qu’agréable : une dalle peut prendre des heures, et un traitement qui perd tout quand la machine se met en veille n’est pas un traitement.</p>
+<p>La fonction parcourt les dalles une à une : téléchargement, inversion par <code><a href="../reference/fev_fuel_lidar.html">fev_fuel_lidar()</a></code>, écriture d’un raster par dalle, suppression du nuage avant de passer à la suivante.</p>
+<ul><li>
+<strong>La reprise se fait par présence de la sortie</strong>, pas par un fichier d’état qui peut mentir : une dalle dont le raster est sur le disque est faite. Chaque raster est écrit sous un nom temporaire puis renommé, donc une écriture interrompue n’est jamais prise pour une dalle terminée.</li>
+<li>
+<strong>Une dalle qui échoue n’arrête pas la campagne.</strong> Un lot qui meurt à la troisième dalle sur quarante gâche les deux qui avaient réussi.</li>
+<li>Le <strong>manifeste est réécrit après chaque dalle</strong>, donc une interruption laisse un relevé lisible de ce qui a été tenté et de ce qui a échoué.</li>
+<li>
+<code>window</code> traite un carré centré plutôt que la dalle entière. C’est ce qui rend une campagne abordable : huit fenêtres de 250 m échantillonnent huit contextes là où une dalle entière n’en échantillonne qu’un, pour une fraction du coût. Pour comparer à une classification, la dispersion vaut mieux que la contiguïté.</li>
+<li>Le délai de téléchargement est porté à une heure. Le défaut de 60 s fait échouer chaque dalle au quart téléchargé — c’est ainsi que la première tentative a été perdue.</li>
+</ul><p><strong>Ce que la documentation refuse explicitement :</strong> réduire la densité du nuage pour aller plus vite. La strate de sous-étage est la première à disparaître quand la densité baisse, donc éclaircir fausse exactement ce que ces métriques servent à mesurer. Réduire <code>window</code>, ou traiter moins de dalles.</p>
+</div>
+<div class="section level4">
+<h4 id="un-script-prêt-à-lancer-0-24-0">Un script prêt à lancer<a class="anchor" aria-label="anchor" href="#un-script-pr%C3%AAt-%C3%A0-lancer-0-24-0"></a></h4>
+<p><code>inst/scripts/batch_lidar.R</code>, exécutable, avec <code>--dry-run</code> pour voir le plan avant d’engager quoi que ce soit :</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--dry-run</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--max</span><span class="op">=</span>8</span></code></pre></div>
+<p>Relancer la même commande le lendemain reprend où l’on s’était arrêté.</p>
+</div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.23.0" id="firexpovulnr-0230-2026-08-18">firexpovulnR 0.23.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0230-2026-08-18"></a></h2>
 <div class="section level4">
 <h4 id="élargir-la-mesure-au-delà-des-deux-placettes--tenté-et-hors-de-portée-0-23-0">Élargir la mesure au-delà des deux placettes : tenté, et hors de portée<a class="anchor" aria-label="anchor" href="#%C3%A9largir-la-mesure-au-del%C3%A0-des-deux-placettes--tent%C3%A9-et-hors-de-port%C3%A9e-0-23-0"></a></h4>
@@ -62,7 +87,7 @@
 <code>fev_exposure(trim = )</code> — le cadre blanc de 500 m disparaît<a class="anchor" aria-label="anchor" href="#fev_exposuretrim----le-cadre-blanc-de-m-dispara%C3%AEt-0-22-0"></a></h4>
 <p>L’anneau extérieur d’un résultat focal n’est pas une mesure : c’est la fenêtre qui déborde du bord de la donnée. Avec <code>na_rm = FALSE</code> il revient vide, et c’est le cadre blanc de toutes les cartes d’exposition publiées jusqu’ici.</p>
 <p>Le paquet donnait déjà la moitié du remède, dans le message <code>fev_extent_too_small</code> : calculer sur plus grand qu’on ne publie. <code>trim</code> fournit l’autre moitié.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_source.html">fev_fuel_source</a></span><span class="op">(</span><span class="va">bdforet</span>, aoi <span class="op">=</span> <span class="fu">sf</span><span class="fu">::</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/geos_unary.html" class="external-link">st_buffer</a></span><span class="op">(</span><span class="va">study</span>, <span class="fl">500</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span>
 <span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">fuel</span>, radius <span class="op">=</span> <span class="fl">500</span>, trim <span class="op">=</span> <span class="va">study</span><span class="op">)</span></span></code></pre></div>
 <p>Mesuré sur l’emprise des Maures : <strong>9,3 % de cellules vides sans recadrage, 0,3 % avec</strong>. Le cadre est toujours calculé — il le faut, pour que l’intérieur soit juste — puis coupé au lieu d’être publié. Les valeurs conservées sont exactement celles qui avaient été calculées, un test le vérifie cellule par cellule.</p>
@@ -128,7 +153,7 @@
 <code>fev_fuel_attach()</code> garde les deux, au lieu d’en sacrifier une<a class="anchor" aria-label="anchor" href="#fev_fuel_attach-garde-les-deux-au-lieu-den-sacrifier-une-0-20-0"></a></h4>
 <p>Réponse à la conséquence livrée en 0.19.0 : WorldCover placé au-dessus prend <strong>tous</strong> les pixels, et l’essence et le taux de couvert de la BD Forêt disparaissent avec elle.</p>
 <p>La fonction accepte désormais une source <strong>catégorielle</strong> en second argument, et non plus seulement un registre continu. Ce qu’elle porte décide où elle atterrit — des métriques continues vont au registre continu, une couche de classes devient une couche nommée du registre catégoriel. Dans les deux cas elle <strong>n’arbitre aucun pixel</strong>, ce qui est toute la différence avec <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code>.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_merge.html">fev_fuel_merge</a></span><span class="op">(</span><span class="va">bdforet</span>, <span class="va">worldcover</span><span class="op">)</span>   <span class="co"># WorldCover décide `class`</span></span>
 <span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_attach.html">fev_fuel_attach</a></span><span class="op">(</span><span class="va">fuel</span>, <span class="va">bdforet</span><span class="op">)</span>        <span class="co"># l'essence survit à côté</span></span></code></pre></div>
 <p>Mesuré sur les Maures : <code>class</code> reste à WorldCover au 10 m, et la couche <code>bdforet_v2</code> attachée conserve <strong>27 classes TFV sur 81,1 % des cellules cartographiées</strong> — dont le chêne vert, <code>FF1G06-06</code>, sur 1 520 475 cellules, que la nomenclature WorldCover ne sait pas exprimer.</p>

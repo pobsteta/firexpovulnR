@@ -1,5 +1,57 @@
 # Changelog
 
+## firexpovulnR 0.24.0 (2026-08-18)
+
+#### `fev_lidar_batch()` — le traitement par lots que la phase 8 réclamait
+
+Le brief de phase 8 le demandait — *« prévois un mode de reprise après
+interruption »* — et il n’avait jamais été écrit. Les chronométrages de
+la 0.23.0 l’ont rendu indispensable plutôt qu’agréable : une dalle peut
+prendre des heures, et un traitement qui perd tout quand la machine se
+met en veille n’est pas un traitement.
+
+La fonction parcourt les dalles une à une : téléchargement, inversion
+par
+[`fev_fuel_lidar()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.md),
+écriture d’un raster par dalle, suppression du nuage avant de passer à
+la suivante.
+
+- **La reprise se fait par présence de la sortie**, pas par un fichier
+  d’état qui peut mentir : une dalle dont le raster est sur le disque
+  est faite. Chaque raster est écrit sous un nom temporaire puis
+  renommé, donc une écriture interrompue n’est jamais prise pour une
+  dalle terminée.
+- **Une dalle qui échoue n’arrête pas la campagne.** Un lot qui meurt à
+  la troisième dalle sur quarante gâche les deux qui avaient réussi.
+- Le **manifeste est réécrit après chaque dalle**, donc une interruption
+  laisse un relevé lisible de ce qui a été tenté et de ce qui a échoué.
+- `window` traite un carré centré plutôt que la dalle entière. C’est ce
+  qui rend une campagne abordable : huit fenêtres de 250 m
+  échantillonnent huit contextes là où une dalle entière n’en
+  échantillonne qu’un, pour une fraction du coût. Pour comparer à une
+  classification, la dispersion vaut mieux que la contiguïté.
+- Le délai de téléchargement est porté à une heure. Le défaut de 60 s
+  fait échouer chaque dalle au quart téléchargé — c’est ainsi que la
+  première tentative a été perdue.
+
+**Ce que la documentation refuse explicitement :** réduire la densité du
+nuage pour aller plus vite. La strate de sous-étage est la première à
+disparaître quand la densité baisse, donc éclaircir fausse exactement ce
+que ces métriques servent à mesurer. Réduire `window`, ou traiter moins
+de dalles.
+
+#### Un script prêt à lancer
+
+`inst/scripts/batch_lidar.R`, exécutable, avec `--dry-run` pour voir le
+plan avant d’engager quoi que ce soit :
+
+``` sh
+Rscript batch_lidar.R maures.gpkg out/lidar --window=250 --dry-run
+Rscript batch_lidar.R maures.gpkg out/lidar --window=250 --max=8
+```
+
+Relancer la même commande le lendemain reprend où l’on s’était arrêté.
+
 ## firexpovulnR 0.23.0 (2026-08-18)
 
 #### Élargir la mesure au-delà des deux placettes : tenté, et hors de portée

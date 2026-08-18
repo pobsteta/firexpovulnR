@@ -102,6 +102,8 @@ sont justifiées ligne par ligne et intégralement surchargeables.
   : Which registers of a fuel source are populated
 - [`fev_fuel_lidar()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.md)
   : Fuel metrics from a LiDAR point cloud
+- [`fev_lidar_batch()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_batch.md)
+  : Invert LiDAR HD tiles in batch, with resume
 - [`fev_fuel_attach()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_attach.md)
   : Attach continuous fuel metrics to a categorical fuel source
 - [`fev_lidar_density()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_density.md)
