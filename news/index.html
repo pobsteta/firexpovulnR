@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.15.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.16.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,66 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.16.0" id="firexpovulnr-0160-2026-08-18">firexpovulnR 0.16.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0160-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="fev_fuel_profile--ce-quune-classification-ne-peut-pas-dire-delle-même-0-16-0">
+<code>fev_fuel_profile()</code> — ce qu’une classification ne peut pas dire d’elle-même<a class="anchor" aria-label="anchor" href="#fev_fuel_profile--ce-quune-classification-ne-peut-pas-dire-delle-m%C3%AAme-0-16-0"></a></h4>
+<p>Étape 2 de la phase 10. Une classification ne peut pas se valider elle-même : la question doit être posée à quelque chose qui a <em>mesuré</em> le sol. Le LiDAR HD de la phase 8 le fait, et c’est tout son intérêt.</p>
+<p>La fonction résume des métriques continues sur les cellules de chaque classe catégorielle, et rapporte deux choses : la <strong>part de variance</strong> que l’appartenance de classe explique, et la <strong>séparabilité</strong> d’une classe donnée — la statistique de Mann-Whitney, celle que <code><a href="../reference/fev_validate.html">fev_validate()</a></code> publie comme AUC, dont l’implémentation est réutilisée plutôt que redoublée.</p>
+<p>Rien n’y est propre à CLCplus : la même confrontation vérifie si la « forêt fermée » de la BD Forêt l’est vraiment, ou si CORINE 323 porte du sous-étage.</p>
+</div>
+<div class="section level4">
+<h4 id="la-cécité-au-sous-étage-chiffrée-pour-la-première-fois-0-16-0">La cécité au sous-étage, chiffrée pour la première fois<a class="anchor" aria-label="anchor" href="#la-c%C3%A9cit%C3%A9-au-sous-%C3%A9tage-chiffr%C3%A9e-pour-la-premi%C3%A8re-fois-0-16-0"></a></h4>
+<p>Le brief désigne cette cécité depuis l’origine comme la principale faiblesse du paquet. Elle n’avait jamais été mesurée. Sur les deux placettes LiDAR des Maures, 566 cellules et 9 classes :</p>
+<table class="table"><thead><tr><th>Métrique</th>
+<th>Variance expliquée par la classe</th>
+</tr></thead><tbody><tr><td>
+<code>Cover</code> — couvert de houppier</td>
+<td><strong>42,6 %</strong></td>
+</tr><tr><td><code>H_Bush</code></td>
+<td>17,5 %</td>
+</tr><tr><td><code>FL_0_1</code></td>
+<td>16,5 %</td>
+</tr><tr><td><code>PAI_tot</code></td>
+<td>14,8 %</td>
+</tr><tr><td>
+<code>FL_1_3</code> — <strong>la strate du maquis</strong>
+</td>
+<td><strong>8,4 %</strong></td>
+</tr></tbody></table><p>L’écart est l’argument entier : la classification restitue ce que ses sources enregistrent, le couvert, et laisse la charge du maquis indéterminée à 92 %.</p>
+<p>Plus net encore, dans la donnée brute : les deux placettes portent le <strong>même code TFV dominant</strong>, <code>FF1-00-00</code>, pour des hauteurs arbustives moyennes de 0,86 m et 4,44 m. Le brief écrivait « une futaie de chêne vert avec sous-bois dense et la même sans sont identiques dans les deux bases » ; c’est maintenant un chiffre.</p>
+<p>Deux placettes et un seul massif : démonstration de méthode et ordre de grandeur, pas validation générale. Et cela ne mesure pas CLCplus, faute de donnée — cela mesure la base que CLCplus devra battre, avec l’outil qui servira à le vérifier.</p>
+</div>
+<div class="section level4">
+<h4 id="fev_exposure_cost--ce-que-coûtera-la-passe-focale-avant-de-la-lancer-0-16-0">
+<code>fev_exposure_cost()</code> — ce que coûtera la passe focale, avant de la lancer<a class="anchor" aria-label="anchor" href="#fev_exposure_cost--ce-que-co%C3%BBtera-la-passe-focale-avant-de-la-lancer-0-16-0"></a></h4>
+<p>Étape 3. Le coût croît comme la <strong>puissance quatrième</strong> de l’inverse de la taille de cellule, le nombre de cellules et la surface de fenêtre variant chacun en <code>res^-2</code>. Passer de 25 m à 10 m n’est donc pas un facteur 2,5 mais quarante.</p>
+<p>Mesuré sur l’emprise réelle des Maures, 677 846 cellules à 25 m :</p>
+<table class="table"><thead><tr><th>Rayon</th>
+<th>25 m</th>
+<th>10 m</th>
+<th>rapport</th>
+</tr></thead><tbody><tr><td>30 m</td>
+<td><em>inatteignable</em></td>
+<td>1,19 × 10⁸</td>
+<td>—</td>
+</tr><tr><td>100 m</td>
+<td>3,25 × 10⁷</td>
+<td>1,34 × 10⁹</td>
+<td><strong>41,1×</strong></td>
+</tr><tr><td>500 m</td>
+<td>8,51 × 10⁸</td>
+<td>3,32 × 10¹⁰</td>
+<td><strong>39,0×</strong></td>
+</tr></tbody></table><p><strong>Et le 10 m est abordable</strong>, contrairement à ce que le rapport supposait avant de mesurer : le pire cas reste sous le seuil d’alerte de <code>fev_check_focal_cost()</code>, qui de toute façon avertit et ne refuse pas. Les Maures à 10 m représentent de l’ordre de trois minutes de travail focal.</p>
+<p>La fonction rapporte aussi, pour chaque rayon, s’il est <strong>atteignable</strong> à la résolution demandée — car un maillage grossier ne coûte pas seulement moins, il met les petits rayons hors de portée.</p>
+</div>
+<div class="section level4">
+<h4 id="le-rayonnement-thermique-tourne-pour-la-première-fois-0-16-0">Le rayonnement thermique tourne, pour la première fois<a class="anchor" aria-label="anchor" href="#le-rayonnement-thermique-tourne-pour-la-premi%C3%A8re-fois-0-16-0"></a></h4>
+<p>Vérifié de bout en bout sur les Maures : <code>fev_exposure(type = "radiant")</code> produit une carte en <strong>0,06 s à 10 m</strong> sur 160 801 cellules, là où le même appel à 25 m lève <code>fev_res_too_coarse</code>. C’était le livrable qui devait prouver l’intérêt de la phase, et une des trois échelles du modèle n’avait jamais tourné.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.15.0" id="firexpovulnr-0150-2026-08-18">firexpovulnR 0.15.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0150-2026-08-18"></a></h2>
 <div class="section level4">

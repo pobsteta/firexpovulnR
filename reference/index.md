@@ -78,6 +78,8 @@ sont justifiées ligne par ligne et intégralement surchargeables.
   : Merge a primary and an auxiliary fuel source
 - [`fev_fuel_fill_gaps()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_fill_gaps.md)
   : Repair rasterisation gaps in a categorical fuel layer
+- [`fev_fuel_profile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_profile.md)
+  : Profile fuel classes against an independent measurement
 - [`fev_fuel_binary()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_binary.md)
   : Burnable / non-burnable mask
 - [`fev_fuel_type()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_type.md)
@@ -138,6 +140,8 @@ d’enjeux. Aucune source d’enjeux n’est imposée.
   : Directional vulnerability from a point
 - [`fev_exposure_radii()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_radii.md)
   : Fire exposure transmission distances
+- [`fev_exposure_cost()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_cost.md)
+  : What a focal exposure pass will cost, before committing to it
 - [`fev_directional_defaults()`](https://pobsteta.github.io/firexpovulnR/reference/fev_directional_defaults.md)
   : Directional vulnerability defaults
 - [`fev_vuln_layer()`](https://pobsteta.github.io/firexpovulnR/reference/fev_vuln_layer.md)
