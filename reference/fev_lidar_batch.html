@@ -13,7 +13,7 @@ again — it picks up where it stopped."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.24.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.25.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -59,6 +59,7 @@ again — it picks up where it stopped.</p>
 <span>  res <span class="op">=</span> <span class="fl">25</span>,</span>
 <span>  window <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_tiles <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  spread <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  keep_las <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  dry_run <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -93,6 +94,13 @@ metres. <code>NULL</code> processes the whole tile.</p></dd>
 overnight job in shifts. <code>NULL</code> for no limit.</p></dd>
 
 
+<dt id="arg-spread">spread<a class="anchor" aria-label="anchor" href="#arg-spread"></a></dt>
+<dd><p>Choose those tiles spread across the area rather than in index
+order. On by default, and it matters: the index is in spatial order, so the
+first eight tiles of it are eight neighbours in one corner. See the section
+below.</p></dd>
+
+
 <dt id="arg-keep-las">keep_las<a class="anchor" aria-label="anchor" href="#arg-keep-las"></a></dt>
 <dd><p>Keep the downloaded point clouds instead of deleting each one
 after its tile is inverted. Off by default: at roughly 200 MB a tile, a
@@ -111,7 +119,11 @@ downloading anything.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A data frame, one row per tile: <code>tile</code>, <code>status</code>, <code>points</code>,
-<code>seconds</code>, <code>path</code>. Also written to <code>manifest.csv</code> in <code>out_dir</code> after every
+<code>seconds</code>, <code>path</code>, <code>rank</code>. <code>status</code> is <code>"done"</code> for a tile whose raster
+already exists, <code>"next"</code> for one this run will take, <code>"todo"</code> for one left
+for a later run, and <code>"written"</code> or <code>"failed"</code> afterwards. <code>rank</code> gives the
+position in the traversal, so a dry run shows the actual batch rather than
+the index order. Also written to <code>manifest.csv</code> in <code>out_dir</code> after every
 tile, so an interrupted run leaves a readable record.</p>
     </div>
     <div class="section level2">
@@ -139,6 +151,20 @@ windows across a massif sample eight contexts, where one whole tile samples
 one, for a fraction of the cost.</p>
 <p>Spread beats contiguity for anything you intend to compare against a
 classification — which is what <code><a href="fev_fuel_profile.html">fev_fuel_profile()</a></code> does.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="why-the-order-is-not-the-index-order">Why the order is not the index order<a class="anchor" aria-label="anchor" href="#why-the-order-is-not-the-index-order"></a></h2>
+
+
+<p><code>max_tiles</code> without <code>spread</code> would hand you the first N tiles of an index
+that is itself in spatial order — eight neighbours in one corner of the
+massif, sampling one context eight times. <code>spread = TRUE</code> walks the tiles by
+farthest-point traversal instead: each tile chosen is the one furthest from
+everything chosen so far.</p>
+<p>The traversal is deterministic and computed over the whole set, so every
+prefix of it is well spread <strong>and</strong> resume continues the spread rather than
+re-drawing it. Eight tiles tonight and eight tomorrow give sixteen spread
+tiles, not two clusters of eight.</p>
     </div>
     <div class="section level2">
     <h2 id="do-not-thin-the-cloud-to-go-faster">Do not thin the cloud to go faster<a class="anchor" aria-label="anchor" href="#do-not-thin-the-cloud-to-go-faster"></a></h2>

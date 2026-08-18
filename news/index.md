@@ -1,5 +1,43 @@
 # Changelog
 
+## firexpovulnR 0.25.0 (2026-08-18)
+
+#### Les dalles d’une session partielle sont réparties, pas voisines
+
+Défaut trouvé en lançant la commande, que ni les tests ni le
+`R CMD check` n’auraient pu voir : `--max=8` prenait les huit premières
+dalles de l’index — or **l’index est lui-même en ordre spatial**, donc
+huit voisines dans un coin du massif. On échantillonnait un seul
+contexte huit fois, ce que la documentation de la fonction déconseille
+explicitement une section plus haut.
+
+`spread = TRUE`, désormais le défaut, parcourt les dalles par
+**traversée du plus éloigné** : chaque dalle retenue est la plus
+lointaine de toutes celles déjà retenues. Mesuré sur les 505 dalles des
+Maures, pour huit dalles :
+
+| Ordre   | Écart minimal | Écart moyen |
+|---------|---------------|-------------|
+| index   | 1,0 km        | 9,0 km      |
+| réparti | **10,0 km**   | **17,8 km** |
+
+La traversée est **déterministe** et calculée sur l’ensemble, donc une
+reprise poursuit la répartition au lieu de la redessiner : huit dalles
+ce soir et huit demain donnent seize dalles réparties, pas deux grappes
+de huit. Vérifié — écart minimal 5,1 km sur les seize.
+
+#### Un essai à blanc qui dit ce qui va se passer
+
+`--dry-run` listait les vingt premières dalles dans l’ordre de l’index,
+sans rapport avec celles que la session aurait réellement traitées. Un
+essai à blanc qui n’annonce pas la bonne chose est pire qu’absent.
+
+Le plan porte maintenant un statut `"next"` pour les dalles de cette
+session, distinct de `"todo"` pour celles laissées à plus tard, et une
+colonne `rank` donnant la position dans la traversée. Sur les Maures,
+les huit premières sont le centre, les quatre coins, puis les milieux de
+bord.
+
 ## firexpovulnR 0.24.0 (2026-08-18)
 
 #### `fev_lidar_batch()` — le traitement par lots que la phase 8 réclamait

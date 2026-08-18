@@ -16,6 +16,7 @@ fev_lidar_batch(
   res = 25,
   window = NULL,
   max_tiles = NULL,
+  spread = TRUE,
   keep_las = FALSE,
   dry_run = FALSE,
   quiet = FALSE
@@ -49,6 +50,13 @@ fev_lidar_batch(
   Stop after this many tiles in one run — a way to take an overnight job
   in shifts. `NULL` for no limit.
 
+- spread:
+
+  Choose those tiles spread across the area rather than in index order.
+  On by default, and it matters: the index is in spatial order, so the
+  first eight tiles of it are eight neighbours in one corner. See the
+  section below.
+
 - keep_las:
 
   Keep the downloaded point clouds instead of deleting each one after
@@ -67,8 +75,12 @@ fev_lidar_batch(
 ## Value
 
 A data frame, one row per tile: `tile`, `status`, `points`, `seconds`,
-`path`. Also written to `manifest.csv` in `out_dir` after every tile, so
-an interrupted run leaves a readable record.
+`path`, `rank`. `status` is `"done"` for a tile whose raster already
+exists, `"next"` for one this run will take, `"todo"` for one left for a
+later run, and `"written"` or `"failed"` afterwards. `rank` gives the
+position in the traversal, so a dry run shows the actual batch rather
+than the index order. Also written to `manifest.csv` in `out_dir` after
+every tile, so an interrupted run leaves a readable record.
 
 ## Why resume is the point
 
@@ -96,6 +108,19 @@ Spread beats contiguity for anything you intend to compare against a
 classification — which is what
 [`fev_fuel_profile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_profile.md)
 does.
+
+## Why the order is not the index order
+
+`max_tiles` without `spread` would hand you the first N tiles of an
+index that is itself in spatial order — eight neighbours in one corner
+of the massif, sampling one context eight times. `spread = TRUE` walks
+the tiles by farthest-point traversal instead: each tile chosen is the
+one furthest from everything chosen so far.
+
+The traversal is deterministic and computed over the whole set, so every
+prefix of it is well spread **and** resume continues the spread rather
+than re-drawing it. Eight tiles tonight and eight tomorrow give sixteen
+spread tiles, not two clusters of eight.
 
 ## Do not thin the cloud to go faster
 

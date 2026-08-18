@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.24.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.25.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,29 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.25.0" id="firexpovulnr-0250-2026-08-18">firexpovulnR 0.25.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0250-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="les-dalles-dune-session-partielle-sont-réparties-pas-voisines-0-25-0">Les dalles d’une session partielle sont réparties, pas voisines<a class="anchor" aria-label="anchor" href="#les-dalles-dune-session-partielle-sont-r%C3%A9parties-pas-voisines-0-25-0"></a></h4>
+<p>Défaut trouvé en lançant la commande, que ni les tests ni le <code>R CMD check</code> n’auraient pu voir : <code>--max=8</code> prenait les huit premières dalles de l’index — or <strong>l’index est lui-même en ordre spatial</strong>, donc huit voisines dans un coin du massif. On échantillonnait un seul contexte huit fois, ce que la documentation de la fonction déconseille explicitement une section plus haut.</p>
+<p><code>spread = TRUE</code>, désormais le défaut, parcourt les dalles par <strong>traversée du plus éloigné</strong> : chaque dalle retenue est la plus lointaine de toutes celles déjà retenues. Mesuré sur les 505 dalles des Maures, pour huit dalles :</p>
+<table class="table"><thead><tr><th>Ordre</th>
+<th>Écart minimal</th>
+<th>Écart moyen</th>
+</tr></thead><tbody><tr><td>index</td>
+<td>1,0 km</td>
+<td>9,0 km</td>
+</tr><tr><td>réparti</td>
+<td><strong>10,0 km</strong></td>
+<td><strong>17,8 km</strong></td>
+</tr></tbody></table><p>La traversée est <strong>déterministe</strong> et calculée sur l’ensemble, donc une reprise poursuit la répartition au lieu de la redessiner : huit dalles ce soir et huit demain donnent seize dalles réparties, pas deux grappes de huit. Vérifié — écart minimal 5,1 km sur les seize.</p>
+</div>
+<div class="section level4">
+<h4 id="un-essai-à-blanc-qui-dit-ce-qui-va-se-passer-0-25-0">Un essai à blanc qui dit ce qui va se passer<a class="anchor" aria-label="anchor" href="#un-essai-%C3%A0-blanc-qui-dit-ce-qui-va-se-passer-0-25-0"></a></h4>
+<p><code>--dry-run</code> listait les vingt premières dalles dans l’ordre de l’index, sans rapport avec celles que la session aurait réellement traitées. Un essai à blanc qui n’annonce pas la bonne chose est pire qu’absent.</p>
+<p>Le plan porte maintenant un statut <code>"next"</code> pour les dalles de cette session, distinct de <code>"todo"</code> pour celles laissées à plus tard, et une colonne <code>rank</code> donnant la position dans la traversée. Sur les Maures, les huit premières sont le centre, les quatre coins, puis les milieux de bord.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.24.0" id="firexpovulnr-0240-2026-08-18">firexpovulnR 0.24.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0240-2026-08-18"></a></h2>
 <div class="section level4">
