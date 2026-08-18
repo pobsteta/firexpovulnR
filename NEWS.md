@@ -1,3 +1,76 @@
+# firexpovulnR 0.16.0 (2026-08-18)
+
+### `fev_fuel_profile()` — ce qu'une classification ne peut pas dire d'elle-même
+
+Étape 2 de la phase 10. Une classification ne peut pas se valider elle-même : la
+question doit être posée à quelque chose qui a *mesuré* le sol. Le LiDAR HD de la
+phase 8 le fait, et c'est tout son intérêt.
+
+La fonction résume des métriques continues sur les cellules de chaque classe
+catégorielle, et rapporte deux choses : la **part de variance** que
+l'appartenance de classe explique, et la **séparabilité** d'une classe donnée —
+la statistique de Mann-Whitney, celle que `fev_validate()` publie comme AUC, dont
+l'implémentation est réutilisée plutôt que redoublée.
+
+Rien n'y est propre à CLCplus : la même confrontation vérifie si la « forêt
+fermée » de la BD Forêt l'est vraiment, ou si CORINE 323 porte du sous-étage.
+
+### La cécité au sous-étage, chiffrée pour la première fois
+
+Le brief désigne cette cécité depuis l'origine comme la principale faiblesse du
+paquet. Elle n'avait jamais été mesurée. Sur les deux placettes LiDAR des Maures,
+566 cellules et 9 classes :
+
+| Métrique | Variance expliquée par la classe |
+|---|---|
+| `Cover` — couvert de houppier | **42,6 %** |
+| `H_Bush` | 17,5 % |
+| `FL_0_1` | 16,5 % |
+| `PAI_tot` | 14,8 % |
+| `FL_1_3` — **la strate du maquis** | **8,4 %** |
+
+L'écart est l'argument entier : la classification restitue ce que ses sources
+enregistrent, le couvert, et laisse la charge du maquis indéterminée à 92 %.
+
+Plus net encore, dans la donnée brute : les deux placettes portent le **même code
+TFV dominant**, `FF1-00-00`, pour des hauteurs arbustives moyennes de 0,86 m et
+4,44 m. Le brief écrivait « une futaie de chêne vert avec sous-bois dense et la
+même sans sont identiques dans les deux bases » ; c'est maintenant un chiffre.
+
+Deux placettes et un seul massif : démonstration de méthode et ordre de grandeur,
+pas validation générale. Et cela ne mesure pas CLCplus, faute de donnée — cela
+mesure la base que CLCplus devra battre, avec l'outil qui servira à le vérifier.
+
+### `fev_exposure_cost()` — ce que coûtera la passe focale, avant de la lancer
+
+Étape 3. Le coût croît comme la **puissance quatrième** de l'inverse de la taille
+de cellule, le nombre de cellules et la surface de fenêtre variant chacun en
+`res^-2`. Passer de 25 m à 10 m n'est donc pas un facteur 2,5 mais quarante.
+
+Mesuré sur l'emprise réelle des Maures, 677 846 cellules à 25 m :
+
+| Rayon | 25 m | 10 m | rapport |
+|---|---|---|---|
+| 30 m | *inatteignable* | 1,19 × 10⁸ | — |
+| 100 m | 3,25 × 10⁷ | 1,34 × 10⁹ | **41,1×** |
+| 500 m | 8,51 × 10⁸ | 3,32 × 10¹⁰ | **39,0×** |
+
+**Et le 10 m est abordable**, contrairement à ce que le rapport supposait avant
+de mesurer : le pire cas reste sous le seuil d'alerte de `fev_check_focal_cost()`,
+qui de toute façon avertit et ne refuse pas. Les Maures à 10 m représentent de
+l'ordre de trois minutes de travail focal.
+
+La fonction rapporte aussi, pour chaque rayon, s'il est **atteignable** à la
+résolution demandée — car un maillage grossier ne coûte pas seulement moins, il
+met les petits rayons hors de portée.
+
+### Le rayonnement thermique tourne, pour la première fois
+
+Vérifié de bout en bout sur les Maures : `fev_exposure(type = "radiant")` produit
+une carte en **0,06 s à 10 m** sur 160 801 cellules, là où le même appel à 25 m
+lève `fev_res_too_coarse`. C'était le livrable qui devait prouver l'intérêt de la
+phase, et une des trois échelles du modèle n'avait jamais tourné.
+
 # firexpovulnR 0.15.0 (2026-08-18)
 
 ### `fev_fetch_clcplus()` — CLCplus Backbone, raster 10 m issu de Sentinel-2

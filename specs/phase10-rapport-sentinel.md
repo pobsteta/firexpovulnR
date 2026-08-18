@@ -285,11 +285,68 @@ soit pas une préférence : il débloque une des trois échelles du modèle, auj
 hors d'atteinte. À 500 m au contraire la fraction focale converge, et le gain du
 10 m y est marginal.
 
-Le prix est sévère : ×6,25 cellules et ×6,25 surface de fenêtre, soit **~39× le
-coût focal**. `fev_check_focal_cost()` refuserait vraisemblablement l'emprise des
-Maures en l'état. À noter aussi que Beverly et al. ont validé leur métrique sur
-une grille à 100 m : à 25 m nous sommes déjà plus fins que la méthodologie
-d'origine.
+Le prix est de ×6,25 cellules et ×6,25 surface de fenêtre. **Mesuré** le
+2026-08-18 par `fev_exposure_cost()` sur l'emprise réelle des Maures
+(677 846 cellules à 25 m) :
+
+| Rayon | ops à 25 m | ops à 10 m | rapport |
+|---|---|---|---|
+| 30 m | *inatteignable* | 1,19 × 10⁸ | — |
+| 100 m | 3,25 × 10⁷ | 1,34 × 10⁹ | **41,1×** |
+| 500 m | 8,51 × 10⁸ | 3,32 × 10¹⁰ | **39,0×** |
+
+**Correction d'une supposition de la première version de ce rapport.** Il y était
+écrit que `fev_check_focal_cost()` refuserait vraisemblablement l'emprise des
+Maures à 10 m. C'est faux sur deux points : cette fonction *avertit*, elle ne
+refuse pas ; et son seuil est à 5 × 10¹⁰, que le pire cas ci-dessus — 3,32 × 10¹⁰
+— ne franchit même pas. Elle reste donc silencieuse. Les Maures à 10 m coûtent de
+l'ordre de **trois minutes** de travail focal au débit mesuré, ce qui est
+abordable. Le 39× était juste, la conclusion qu'on en tirait ne l'était pas.
+
+Vérifié de bout en bout sur données réelles : `fev_exposure(type = "radiant")`
+sur un carré de 4 km au centre du massif tourne en **0,06 s à 10 m** sur
+160 801 cellules, et le même appel à 25 m lève `fev_res_too_coarse`.
+
+À noter enfin que Beverly et al. ont validé leur métrique sur une grille à 100 m :
+à 25 m nous sommes déjà plus fins que la méthodologie d'origine.
+
+## 6 bis. Ce que les sources actuelles savent du sous-étage, mesuré
+
+Ajouté le 2026-08-18, avec `fev_fuel_profile()`.
+
+Le brief désigne depuis l'origine la cécité au sous-étage comme la principale
+faiblesse du paquet, mais elle n'avait jamais été chiffrée. Les deux placettes
+LiDAR HD des Maures le permettent : elles *mesurent* la strate basse que toute
+classification optique devine.
+
+Confrontation des 9 classes présentes sur les deux placettes — 566 cellules à
+25 m — aux métriques LiDAR, part de variance expliquée par l'appartenance de
+classe :
+
+| Métrique | Ce qu'elle décrit | Variance expliquée |
+|---|---|---|
+| `Cover` | couvert de houppier | **42,6 %** |
+| `H_Bush` | hauteur de la strate arbustive | 17,5 % |
+| `FL_0_1` | charge 0-1 m | 16,5 % |
+| `PAI_tot` | indice de surface végétale | 14,8 % |
+| `FL_1_3` | **charge 1-3 m — la strate du maquis** | **8,4 %** |
+
+L'écart entre 42,6 % et 8,4 % est l'argument entier. La classification restitue
+ce que ses sources enregistrent — le couvert — et ne dit presque rien de la
+strate qui porte le feu de surface. Connaître la classe d'une cellule laisse la
+charge du maquis à 92 % indéterminée.
+
+La forme la plus nette du problème est dans la donnée elle-même : **les deux
+placettes portent le même code TFV dominant**, `FF1-00-00`, et leur hauteur
+arbustive moyenne diffère d'un facteur 5 — 0,86 m sur la brûlée contre 4,44 m sur
+le témoin. Le brief l'écrivait ainsi : *« une futaie de chêne vert avec sous-bois
+dense et la même sans sous-bois sont identiques dans les deux bases »*. C'est
+maintenant un chiffre.
+
+**Ce que cela ne dit pas.** Deux placettes, 566 cellules, un seul massif : c'est
+une démonstration de méthode et un ordre de grandeur, pas une validation
+générale. Et cela ne mesure pas CLCplus, faute de donnée — cela mesure la base
+que CLCplus devra battre, avec l'outil qui servira à le vérifier.
 
 ## 7. Ce qu'il faudrait changer dans le code
 

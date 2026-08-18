@@ -649,3 +649,97 @@ plot.fev_directional <- function(x, ...) {
   graphics::text(0, 1.12, "N")
   invisible(x)
 }
+
+#' What a focal exposure pass will cost, before committing to it
+#'
+#' Reports the size of the window and the weighted operation count for a fuel
+#' grid, at its own resolution or at a hypothetical one. Exists because the cost
+#' of this step grows as the **fourth power** of the inverse cell size — both the
+#' cell count and the window area scale as `res^-2` — so the step from 25 m to
+#' 10 m is not a 2.5-fold increase but roughly forty-fold, and that is worth
+#' knowing before a run rather than during one.
+#'
+#' @section The other reason to ask:
+#' `fev_exposure()` requires `res <= radius / 3`, so a coarse grid does not
+#' merely cost less, it puts the short radii out of reach entirely. At 25 m the
+#' 30 m radiant-heat radius is refused; at 10 m it passes, exactly, since
+#' `10 = 30 / 3`. This function reports whether each radius is reachable at the
+#' resolution asked about, which is the trade the cost has to be weighed against.
+#'
+#' @param x A fuel layer: `SpatRaster`, [fev_fuel_source] or [fev_layer].
+#' @param res Cell size to cost, in CRS units. `NULL` uses `x`'s own.
+#' @param radius Radius in metres. `NULL` costs all three shipped radii.
+#' @param rate Weighted operations per second, for the time estimate. The
+#'   default was measured on the machine this package was developed on; yours
+#'   will differ, which is why it is an argument and the result is called an
+#'   estimate.
+#'
+#' @return A data frame with one row per radius: `radius`, `res`, `reachable`,
+#'   `window_cells`, `ring_cells`, `ops` and `seconds`.
+#'
+#' @seealso [fev_exposure()], [fev_exposure_radii()].
+#'
+#' @examples
+#' r <- terra::rast(nrows = 100, ncols = 100, xmin = 0, xmax = 2500,
+#'                  ymin = 0, ymax = 2500, crs = "EPSG:2154")
+#' terra::values(r) <- 1
+#'
+#' # What the three scales cost on this grid, and which are out of reach.
+#' fev_exposure_cost(r)
+#'
+#' # And what refining to 10 m would cost.
+#' fev_exposure_cost(r, res = 10)
+#'
+#' @export
+fev_exposure_cost <- function(x, res = NULL, radius = NULL, rate = 2e8) {
+  r <- if (inherits(x, "fev_fuel_source")) {
+    fev_fuel_categorical(x)
+  } else if (inherits(x, "fev_layer")) {
+    fev_data(x)
+  } else {
+    x
+  }
+  if (!inherits(r, "SpatRaster")) {
+    fev_abort("{.arg x} must be a {.cls SpatRaster}, {.cls fev_fuel_source} \\
+               or {.cls fev_layer}.")
+  }
+
+  native_res <- terra::res(r)[1]
+  res <- res %||% native_res
+  if (!is.numeric(res) || length(res) != 1L || is.na(res) || res <= 0) {
+    fev_abort("{.arg res} must be a single positive number, in CRS units.")
+  }
+
+  radii <- fev_exposure_radii()
+  radius <- radius %||% radii$max_m
+  if (!is.numeric(radius) || anyNA(radius) || any(radius <= 0)) {
+    fev_abort("{.arg radius} must be positive numbers, in CRS units.")
+  }
+
+  # The extent is fixed; only the cell size moves. Scaling the native cell count
+  # rather than rebuilding a raster keeps this cheap enough to call casually.
+  ncell <- as.numeric(terra::ncell(r)) * (native_res / res)^2
+
+  rows <- lapply(radius, function(rad) {
+    reachable <- res <= rad / 3
+    if (!reachable) {
+      return(data.frame(radius = rad, res = res, reachable = FALSE,
+                        window_cells = NA_integer_, ring_cells = NA_integer_,
+                        ops = NA_real_, seconds = NA_real_,
+                        stringsAsFactors = FALSE))
+    }
+    # fev_annulus_window() returns a weight MATRIX, not a raster: terra's focal
+    # takes it as such, and so does the arithmetic here.
+    w <- fev_annulus_window(res, rad)
+    ring <- sum(!is.na(w))
+    ops <- ncell * ring
+    data.frame(radius = rad, res = res, reachable = TRUE,
+               window_cells = as.integer(length(w)),
+               ring_cells = as.integer(ring),
+               ops = ops, seconds = ops / rate,
+               stringsAsFactors = FALSE)
+  })
+  out <- do.call(rbind, rows)
+  rownames(out) <- NULL
+  out
+}
