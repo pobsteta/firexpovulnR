@@ -42,14 +42,21 @@
 #'
 #' @section The weak class is the one that burns:
 #' Independent validation of the 2018 and 2021 rasters gave overall accuracies
-#' of 85.2% and 85.3%, both within 0.5%. But the producers state that class 5
-#' (low-growing woody plants) and class 8 (lichens and mosses) carry **higher
-#' error tolerances** than the other nine, from fuzzy class definition, limited
-#' spectral-temporal separability and sparse reference data.
+#' of 85.2% and 85.3%, both within 0.5%. Producer's and user's accuracies meet
+#' the per-class target of at least 85% for every class **except three**, stated
+#' to be regionally lower: 5 (low-growing woody plants), 8 (lichens and mosses)
+#' and 9 (non- and sparsely vegetated). The reasons given are fuzzy class
+#' definition, limited spectral-temporal separability and sparse reference data.
 #'
 #' Class 5 is maquis and garrigue. The weakest class of the product is the one
 #' that carries fire in the Var, so this function says so on import rather than
-#' leaving it in a PDF. Validate it locally before relying on it.
+#' leaving it in a PDF. Validate it locally before relying on it —
+#' [fev_fuel_profile()] is what that validation looks like.
+#'
+#' **By how much they fall short is not public.** The Algorithm Theoretical
+#' Basis Document was read and carries no per-class figure; the validation
+#' reports are announced as forthcoming. So the package records *which* classes
+#' are weak, not *how* weak, which is the honest limit of what is known.
 #'
 #' @section Absence is not a class:
 #' The raster carries three special values. 253 is the coastal seawater buffer,
@@ -82,9 +89,11 @@
 #' catalogue record for CLCplus Backbone 2023,
 #' \doi{10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2}, verified 2026-08-18.
 #'
-#' Accuracy figures and the higher tolerance on classes 5 and 8: Copernicus
-#' Land Monitoring Service, CLCplus Backbone product documentation, read at
-#' summary level 2026-08-18. Not read in the Product User Manual itself.
+#' Accuracy figures and the three regionally weaker classes: Copernicus Land
+#' Monitoring Service, CLCplus Backbone product documentation, read at summary
+#' level 2026-08-18. The ATBD was read directly and carries no per-class figure;
+#' the Product User Manual was not reachable, and the validation reports are
+#' announced as forthcoming.
 #'
 #' @examples
 #' \dontrun{
@@ -313,14 +322,20 @@ fev_clcplus_report <- function(r, year, n_absent) {
   # import after the first.
   fev_inform(msg, .envir = environment())
 
+  weak <- .FEV_CLCPLUS_ACCURACY$weak_classes
+  # Bound to a local first: cli reads a braced expression starting with a dot as
+  # an inline style, so `{.FEV_...}` is a syntax error in the glue string.
+  target <- .FEV_CLCPLUS_ACCURACY$target_per_class_pct
   fev_once("clcplus_weak_class", fev_warn(c(
-    "Class 5, low-growing woody plants, carries a HIGHER error tolerance \\
-     than the other CLCplus classes -- and it is the maquis.",
-    i = "It merges what CORINE splits across 322, 323 and 324. The producers \\
-         attribute the tolerance to fuzzy class definition, limited \\
+    "{length(weak)} classes -- {.val {weak}} -- miss the {target}% per-class \
+     accuracy target regionally, and class 5 is the maquis.",
+    i = "Class 5 merges what CORINE splits across 322, 323 and 324. The \
+         producers attribute the shortfall to fuzzy class definition, limited \
          spectral-temporal separability and sparse reference data.",
-    i = "Validate it locally before relying on it; the shipped lookup marks \\
-         every CLCplus vegetation row {.val ambiguous}.",
+    i = "By how much is not public: the ATBD carries no per-class figure and \
+         the validation reports are announced as forthcoming.",
+    i = "Validate locally before relying on it; the shipped lookup marks every \
+         CLCplus vegetation row {.val ambiguous}.",
     i = "Shown once per session; the caveat is in the lookup table every time."
-  ), class = "fev_clcplus_weak_class"))
+  ), class = "fev_clcplus_weak_class", .envir = environment()))
 }

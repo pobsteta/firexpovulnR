@@ -378,7 +378,7 @@ pour Sentinel, `rGEDI` pour GEDI. Tous non testés ici.
 |---|---|---|
 | **A — CLC+ Backbone en auxiliaire** | **à faire** | supprime les esquilles et le biais de millésime, coût faible, machinerie catégorielle réutilisée |
 | B — Sentinel-1 | à instruire | covariable plausible sur formations basses, jamais source autonome |
-| C — GEDI × S2 pour la hauteur | **ne pas recalculer** | FORMS existe, 10 m, CC-BY ; à ingérer si besoin |
+| C — GEDI × S2 pour la hauteur | **ingéré, non recalculé** | `fev_fetch_forms()`, 10 m, CC-BY ; étend `fev_fuel_profile()` hors emprise LiDAR |
 | C' — GEDI × S2 pour le sous-étage | **non** | GEDI aveugle sous ~30 m de canopée ; le contournement phénologique s'effondre en sempervirent |
 | Descente à 10 m | **motivée**, si source native 10 m | seule grille où `type = "radiant"` cesse d'être refusé ; prix ~39× le coût focal |
 
@@ -396,7 +396,12 @@ livrer celle qui nous manque.
 - Aucun appel réel. Aucun endpoint testé, aucune emprise téléchargée.
 - Liste des 11 classes CLC+ : lue en résultat de recherche, **pas** dans le manuel
   utilisateur. Codes et libellés à confirmer avant codage.
-- Précisions par classe de CLC+, licence exacte, UMC déclarée : non lues.
+- Précisions par classe de CLC+ : **cherchées et introuvables**. L'ATBD 2023 a été
+  lu directement et n'en contient aucune ; le manuel utilisateur n'était pas
+  atteignable ; les rapports de validation sont annoncés à paraître. Ce qui est
+  su : la cible est d'au moins 85 % par classe, atteinte partout sauf pour trois
+  classes régionalement plus faibles — 5 (ligneux bas), 8 (lichens et mousses) et
+  9 (non et peu végétalisé). De combien, personne ne le publie encore.
 - Lahssini et al. 2025 : résumé seul. Gains chiffrés et portée du variogramme
   inconnus.
 - L'évaluation australienne de GEDI : résumé et extraits. Le seuil de « ~30 m »

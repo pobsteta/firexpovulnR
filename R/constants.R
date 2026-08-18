@@ -160,19 +160,26 @@
 .FEV_CLCPLUS_SEAWATER <- 253L
 
 # Independent validation of the 2018 and 2021 raster gave overall accuracies of
-# 85.2% and 85.3%, both with a 0.5% margin of error. The target is 90% overall
-# with no more than 15% omission or commission per class -- but the producers
-# state that class 5 (low-growing woody plants) and class 8 (lichens and mosses)
-# carry HIGHER tolerances, from fuzzy class definition, limited spectral-temporal
-# separability, and sparse reference data.
+# 85.2% and 85.3%, both with a 0.5% margin of error. Producer's and user's
+# accuracies meet the per-class target of at least 85% for every class EXCEPT
+# three, which are stated to be regionally lower: 5 (low-growing woody plants),
+# 8 (lichens and mosses) and 9 (non- and sparsely vegetated). The reasons given
+# are fuzzy class definition, limited spectral-temporal separability, and sparse
+# reference data.
 #
 # Class 5 is maquis and garrigue. The weakest class of the product is the one
 # that carries the fire risk in the Var, and fev_fetch_clcplus() says so out
 # loud rather than leaving it in a PDF.
+#
+# Verified 2026-08-18. The per-class figures themselves are NOT public: the ATBD
+# was read and contains none, and the validation reports are announced as
+# forthcoming. So this records which classes are weak, not by how much -- which
+# is the honest limit of what is known.
 .FEV_CLCPLUS_ACCURACY <- list(
   overall = c(`2018` = 85.2, `2021` = 85.3),
   margin_pct = 0.5,
-  weak_classes = c(5L, 8L)
+  target_per_class_pct = 85,
+  weak_classes = c(5L, 8L, 9L)
 )
 
 # LiDAR HD, verified 2026-08-17 by GetCapabilities, DescribeFeatureType and real

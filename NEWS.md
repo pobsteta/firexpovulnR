@@ -1,3 +1,53 @@
+# firexpovulnR 0.17.0 (2026-08-18)
+
+### `fev_fetch_forms()` — la hauteur de canopée pour toute la France
+
+Étape 4 de la phase 10, débloquée par la réussite de l'étape 3, et délibérément
+un **import** plutôt qu'un calcul. Coupler GEDI à Sentinel-2 pour obtenir la
+hauteur de canopée est une méthode valide — y compris par krigeage de régression,
+avec l'anisotropie des traces GEDI modélisée. Mais Schwartz et al. l'ont fait
+pour la France entière à 10 m sous CC-BY. Le refaire coûterait une phase pour
+retrouver un résultat gratuit, dont nous devrions ensuite la validation.
+
+Ce que cela apporte concrètement : `fev_fuel_profile()` dispose enfin d'une
+référence **au-delà de l'emprise LiDAR**. Une classification peut être confrontée
+à une hauteur mesurée n'importe où en France, et plus seulement sur les deux
+placettes embarquées.
+
+Trois mises en garde voyagent avec le produit, et la fonction les répète au lieu
+de supposer qu'on les a lues : modèle entraîné sur un composite **2020** unique ;
+**forêts méditerranéennes sous-représentées dans la validation**, ce qui vise les
+Maures ; et une fiabilité très inégale selon la variable — hauteur MAE 2,94 m et
+R² 0,69 contre placettes IFN, biomasse R² 0,18 contre Renecofor. Les deux ne se
+lisent pas de la même façon, et le paquet refuse de publier un chiffre unique
+pour « FORMS ».
+
+Ce que cela ne fait pas : lever la limite centrale. FORMS donne le **houppier**.
+Le sous-étage reste au LiDAR HD.
+
+### Les classes régionalement faibles de CLCplus sont trois, pas deux
+
+Correction. Le paquet enregistrait 5 (ligneux bas) et 8 (lichens et mousses). Les
+producteurs en nomment **trois** : s'y ajoute la 9 (non et peu végétalisé). La
+cible est d'au moins 85 % de précision par classe, atteinte partout ailleurs.
+
+**De combien elles manquent la cible n'est pas public.** L'ATBD a été lu
+directement et ne contient aucun chiffre par classe ; les rapports de validation
+sont annoncés à paraître. Le paquet enregistre donc *quelles* classes sont
+faibles, pas *à quel point* — c'est la limite honnête de ce qui est connu.
+
+### L'article des Maures met un chiffre sur son propre argument
+
+La page démontrait sur deux carrés que la BD Forêt ne distingue pas un sous-bois
+dense d'un sol nu. `fev_fuel_profile()` le généralise aux neuf classes présentes
+et 566 cellules : l'appartenance de classe explique **42,6 %** de la variance du
+couvert de houppier et **8,4 %** de celle de la charge 1-3 m — la strate qui porte
+le feu de surface, laissée indéterminée à 92 %.
+
+Ce n'est pas une critique de la BD Forêt, qui fait ce pour quoi elle est faite.
+C'est le prix chiffré de son emploi seule pour du combustible, et la raison
+d'être du registre continu.
+
 # firexpovulnR 0.16.0 (2026-08-18)
 
 ### `fev_fuel_profile()` — ce qu'une classification ne peut pas dire d'elle-même

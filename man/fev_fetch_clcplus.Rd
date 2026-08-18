@@ -8,9 +8,11 @@ Codes, labels, resolution, CRS and vintages: European Environment Agency
 catalogue record for CLCplus Backbone 2023,
 \doi{10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2}, verified 2026-08-18.
 
-Accuracy figures and the higher tolerance on classes 5 and 8: Copernicus
-Land Monitoring Service, CLCplus Backbone product documentation, read at
-summary level 2026-08-18. Not read in the Product User Manual itself.
+Accuracy figures and the three regionally weaker classes: Copernicus Land
+Monitoring Service, CLCplus Backbone product documentation, read at summary
+level 2026-08-18. The ATBD was read directly and carries no per-class figure;
+the Product User Manual was not reachable, and the validation reports are
+announced as forthcoming.
 }
 \usage{
 fev_fetch_clcplus(
@@ -76,14 +78,21 @@ a replacement for it.
 \section{The weak class is the one that burns}{
 
 Independent validation of the 2018 and 2021 rasters gave overall accuracies
-of 85.2\% and 85.3\%, both within 0.5\%. But the producers state that class 5
-(low-growing woody plants) and class 8 (lichens and mosses) carry \strong{higher
-error tolerances} than the other nine, from fuzzy class definition, limited
-spectral-temporal separability and sparse reference data.
+of 85.2\% and 85.3\%, both within 0.5\%. Producer's and user's accuracies meet
+the per-class target of at least 85\% for every class \strong{except three}, stated
+to be regionally lower: 5 (low-growing woody plants), 8 (lichens and mosses)
+and 9 (non- and sparsely vegetated). The reasons given are fuzzy class
+definition, limited spectral-temporal separability and sparse reference data.
 
 Class 5 is maquis and garrigue. The weakest class of the product is the one
 that carries fire in the Var, so this function says so on import rather than
-leaving it in a PDF. Validate it locally before relying on it.
+leaving it in a PDF. Validate it locally before relying on it —
+\code{\link[=fev_fuel_profile]{fev_fuel_profile()}} is what that validation looks like.
+
+\strong{By how much they fall short is not public.} The Algorithm Theoretical
+Basis Document was read and carries no per-class figure; the validation
+reports are announced as forthcoming. So the package records \emph{which} classes
+are weak, not \emph{how} weak, which is the honest limit of what is known.
 }
 
 \section{Absence is not a class}{

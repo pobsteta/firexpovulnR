@@ -206,6 +206,19 @@ test_that("evergreen and deciduous broadleaf are separated, which CORINE cannot"
   expect_equal(clc$fuel_type[clc$code == "311"], "broadleaf_closed")
 })
 
+test_that("all three regionally weak classes are recorded, not just the maquis", {
+  weak <- firexpovulnR:::.FEV_CLCPLUS_ACCURACY$weak_classes
+  # 9 was missed on the first pass: the producers name three classes below the
+  # per-class target, not two.
+  expect_setequal(weak, c(5L, 8L, 9L))
+  expect_equal(firexpovulnR:::.FEV_CLCPLUS_ACCURACY$target_per_class_pct, 85)
+
+  tab <- fev_fuel_lookup("clcplus")
+  for (code in as.character(weak)) {
+    expect_equal(tab$confidence[tab$code == code], "ambiguous")
+  }
+})
+
 test_that("the weak class is flagged ambiguous and its note says why", {
   tab <- fev_fuel_lookup("clcplus")
   row <- tab[tab$code == "5", ]
