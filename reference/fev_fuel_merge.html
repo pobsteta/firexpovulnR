@@ -9,7 +9,7 @@ for every pixel which dataset its class came from."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.18.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.19.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -50,7 +50,7 @@ for every pixel which dataset its class came from.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">fev_fuel_merge</span><span class="op">(</span></span>
 <span>  <span class="va">primary</span>,</span>
 <span>  <span class="va">secondary</span>,</span>
-<span>  hierarchy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"primary_first"</span>, <span class="st">"secondary_first"</span><span class="op">)</span></span>
+<span>  hierarchy <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"auto"</span>, <span class="st">"primary_first"</span>, <span class="st">"secondary_first"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -68,8 +68,11 @@ categorical register.</p></dd>
 
 
 <dt id="arg-hierarchy">hierarchy<a class="anchor" aria-label="anchor" href="#arg-hierarchy"></a></dt>
-<dd><p><code>"primary_first"</code> (default) or <code>"secondary_first"</code>, which
-swaps the two roles — including which grid the result lands on.</p></dd>
+<dd><p><code>"auto"</code> (default) ranks the two sources by type and lets
+the higher one win whichever position it was passed in; see the section on
+ranking. <code>"primary_first"</code> and <code>"secondary_first"</code> decide by argument
+position instead, <code>"secondary_first"</code> swapping the two roles — including
+which grid the result lands on.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -98,6 +101,24 @@ reported per source, or at least alongside the source proportions that
 <p>Merging is <strong>idempotent</strong> on that layer: re-merging an already-merged source
 with the same auxiliary changes no pixel and no attribution, because pixels
 already attributed keep their original source.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="which-source-wins-and-why-it-is-not-argument-order">Which source wins, and why it is not argument order<a class="anchor" aria-label="anchor" href="#which-source-wins-and-why-it-is-not-argument-order"></a></h2>
+
+
+<p><code>hierarchy = "auto"</code> reads a rank per source type rather than trusting the
+order you happened to write. The ranking, highest first: <strong>ESA WorldCover</strong>,
+then <strong>BD Forêt v2</strong>, then <strong>CLCplus Backbone</strong>, then <strong>CORINE</strong>. Sources of
+equal or unknown rank fall back to argument order, which is what every
+earlier version did — so <code>fev_fuel_merge(bdforet, corine)</code> is unchanged.</p>
+<p>WorldCover sits on top deliberately, and the choice has a measured cost. It
+buys 10 m and a 2021 vintage everywhere, against 25 m and a 2008–2018 vintage
+for BD Forêt. It pays in thematic depth: no species, no crown cover, and a
+<em>Shrubland</em> class that separates the LiDAR-measured understorey at only 0.688
+at best on the two Maures plots — its <em>Shrubland</em> and <em>Tree cover</em> cells
+carrying practically the same understorey.</p>
+<p>If that trade is wrong for your study, say so explicitly:
+<code>fev_fuel_merge(bdforet, worldcover, hierarchy = "primary_first")</code>.</p>
     </div>
     <div class="section level2">
     <h2 id="what-gets-reprojected">What gets reprojected<a class="anchor" aria-label="anchor" href="#what-gets-reprojected"></a></h2>

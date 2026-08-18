@@ -10,7 +10,8 @@ for which vintage.
 ``` r
 fev_fuel_source(
   x,
-  type = c("bdforet_v2", "clc_2018", "clcplus_2023", "lidarhd", "custom"),
+  type = c("bdforet_v2", "clc_2018", "clcplus_2023", "worldcover_2021", "lidarhd",
+    "custom"),
   res = 25,
   crs_work = 2154,
   field = NULL,
@@ -39,8 +40,8 @@ fev_fuel_source(
 - type:
 
   Source type: `"bdforet_v2"`, `"clc_2018"` (and the other CORINE
-  vintages), `"clcplus_2023"` (and 2018, 2021), `"lidarhd"` (phase 8,
-  not implemented) or `"custom"`.
+  vintages), `"clcplus_2023"` (and 2018, 2021), `"worldcover_2021"` (and
+  2020), `"lidarhd"` (phase 8, not implemented) or `"custom"`.
 
 - res:
 

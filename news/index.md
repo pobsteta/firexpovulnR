@@ -1,5 +1,53 @@
 # Changelog
 
+## firexpovulnR 0.19.0 (2026-08-18)
+
+#### `fev_fetch_worldcover()` — la première source 10 m que le paquet sait chercher
+
+ESA WorldCover, 11 classes à 10 m dérivées de Sentinel-1 et Sentinel-2,
+sous CC-BY 4.0. La différence avec CLCplus n’est pas thématique, elle
+est d’accès : CLCplus est derrière EU Login et a dû devenir un import
+manuel ; WorldCover est sur un bucket public.
+
+**Et la fonction ne télécharge pas de tuile.** Une tuile WorldCover fait
+3° de côté — 36 000 × 36 000 cellules — quand une analyse en veut une
+fraction. GDAL lisant les GeoTIFF nuage-optimisés par requête de plage,
+seule la fenêtre demandée traverse le réseau.
+
+Les onze codes ont été vérifiés **contre la table de couleurs embarquée
+dans le raster lui-même**, les onze triplets RVB correspondant à la
+légende publiée. C’est une vérification depuis la donnée plutôt que
+depuis un document sur la donnée, et c’est la route la plus solide
+qu’ait employée ce paquet pour une nomenclature. Le nodata — la valeur
+0, d’alpha nul dans cette même table — en vient aussi.
+
+#### `fev_fuel_merge(hierarchy = "auto")`, et WorldCover au-dessus
+
+Le nouveau défaut classe les sources par **type** au lieu de faire
+confiance à l’ordre des arguments, qui n’enregistre que l’objet nommé en
+premier. Du plus fort au plus faible : **WorldCover, BD Forêt v2,
+CLCplus, CORINE**. À rang égal ou inconnu, retour à l’ordre des
+arguments — donc `fev_fuel_merge(bdforet, corine)` est inchangé.
+
+**Ce que ce choix coûte, mesuré et non supposé.** WorldCover achète le
+10 m et un millésime 2021 partout, contre 25 m et 2008-2018 pour la BD
+Forêt. Il paie en profondeur thématique : pas d’essence, pas de taux de
+couvert, et une classe *Shrubland* qui ne sépare le sous-étage mesuré
+qu’à 0,688 au mieux sur les deux placettes des Maures — ses cellules
+*Shrubland* et *Tree cover* portant pratiquement le même sous-étage.
+Pour renverser :
+`fev_fuel_merge(bdforet, worldcover, hierarchy = "primary_first")`.
+
+#### Un empilement complet n’est pas une fusion, et le dit
+
+Conséquence directe et facile à manquer : WorldCover ayant une
+couverture complète, placé au-dessus il ne laisse **rien** à combler.
+Sur les Maures, la BD Forêt ne contribue plus une seule des 7 160 572
+cellules. Le mot « merge » rend cela invisible, donc
+[`fev_fuel_merge()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_merge.md)
+avertit désormais quand une source n’apporte aucune cellule : ce n’est
+plus une fusion mais un remplacement.
+
 ## firexpovulnR 0.18.1 (2026-08-18)
 
 #### Les libellés CLCplus sont vérifiés chez le producteur

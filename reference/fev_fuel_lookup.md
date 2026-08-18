@@ -7,7 +7,10 @@ type each one is.
 ## Usage
 
 ``` r
-fev_fuel_lookup(type = c("bdforet_v2", "clc", "clcplus"), file = NULL)
+fev_fuel_lookup(
+  type = c("bdforet_v2", "clc", "clcplus", "worldcover"),
+  file = NULL
+)
 ```
 
 ## Source

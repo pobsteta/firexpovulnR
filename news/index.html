@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.18.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.19.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,26 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.19.0" id="firexpovulnr-0190-2026-08-18">firexpovulnR 0.19.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0190-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="fev_fetch_worldcover--la-première-source-m-que-le-paquet-sait-chercher-0-19-0">
+<code>fev_fetch_worldcover()</code> — la première source 10 m que le paquet sait chercher<a class="anchor" aria-label="anchor" href="#fev_fetch_worldcover--la-premi%C3%A8re-source-m-que-le-paquet-sait-chercher-0-19-0"></a></h4>
+<p>ESA WorldCover, 11 classes à 10 m dérivées de Sentinel-1 et Sentinel-2, sous CC-BY 4.0. La différence avec CLCplus n’est pas thématique, elle est d’accès : CLCplus est derrière EU Login et a dû devenir un import manuel ; WorldCover est sur un bucket public.</p>
+<p><strong>Et la fonction ne télécharge pas de tuile.</strong> Une tuile WorldCover fait 3° de côté — 36 000 × 36 000 cellules — quand une analyse en veut une fraction. GDAL lisant les GeoTIFF nuage-optimisés par requête de plage, seule la fenêtre demandée traverse le réseau.</p>
+<p>Les onze codes ont été vérifiés <strong>contre la table de couleurs embarquée dans le raster lui-même</strong>, les onze triplets RVB correspondant à la légende publiée. C’est une vérification depuis la donnée plutôt que depuis un document sur la donnée, et c’est la route la plus solide qu’ait employée ce paquet pour une nomenclature. Le nodata — la valeur 0, d’alpha nul dans cette même table — en vient aussi.</p>
+</div>
+<div class="section level4">
+<h4 id="fev_fuel_mergehierarchy--auto-et-worldcover-au-dessus-0-19-0">
+<code>fev_fuel_merge(hierarchy = "auto")</code>, et WorldCover au-dessus<a class="anchor" aria-label="anchor" href="#fev_fuel_mergehierarchy--auto-et-worldcover-au-dessus-0-19-0"></a></h4>
+<p>Le nouveau défaut classe les sources par <strong>type</strong> au lieu de faire confiance à l’ordre des arguments, qui n’enregistre que l’objet nommé en premier. Du plus fort au plus faible : <strong>WorldCover, BD Forêt v2, CLCplus, CORINE</strong>. À rang égal ou inconnu, retour à l’ordre des arguments — donc <code>fev_fuel_merge(bdforet, corine)</code> est inchangé.</p>
+<p><strong>Ce que ce choix coûte, mesuré et non supposé.</strong> WorldCover achète le 10 m et un millésime 2021 partout, contre 25 m et 2008-2018 pour la BD Forêt. Il paie en profondeur thématique : pas d’essence, pas de taux de couvert, et une classe <em>Shrubland</em> qui ne sépare le sous-étage mesuré qu’à 0,688 au mieux sur les deux placettes des Maures — ses cellules <em>Shrubland</em> et <em>Tree cover</em> portant pratiquement le même sous-étage. Pour renverser : <code>fev_fuel_merge(bdforet, worldcover, hierarchy = "primary_first")</code>.</p>
+</div>
+<div class="section level4">
+<h4 id="un-empilement-complet-nest-pas-une-fusion-et-le-dit-0-19-0">Un empilement complet n’est pas une fusion, et le dit<a class="anchor" aria-label="anchor" href="#un-empilement-complet-nest-pas-une-fusion-et-le-dit-0-19-0"></a></h4>
+<p>Conséquence directe et facile à manquer : WorldCover ayant une couverture complète, placé au-dessus il ne laisse <strong>rien</strong> à combler. Sur les Maures, la BD Forêt ne contribue plus une seule des 7 160 572 cellules. Le mot « merge » rend cela invisible, donc <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code> avertit désormais quand une source n’apporte aucune cellule : ce n’est plus une fusion mais un remplacement.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.18.1" id="firexpovulnr-0181-2026-08-18">firexpovulnR 0.18.1 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0181-2026-08-18"></a></h2>
 <div class="section level4">

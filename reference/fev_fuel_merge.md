@@ -9,7 +9,7 @@ records for every pixel which dataset its class came from.
 fev_fuel_merge(
   primary,
   secondary,
-  hierarchy = c("primary_first", "secondary_first")
+  hierarchy = c("auto", "primary_first", "secondary_first")
 )
 ```
 
@@ -26,8 +26,11 @@ fev_fuel_merge(
 
 - hierarchy:
 
-  `"primary_first"` (default) or `"secondary_first"`, which swaps the
-  two roles — including which grid the result lands on.
+  `"auto"` (default) ranks the two sources by type and lets the higher
+  one win whichever position it was passed in; see the section on
+  ranking. `"primary_first"` and `"secondary_first"` decide by argument
+  position instead, `"secondary_first"` swapping the two roles —
+  including which grid the result lands on.
 
 ## Value
 
@@ -55,6 +58,26 @@ prints.
 Merging is **idempotent** on that layer: re-merging an already-merged
 source with the same auxiliary changes no pixel and no attribution,
 because pixels already attributed keep their original source.
+
+## Which source wins, and why it is not argument order
+
+`hierarchy = "auto"` reads a rank per source type rather than trusting
+the order you happened to write. The ranking, highest first: **ESA
+WorldCover**, then **BD Forêt v2**, then **CLCplus Backbone**, then
+**CORINE**. Sources of equal or unknown rank fall back to argument
+order, which is what every earlier version did — so
+`fev_fuel_merge(bdforet, corine)` is unchanged.
+
+WorldCover sits on top deliberately, and the choice has a measured cost.
+It buys 10 m and a 2021 vintage everywhere, against 25 m and a 2008–2018
+vintage for BD Forêt. It pays in thematic depth: no species, no crown
+cover, and a *Shrubland* class that separates the LiDAR-measured
+understorey at only 0.688 at best on the two Maures plots — its
+*Shrubland* and *Tree cover* cells carrying practically the same
+understorey.
+
+If that trade is wrong for your study, say so explicitly:
+`fev_fuel_merge(bdforet, worldcover, hierarchy = "primary_first")`.
 
 ## What gets reprojected
 

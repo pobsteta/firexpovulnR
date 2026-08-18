@@ -51,6 +51,10 @@ différents ne peuvent pas se confondre.
   : Import CLCplus Backbone (10 m raster land cover)
 - [`fev_clcplus_tiles()`](https://pobsteta.github.io/firexpovulnR/reference/fev_clcplus_tiles.md)
   : Which CLCplus tiles cover an area
+- [`fev_fetch_worldcover()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_worldcover.md)
+  : Fetch ESA WorldCover (10 m land cover, no account needed)
+- [`fev_worldcover_tiles()`](https://pobsteta.github.io/firexpovulnR/reference/fev_worldcover_tiles.md)
+  : Which 3-degree tiles cover an area
 - [`fev_fetch_forms()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_forms.md)
   : Import FORMS canopy height (France, 10 m)
 - [`fev_fetch_burnt()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.md)
