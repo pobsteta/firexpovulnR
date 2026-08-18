@@ -13,7 +13,7 @@ Sentinel-2."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.20.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.21.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -93,15 +93,8 @@ nearest neighbour and is logged.</p></dd>
     <p>A <a href="fev_data.html">fev_source</a> holding a categorical <code>SpatRaster</code> of class codes.</p>
     </div>
     <div class="section level2">
-    <h2 id="why-this-one-is-a-fetch-and-clcplus-is-not">Why this one is a fetch and CLCplus is not<a class="anchor" aria-label="anchor" href="#why-this-one-is-a-fetch-and-clcplus-is-not"></a></h2>
-
-
-<p>Both are 10 m Sentinel-derived land cover. The difference is access:
-<code><a href="fev_fetch_clcplus.html">fev_fetch_clcplus()</a></code> cannot download anything because the Copernicus Land
-Monitoring Service serves its product behind EU Login, and this package does
-not handle personal tokens. WorldCover is on an open bucket under CC-BY 4.0,
-so this function does the whole job.</p>
-<p>It also does not download a tile. A WorldCover tile is 3° square — 36 000 by
+    <h2 id="it-does-not-download-a-tile">It does not download a tile<a class="anchor" aria-label="anchor" href="#it-does-not-download-a-tile"></a></h2>
+    <p>A WorldCover tile is 3° square — 36 000 by
 36 000 cells — and an analysis usually wants a fraction of one. GDAL reads
 cloud-optimised GeoTIFFs by range request, so only the requested window
 crosses the network.</p>
@@ -133,9 +126,8 @@ by that rather than by the ground. Pick one vintage per analysis.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
-    <div class="dont-index"><p><code><a href="fev_fuel_source.html">fev_fuel_source()</a></code> to put it on a grid, <code><a href="fev_fetch_clcplus.html">fev_fetch_clcplus()</a></code> for
-the product that needs an account, <code><a href="fev_fuel_profile.html">fev_fuel_profile()</a></code> to test its classes
-against a measurement before trusting them.</p></div>
+    <div class="dont-index"><p><code><a href="fev_fuel_source.html">fev_fuel_source()</a></code> to put it on a grid, <code><a href="fev_fuel_profile.html">fev_fuel_profile()</a></code> to
+test its classes against a measurement before trusting them.</p></div>
     </div>
 
     <div class="section level2">

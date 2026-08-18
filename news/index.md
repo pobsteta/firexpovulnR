@@ -1,5 +1,50 @@
 # Changelog
 
+## firexpovulnR 0.21.0 (2026-08-18)
+
+#### CLCplus Backbone retiré
+
+Le périmètre est la France, et dans ce périmètre CLCplus n’apportait
+plus rien.
+
+Son seul avantage irremplaçable était de séparer le feuillu
+**sempervirent** du **caducifolié** — ce que CORINE ne fait pas (311 les
+confond), ni WorldCover (une seule classe *Tree cover*), ni la HRL
+*Dominant Leaf Type* (feuillu/résineux seulement, vérifié). Mais **la BD
+Forêt le fait**, et plus finement : `FF1G06-06` chêne sempervirent
+contre `FF1G01-01` chêne décidu, soit l’essence et non la seule
+phénologie foliaire.
+
+Ce qui a rendu l’argument décisif est la version précédente :
+[`fev_fuel_attach()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_attach.md)
+accepte désormais une source catégorielle, donc la BD Forêt survit **à
+côté** d’une classe décidée par un raster à 10 m au lieu d’être écrasée.
+Avant cela, mettre WorldCover au-dessus coûtait l’essence et CLCplus
+gardait un intérêt. Après, non.
+
+S’y ajoutait un défaut de fond : le produit est derrière EU Login, ce
+paquet ne manipule pas de jeton personnel, et **aucun raster réel n’est
+jamais passé dans ce code**. Il était testé contre des rasters
+synthétiques et rien d’autre.
+
+Retirés : `fev_fetch_clcplus()`, `fev_clcplus_tiles()`, la table de
+correspondance des 12 classes, les entrées de type, d’UMC et de
+priorité, et leurs 50 tests.
+
+**Conservé, parce que CLCplus n’en était que l’occasion :** le champ
+`native` de `.FEV_FUEL_MMU` et le refus distinct de
+[`fev_fuel_fill_gaps()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_fill_gaps.md)
+pour une source nativement raster, le drapeau `grid_driver`,
+[`fev_fuel_profile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_profile.md),
+[`fev_exposure_cost()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_cost.md),
+et le rapport de phase 10 — qui reste le compte rendu de l’instruction,
+branche non retenue comprise.
+
+**Ce qu’on renonce à pouvoir faire :** analyser hors de France avec la
+séparation sclérophylle. Hors BD Forêt, aucune source du paquet ne
+distingue le chêne vert du hêtre. Le rapport de phase 10 dit où
+retrouver le produit si le périmètre change un jour.
+
 ## firexpovulnR 0.20.0 (2026-08-18)
 
 #### `fev_fuel_attach()` garde les deux, au lieu d’en sacrifier une
@@ -147,11 +192,9 @@ tuile, `E40N22`** ; **Couchey en chevauche deux**, `E39N26` et `E39N27`,
 parce que l’emprise traverse le northing 2 700 000 — une seule tuile y
 laisserait un trou.
 
-Le refus de
-[`fev_fetch_clcplus()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_clcplus.md)
-nomme désormais ces tuiles quand un `aoi` lui est passé. Nommer la tuile
-est la chose la plus utile qu’un refus puisse faire quand la
-récupération doit se faire à la main.
+Le refus de `fev_fetch_clcplus()` nomme désormais ces tuiles quand un
+`aoi` lui est passé. Nommer la tuile est la chose la plus utile qu’un
+refus puisse faire quand la récupération doit se faire à la main.
 
 L’arithmétique est le système de codage documenté de la grille EEA ;
 **le préfixe exact que le CLMS met devant dans ses noms de fichiers n’a

@@ -10,8 +10,7 @@ for which vintage.
 ``` r
 fev_fuel_source(
   x,
-  type = c("bdforet_v2", "clc_2018", "clcplus_2023", "worldcover_2021", "lidarhd",
-    "custom"),
+  type = c("bdforet_v2", "clc_2018", "worldcover_2021", "lidarhd", "custom"),
   res = 25,
   crs_work = 2154,
   field = NULL,
@@ -40,8 +39,8 @@ fev_fuel_source(
 - type:
 
   Source type: `"bdforet_v2"`, `"clc_2018"` (and the other CORINE
-  vintages), `"clcplus_2023"` (and 2018, 2021), `"worldcover_2021"` (and
-  2020), `"lidarhd"` (phase 8, not implemented) or `"custom"`.
+  vintages), `"worldcover_2021"` (and 2020), `"lidarhd"` (phase 8, not
+  implemented) or `"custom"`.
 
 - res:
 
@@ -115,10 +114,10 @@ to see which are populated.
 
 `res` defaults to 25 m, and the floor below which it buys nothing is a
 property of the source, not a constant: BD Forêt v2's minimum mapped
-width is 20 m, CLCplus Backbone's is 10 m. Below its source's own width
-a grid resolves boundaries the data never had. At 100 m the advantage
-over CORINE — whose native raster is 100 m — disappears entirely.
-Between those, the cost is quadratic in memory and in focal-window time.
+width is 20 m, ESA WorldCover's is 10 m. Below its source's own width a
+grid resolves boundaries the data never had. At 100 m the advantage over
+CORINE — whose native raster is 100 m — disappears entirely. Between
+those, the cost is quadratic in memory and in focal-window time.
 
 One resolution earns its cost for a reason unrelated to detail.
 [`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md)

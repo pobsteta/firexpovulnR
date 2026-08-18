@@ -49,19 +49,12 @@ A
 [fev_source](https://pobsteta.github.io/firexpovulnR/reference/fev_data.md)
 holding a categorical `SpatRaster` of class codes.
 
-## Why this one is a fetch and CLCplus is not
+## It does not download a tile
 
-Both are 10 m Sentinel-derived land cover. The difference is access:
-[`fev_fetch_clcplus()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_clcplus.md)
-cannot download anything because the Copernicus Land Monitoring Service
-serves its product behind EU Login, and this package does not handle
-personal tokens. WorldCover is on an open bucket under CC-BY 4.0, so
-this function does the whole job.
-
-It also does not download a tile. A WorldCover tile is 3° square — 36
-000 by 36 000 cells — and an analysis usually wants a fraction of one.
-GDAL reads cloud-optimised GeoTIFFs by range request, so only the
-requested window crosses the network.
+A WorldCover tile is 3° square — 36 000 by 36 000 cells — and an
+analysis usually wants a fraction of one. GDAL reads cloud-optimised
+GeoTIFFs by range request, so only the requested window crosses the
+network.
 
 ## Where it sits in the hierarchy, and what that costs
 
@@ -92,8 +85,6 @@ per analysis.
 
 [`fev_fuel_source()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_source.md)
 to put it on a grid,
-[`fev_fetch_clcplus()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_clcplus.md)
-for the product that needs an account,
 [`fev_fuel_profile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_profile.md)
 to test its classes against a measurement before trusting them.
 

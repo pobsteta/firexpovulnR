@@ -196,10 +196,6 @@ différents ne peuvent pas se confondre.
   : Fetch BD Forêt v2 (primary fuel source)
 - [`fev_fetch_corine()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_corine.md)
   : Fetch CORINE Land Cover (auxiliary fuel source)
-- [`fev_fetch_clcplus()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_clcplus.md)
-  : Import CLCplus Backbone (10 m raster land cover)
-- [`fev_clcplus_tiles()`](https://pobsteta.github.io/firexpovulnR/reference/fev_clcplus_tiles.md)
-  : Which CLCplus tiles cover an area
 - [`fev_fetch_worldcover()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_worldcover.md)
   : Fetch ESA WorldCover (10 m land cover, no account needed)
 - [`fev_worldcover_tiles()`](https://pobsteta.github.io/firexpovulnR/reference/fev_worldcover_tiles.md)

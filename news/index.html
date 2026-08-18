@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.20.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.21.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,19 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.21.0" id="firexpovulnr-0210-2026-08-18">firexpovulnR 0.21.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0210-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="clcplus-backbone-retiré-0-21-0">CLCplus Backbone retiré<a class="anchor" aria-label="anchor" href="#clcplus-backbone-retir%C3%A9-0-21-0"></a></h4>
+<p>Le périmètre est la France, et dans ce périmètre CLCplus n’apportait plus rien.</p>
+<p>Son seul avantage irremplaçable était de séparer le feuillu <strong>sempervirent</strong> du <strong>caducifolié</strong> — ce que CORINE ne fait pas (311 les confond), ni WorldCover (une seule classe <em>Tree cover</em>), ni la HRL <em>Dominant Leaf Type</em> (feuillu/résineux seulement, vérifié). Mais <strong>la BD Forêt le fait</strong>, et plus finement : <code>FF1G06-06</code> chêne sempervirent contre <code>FF1G01-01</code> chêne décidu, soit l’essence et non la seule phénologie foliaire.</p>
+<p>Ce qui a rendu l’argument décisif est la version précédente : <code><a href="../reference/fev_fuel_attach.html">fev_fuel_attach()</a></code> accepte désormais une source catégorielle, donc la BD Forêt survit <strong>à côté</strong> d’une classe décidée par un raster à 10 m au lieu d’être écrasée. Avant cela, mettre WorldCover au-dessus coûtait l’essence et CLCplus gardait un intérêt. Après, non.</p>
+<p>S’y ajoutait un défaut de fond : le produit est derrière EU Login, ce paquet ne manipule pas de jeton personnel, et <strong>aucun raster réel n’est jamais passé dans ce code</strong>. Il était testé contre des rasters synthétiques et rien d’autre.</p>
+<p>Retirés : <code>fev_fetch_clcplus()</code>, <code>fev_clcplus_tiles()</code>, la table de correspondance des 12 classes, les entrées de type, d’UMC et de priorité, et leurs 50 tests.</p>
+<p><strong>Conservé, parce que CLCplus n’en était que l’occasion :</strong> le champ <code>native</code> de <code>.FEV_FUEL_MMU</code> et le refus distinct de <code><a href="../reference/fev_fuel_fill_gaps.html">fev_fuel_fill_gaps()</a></code> pour une source nativement raster, le drapeau <code>grid_driver</code>, <code><a href="../reference/fev_fuel_profile.html">fev_fuel_profile()</a></code>, <code><a href="../reference/fev_exposure_cost.html">fev_exposure_cost()</a></code>, et le rapport de phase 10 — qui reste le compte rendu de l’instruction, branche non retenue comprise.</p>
+<p><strong>Ce qu’on renonce à pouvoir faire :</strong> analyser hors de France avec la séparation sclérophylle. Hors BD Forêt, aucune source du paquet ne distingue le chêne vert du hêtre. Le rapport de phase 10 dit où retrouver le produit si le périmètre change un jour.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.20.0" id="firexpovulnr-0200-2026-08-18">firexpovulnR 0.20.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0200-2026-08-18"></a></h2>
 <div class="section level4">
@@ -101,7 +114,7 @@
 <p>CLCplus est diffusé en tuiles de <strong>100 x 100 km</strong> en GeoTIFF nuage-optimisé sur la grille de référence EEA. Puisque le téléchargement est manuel — le produit est derrière EU Login — le moins que ce paquet puisse faire est de dire exactement quelles tuiles prendre, plutôt que de laisser le calcul à faire sur une carte.</p>
 <p>Le code de cellule EEA est la taille suivie du coin inférieur gauche exprimé en unités de cette taille, en EPSG:3035 : une tuile de 100 km dont le coin est à 4 000 000 m est et 2 200 000 m nord s’appelle <code>E40N22</code>.</p>
 <p>Pour les deux emprises embarquées : <strong>les Maures tiennent dans une seule tuile, <code>E40N22</code></strong> ; <strong>Couchey en chevauche deux</strong>, <code>E39N26</code> et <code>E39N27</code>, parce que l’emprise traverse le northing 2 700 000 — une seule tuile y laisserait un trou.</p>
-<p>Le refus de <code><a href="../reference/fev_fetch_clcplus.html">fev_fetch_clcplus()</a></code> nomme désormais ces tuiles quand un <code>aoi</code> lui est passé. Nommer la tuile est la chose la plus utile qu’un refus puisse faire quand la récupération doit se faire à la main.</p>
+<p>Le refus de <code>fev_fetch_clcplus()</code> nomme désormais ces tuiles quand un <code>aoi</code> lui est passé. Nommer la tuile est la chose la plus utile qu’un refus puisse faire quand la récupération doit se faire à la main.</p>
 <p>L’arithmétique est le système de codage documenté de la grille EEA ; <strong>le préfixe exact que le CLMS met devant dans ses noms de fichiers n’a pas été vérifié</strong>, donc cherchez la partie <code>E..N..</code> dans la liste de téléchargement.</p>
 </div>
 </div>

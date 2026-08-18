@@ -9,7 +9,7 @@ for every pixel which dataset its class came from."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.20.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.21.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -108,7 +108,7 @@ already attributed keep their original source.</p>
 
 <p><code>hierarchy = "auto"</code> reads a rank per source type rather than trusting the
 order you happened to write. The ranking, highest first: <strong>ESA WorldCover</strong>,
-then <strong>BD Forêt v2</strong>, then <strong>CLCplus Backbone</strong>, then <strong>CORINE</strong>. Sources of
+then <strong>BD Forêt v2</strong>, then <strong>CORINE</strong>. Sources of
 equal or unknown rank fall back to argument order, which is what every
 earlier version did — so <code>fev_fuel_merge(bdforet, corine)</code> is unchanged.</p>
 <p>WorldCover sits on top deliberately, and the choice has a measured cost. It

@@ -44,8 +44,8 @@ fev_fuel_profile(
 - class:
 
   Class to test for separability, as it appears in the fuel layer's
-  levels (e.g. `"5"` for CLCplus low-growing woody plants). `NULL`
-  profiles every class without computing a separability statistic.
+  levels (e.g. `"20"` for WorldCover shrubland). `NULL` profiles every
+  class without computing a separability statistic.
 
 - min_cells:
 
