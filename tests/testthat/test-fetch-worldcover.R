@@ -164,8 +164,9 @@ test_that("a source that fills nothing is announced as a replacement", {
 # --------------------------------------------------------------------------
 
 test_that("the window is read without downloading a tile", {
-  skip_on_cran()
-  skip_if_offline()
+  # The package's own gate, not a weaker one of this file's invention: a
+  # routine check must never reach the network.
+  skip_unless_network()
   gpkg <- system.file("extdata", "maures.gpkg", package = "firexpovulnR")
   skip_if(!nzchar(gpkg), "Maures extract not installed")
 

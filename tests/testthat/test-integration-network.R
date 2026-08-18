@@ -18,13 +18,8 @@
 # every one of these ran in CI, and stayed green only for as long as IGN and
 # EFFIS did. The first DNS timeout at data.geopf.fr turned the check red, which
 # is precisely what the brief forbids.
-skip_unless_network <- function() {
-  if (!tolower(Sys.getenv("FIREXPOVULNR_TEST_NETWORK")) %in%
-        c("1", "true", "yes")) {
-    skip("network tests disabled (set FIREXPOVULNR_TEST_NETWORK=1)")
-  }
-  testthat::skip_if_offline()
-}
+# skip_unless_network() now lives in helper-network.R, shared by every test
+# that touches the network.
 
 # A small AOI in the Massif des Maures: forested, Mediterranean, and small
 # enough that every request below returns in seconds.
