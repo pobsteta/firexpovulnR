@@ -7,7 +7,7 @@
 fev_exposure_cost(x, res = NULL, radius = NULL, rate = 2e+08)
 }
 \arguments{
-\item{x}{A fuel layer: \code{SpatRaster}, \link{fev_fuel_source} or \link{fev_layer}.}
+\item{x}{A fuel layer: \code{SpatRaster}, \link{fev_fuel_source} or \code{fev_layer}.}
 
 \item{res}{Cell size to cost, in CRS units. \code{NULL} uses \code{x}'s own.}
 

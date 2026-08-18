@@ -666,7 +666,7 @@ plot.fev_directional <- function(x, ...) {
 #' `10 = 30 / 3`. This function reports whether each radius is reachable at the
 #' resolution asked about, which is the trade the cost has to be weighed against.
 #'
-#' @param x A fuel layer: `SpatRaster`, [fev_fuel_source] or [fev_layer].
+#' @param x A fuel layer: `SpatRaster`, [fev_fuel_source] or `fev_layer`.
 #' @param res Cell size to cost, in CRS units. `NULL` uses `x`'s own.
 #' @param radius Radius in metres. `NULL` costs all three shipped radii.
 #' @param rate Weighted operations per second, for the time estimate. The

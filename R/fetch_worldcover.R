@@ -280,7 +280,7 @@ fev_worldcover_report <- function(r, year, spec, tiles, missing, n_absent,
          information -- and its {.val Shrubland} and {.val Tree cover} cells \\
          carry practically the same measured understorey.",
     i = "WorldCover also carries no species and no crown cover, both of which \\
-         BD Forêt does.",
+         BD For\u00eat does.",
     i = "{.fn fev_fuel_profile} is how you check this on your own ground.",
     i = "Shown once per session."
   ), class = "fev_worldcover_shrubland"))
