@@ -1,15 +1,14 @@
 # Confronting a categorical fuel layer with an independent continuous
 # measurement.
 #
-# Phase 10 step 2 exists because CLCplus Backbone's weakest class -- 5,
-# low-growing woody plants -- is the maquis, and the producers say so. A
-# classification cannot validate itself, so the question has to be put to
+# A classification cannot validate itself, so the question has to be put to
 # something that MEASURED the ground rather than inferred it. LiDAR HD does,
 # which is the whole point of phase 8.
 #
-# Nothing here is CLCplus-specific: the same confrontation checks whether BD
-# Forêt's "forêt fermée" really is closed, or whether CORINE 323 really carries
-# understorey.
+# The case that prompted it: a 10 m satellite shrub class is exactly what a
+# Mediterranean fuel model most needs and least deserves to trust. The same
+# confrontation checks whether BD Forêt's "forêt fermée" really is closed, or
+# whether CORINE 323 really carries understorey.
 
 #' Profile fuel classes against an independent measurement
 #'
@@ -55,7 +54,7 @@
 #'   understorey-bearing subset when it is present — `H_Bush`, `FL_0_1`,
 #'   `FL_1_3`, `Cover`, `PAI_tot` — and otherwise every layer.
 #' @param class Class to test for separability, as it appears in the fuel
-#'   layer's levels (e.g. `"5"` for CLCplus low-growing woody plants). `NULL`
+#'   layer's levels (e.g. `"20"` for WorldCover shrubland). `NULL`
 #'   profiles every class without computing a separability statistic.
 #' @param min_cells Classes with fewer cells than this are reported but
 #'   excluded from the separability statistic. Default 30.
@@ -185,7 +184,7 @@ fev_profile_default_metrics <- function(available) {
 }
 
 # A class layer with more distinct values than this is almost certainly a
-# measurement passed by mistake. CORINE has 44 codes, BD Forêt 32, CLCplus 12;
+# measurement passed by mistake. CORINE has 44 codes, BD Forêt 32, WorldCover 11;
 # 255 leaves room for any byte-coded nomenclature and still catches the error.
 .FEV_PROFILE_MAX_CLASSES <- 255L
 

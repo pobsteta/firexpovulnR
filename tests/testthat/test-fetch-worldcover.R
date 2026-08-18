@@ -73,7 +73,8 @@ test_that("worldcover does not fall through to another table", {
   expect_equal(nrow(fev_fuel_lookup("worldcover_2021")), 11L)
   expect_equal(fev_fuel_lookup("worldcover_2020"), fev_fuel_lookup("worldcover"))
   expect_false(identical(fev_fuel_lookup("worldcover"),
-                         fev_fuel_lookup("clcplus")))
+                         fev_fuel_lookup("clc")))
+  expect_equal(nrow(fev_fuel_lookup("clc")), 44L)
 })
 
 test_that("the shrub class is flagged ambiguous, with the measurement in its note", {

@@ -286,7 +286,7 @@ fev_fuel_mmu <- function(components) {
     return(list(mmu_ha = NA_real_, from = NULL, reason = "raster_native",
                 raster_from = complete))
   }
-  # A mixed merge -- say CORINE polygons under a CLCplus raster -- keeps the
+  # A mixed merge -- say CORINE polygons under a WorldCover raster -- keeps the
   # vector component's unit: that component really was rasterised, and really
   # does leave slivers.
   pick <- complete[which.max(areas)]

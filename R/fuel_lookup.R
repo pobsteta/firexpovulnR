@@ -98,9 +98,9 @@ fev_fuel_types <- function() {
 #' at your analysis date — Mediterranean shrubland regrowth is among the most
 #' flammable states there is by year five.
 #'
-#' @param type Nomenclature to load: `"bdforet_v2"`, `"clc"` or `"clcplus"`.
-#'   Both land cover tables are vintage-independent, so `"clc_2018"` and
-#'   `"clcplus_2023"` resolve to `"clc"` and `"clcplus"`.
+#' @param type Nomenclature to load: `"bdforet_v2"`, `"clc"` or `"worldcover"`.
+#'   The land cover tables are vintage-independent, so `"clc_2018"` and
+#'   `"worldcover_2021"` resolve to `"clc"` and `"worldcover"`.
 #' @param file Optional path to a CSV of your own, replacing the shipped table
 #'   entirely. It must have columns `code`, `fuel_type` and `burnable`;
 #'   `nomenclature`, `label`, `crown_cover`, `confidence` and `notes` are
@@ -124,11 +124,6 @@ fev_fuel_types <- function() {
 #' verified 2026-08-16 against the 2019 illustrated guidelines, which agree on
 #' all 44 rows.
 #'
-#' CLCplus Backbone codes and labels: European Environment Agency catalogue
-#' record for the 2023 vintage,
-#' \doi{10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2}, verified 2026-08-18.
-#' Nomenclature derived from the EAGLE Land Cover Components.
-#'
 #' @examples
 #' bdf <- fev_fuel_lookup("bdforet_v2")
 #' nrow(bdf)
@@ -137,14 +132,8 @@ fev_fuel_types <- function() {
 #' clc <- fev_fuel_lookup("clc")
 #' table(clc$fuel_type, clc$burnable)
 #'
-#' # CLCplus splits what CORINE 311 could not: deciduous from evergreen
-#' # broadleaf, which is the sclerophyll distinction the Mediterranean needs.
-#' cpl <- fev_fuel_lookup("clcplus")
-#' cpl[cpl$code %in% c("3", "4"), c("code", "label", "fuel_type")]
-#'
 #' @export
-fev_fuel_lookup <- function(type = c("bdforet_v2", "clc", "clcplus",
-                                    "worldcover"),
+fev_fuel_lookup <- function(type = c("bdforet_v2", "clc", "worldcover"),
                             file = NULL) {
   if (!is.null(file)) {
     if (!file.exists(file)) {
@@ -158,20 +147,13 @@ fev_fuel_lookup <- function(type = c("bdforet_v2", "clc", "clcplus",
   type <- match.arg(type[1], c(
     "bdforet_v2",
     "clc", paste0("clc_", c(1990, 2000, 2006, 2012, 2018)),
-    "clcplus", paste0("clcplus_", c(2018, 2021, 2023)),
     "worldcover", paste0("worldcover_", c(2020, 2021))
   ))
   # Neither nomenclature's fuel semantics change with the vintage: CORINE 323 is
-  # sclerophyllous vegetation in 1990 as in 2018, and CLCplus class 4 is
-  # evergreen broadleaf in 2018 as in 2023. Only the mapped extent does.
-  #
-  # Order matters here: "clcplus_2023" starts with "clc" too, so the longer stem
-  # has to be tested first or every CLCplus request would silently read the
-  # CORINE table -- 44 unrelated codes, and not one of them matching.
+  # sclerophyllous vegetation in 1990 as in 2018, and WorldCover class 20 is
+  # shrubland in 2020 as in 2021. Only the mapped extent does.
   stem <- if (startsWith(type, "worldcover")) {
     "worldcover"
-  } else if (startsWith(type, "clcplus")) {
-    "clcplus"
   } else if (startsWith(type, "clc")) {
     "clc"
   } else {

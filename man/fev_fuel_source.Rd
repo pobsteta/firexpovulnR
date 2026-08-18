@@ -6,8 +6,7 @@
 \usage{
 fev_fuel_source(
   x,
-  type = c("bdforet_v2", "clc_2018", "clcplus_2023", "worldcover_2021", "lidarhd",
-    "custom"),
+  type = c("bdforet_v2", "clc_2018", "worldcover_2021", "lidarhd", "custom"),
   res = 25,
   crs_work = 2154,
   field = NULL,
@@ -25,8 +24,8 @@ fev_fuel_source(
 or a plain \code{sf}, \code{SpatVector} or \code{SpatRaster}.}
 
 \item{type}{Source type: \code{"bdforet_v2"}, \code{"clc_2018"} (and the other CORINE
-vintages), \code{"clcplus_2023"} (and 2018, 2021), \code{"worldcover_2021"} (and
-2020), \code{"lidarhd"} (phase 8, not implemented) or \code{"custom"}.}
+vintages), \code{"worldcover_2021"} (and 2020), \code{"lidarhd"} (phase 8, not
+implemented) or \code{"custom"}.}
 
 \item{res}{Target cell size in CRS units, metres for the projected
 defaults. See the resolution section.}
@@ -83,7 +82,7 @@ class. Use \code{\link[=fev_fuel_registers]{fev_fuel_registers()}} to see which 
 
 \code{res} defaults to 25 m, and the floor below which it buys nothing is a
 property of the source, not a constant: BD Forêt v2's minimum mapped width is
-20 m, CLCplus Backbone's is 10 m. Below its source's own width a grid
+20 m, ESA WorldCover's is 10 m. Below its source's own width a grid
 resolves boundaries the data never had. At 100 m the advantage over CORINE —
 whose native raster is 100 m — disappears entirely. Between those, the cost
 is quadratic in memory and in focal-window time.

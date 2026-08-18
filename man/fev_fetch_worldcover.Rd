@@ -36,15 +36,8 @@ public bucket, crops to the area, turns the product's nodata into \code{NA}, and
 records provenance. Eleven classes at 10 m, derived from Sentinel-1 and
 Sentinel-2.
 }
-\section{Why this one is a fetch and CLCplus is not}{
-
-Both are 10 m Sentinel-derived land cover. The difference is access:
-\code{\link[=fev_fetch_clcplus]{fev_fetch_clcplus()}} cannot download anything because the Copernicus Land
-Monitoring Service serves its product behind EU Login, and this package does
-not handle personal tokens. WorldCover is on an open bucket under CC-BY 4.0,
-so this function does the whole job.
-
-It also does not download a tile. A WorldCover tile is 3° square — 36 000 by
+\section{It does not download a tile}{
+ A WorldCover tile is 3° square — 36 000 by
 36 000 cells — and an analysis usually wants a fraction of one. GDAL reads
 cloud-optimised GeoTIFFs by range request, so only the requested window
 crosses the network.
@@ -84,7 +77,6 @@ fuel <- fev_fuel_source(wc, type = "worldcover_2021", res = 10)
 
 }
 \seealso{
-\code{\link[=fev_fuel_source]{fev_fuel_source()}} to put it on a grid, \code{\link[=fev_fetch_clcplus]{fev_fetch_clcplus()}} for
-the product that needs an account, \code{\link[=fev_fuel_profile]{fev_fuel_profile()}} to test its classes
-against a measurement before trusting them.
+\code{\link[=fev_fuel_source]{fev_fuel_source()}} to put it on a grid, \code{\link[=fev_fuel_profile]{fev_fuel_profile()}} to
+test its classes against a measurement before trusting them.
 }

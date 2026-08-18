@@ -13,22 +13,14 @@ CLC nomenclature guidelines,
 \url{https://land.copernicus.eu/content/corine-land-cover-nomenclature-guidelines/html/},
 verified 2026-08-16 against the 2019 illustrated guidelines, which agree on
 all 44 rows.
-
-CLCplus Backbone codes and labels: European Environment Agency catalogue
-record for the 2023 vintage,
-\doi{10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2}, verified 2026-08-18.
-Nomenclature derived from the EAGLE Land Cover Components.
 }
 \usage{
-fev_fuel_lookup(
-  type = c("bdforet_v2", "clc", "clcplus", "worldcover"),
-  file = NULL
-)
+fev_fuel_lookup(type = c("bdforet_v2", "clc", "worldcover"), file = NULL)
 }
 \arguments{
-\item{type}{Nomenclature to load: \code{"bdforet_v2"}, \code{"clc"} or \code{"clcplus"}.
-Both land cover tables are vintage-independent, so \code{"clc_2018"} and
-\code{"clcplus_2023"} resolve to \code{"clc"} and \code{"clcplus"}.}
+\item{type}{Nomenclature to load: \code{"bdforet_v2"}, \code{"clc"} or \code{"worldcover"}.
+The land cover tables are vintage-independent, so \code{"clc_2018"} and
+\code{"worldcover_2021"} resolve to \code{"clc"} and \code{"worldcover"}.}
 
 \item{file}{Optional path to a CSV of your own, replacing the shipped table
 entirely. It must have columns \code{code}, \code{fuel_type} and \code{burnable};
@@ -79,11 +71,6 @@ bdf[bdf$confidence == "ambiguous", c("code", "label", "notes")]
 
 clc <- fev_fuel_lookup("clc")
 table(clc$fuel_type, clc$burnable)
-
-# CLCplus splits what CORINE 311 could not: deciduous from evergreen
-# broadleaf, which is the sclerophyll distinction the Mediterranean needs.
-cpl <- fev_fuel_lookup("clcplus")
-cpl[cpl$code \%in\% c("3", "4"), c("code", "label", "fuel_type")]
 
 }
 \seealso{

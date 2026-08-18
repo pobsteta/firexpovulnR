@@ -1,10 +1,13 @@
 # ESA WorldCover import.
 #
-# The one 10 m land cover this package can actually fetch. CLCplus sits behind
-# EU Login and had to become a manual import; WorldCover is a cloud-optimised
-# GeoTIFF on a public bucket, so the window an analysis needs is read over HTTP
-# through GDAL's /vsicurl/ -- no account, and no 3 GB tile on disk to get a few
-# hundred square kilometres.
+# The package's 10 m land cover. A cloud-optimised GeoTIFF on a public bucket,
+# so the window an analysis needs is read over HTTP through GDAL's /vsicurl/ --
+# no account, and no 3 GB tile on disk to get a few hundred square kilometres.
+#
+# CLCplus Backbone was evaluated for this role and dropped: it sits behind EU
+# Login, and the one thing it offered that WorldCover does not -- evergreen
+# against deciduous broadleaf -- BD Foret already does in France, and by species
+# rather than by leaf phenology. See NEWS for 0.21.0.
 
 #' Fetch ESA WorldCover (10 m land cover, no account needed)
 #'
@@ -13,14 +16,7 @@
 #' records provenance. Eleven classes at 10 m, derived from Sentinel-1 and
 #' Sentinel-2.
 #'
-#' @section Why this one is a fetch and CLCplus is not:
-#' Both are 10 m Sentinel-derived land cover. The difference is access:
-#' [fev_fetch_clcplus()] cannot download anything because the Copernicus Land
-#' Monitoring Service serves its product behind EU Login, and this package does
-#' not handle personal tokens. WorldCover is on an open bucket under CC-BY 4.0,
-#' so this function does the whole job.
-#'
-#' It also does not download a tile. A WorldCover tile is 3° square — 36 000 by
+#' @section It does not download a tile: A WorldCover tile is 3° square — 36 000 by
 #' 36 000 cells — and an analysis usually wants a fraction of one. GDAL reads
 #' cloud-optimised GeoTIFFs by range request, so only the requested window
 #' crosses the network.
@@ -56,9 +52,8 @@
 #'
 #' @return A [fev_source] holding a categorical `SpatRaster` of class codes.
 #'
-#' @seealso [fev_fuel_source()] to put it on a grid, [fev_fetch_clcplus()] for
-#'   the product that needs an account, [fev_fuel_profile()] to test its classes
-#'   against a measurement before trusting them.
+#' @seealso [fev_fuel_source()] to put it on a grid, [fev_fuel_profile()] to
+#'   test its classes against a measurement before trusting them.
 #'
 #' @source
 #' ESA WorldCover, CC-BY 4.0, <https://esa-worldcover.org>. Overall accuracy
@@ -222,9 +217,9 @@ fev_worldcover_url <- function(tile, version, year) {
 
 #' Attach the class vocabulary
 #'
-#' Same reason as for CLCplus: without a level table, `fev_fuel_source()` files
-#' these codes in the continuous register and reads class 20 as a measurement of
-#' twenty of something.
+#' Without a level table, `fev_fuel_source()` files these codes in the
+#' continuous register and reads class 20 as a measurement of twenty of
+#' something.
 #'
 #' @noRd
 fev_worldcover_categorise <- function(r) {

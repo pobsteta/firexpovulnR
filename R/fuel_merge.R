@@ -34,7 +34,7 @@
 #' @section Which source wins, and why it is not argument order:
 #' `hierarchy = "auto"` reads a rank per source type rather than trusting the
 #' order you happened to write. The ranking, highest first: **ESA WorldCover**,
-#' then **BD Forêt v2**, then **CLCplus Backbone**, then **CORINE**. Sources of
+#' then **BD Forêt v2**, then **CORINE**. Sources of
 #' equal or unknown rank fall back to argument order, which is what every
 #' earlier version did — so `fev_fuel_merge(bdforet, corine)` is unchanged.
 #'

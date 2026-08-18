@@ -25,7 +25,7 @@ understorey-bearing subset when it is present — \code{H_Bush}, \code{FL_0_1},
 \code{FL_1_3}, \code{Cover}, \code{PAI_tot} — and otherwise every layer.}
 
 \item{class}{Class to test for separability, as it appears in the fuel
-layer's levels (e.g. \code{"5"} for CLCplus low-growing woody plants). \code{NULL}
+layer's levels (e.g. \code{"20"} for WorldCover shrubland). \code{NULL}
 profiles every class without computing a separability statistic.}
 
 \item{min_cells}{Classes with fewer cells than this are reported but

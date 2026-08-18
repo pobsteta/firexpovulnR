@@ -55,7 +55,7 @@ already attributed keep their original source.
 
 \code{hierarchy = "auto"} reads a rank per source type rather than trusting the
 order you happened to write. The ranking, highest first: \strong{ESA WorldCover},
-then \strong{BD Forêt v2}, then \strong{CLCplus Backbone}, then \strong{CORINE}. Sources of
+then \strong{BD Forêt v2}, then \strong{CORINE}. Sources of
 equal or unknown rank fall back to argument order, which is what every
 earlier version did — so \code{fev_fuel_merge(bdforet, corine)} is unchanged.
 

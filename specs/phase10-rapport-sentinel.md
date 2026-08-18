@@ -494,6 +494,43 @@ recommandée pour le masque brûlable, la résolution et le millésime. Mais cel
 renforce l'exigence de l'étape 2 du brief — ne pas faire de la classe arbustive
 une source de sous-étage sans l'avoir mesurée localement.
 
+## 12. Épilogue — CLCplus retiré du paquet
+
+Le 2026-08-18, après les mesures des sections 10 et 11.
+
+Ce rapport recommandait CLCplus Backbone comme voie A, et le code correspondant a
+été écrit et testé. Il a ensuite été **retiré**. La raison n'est pas qu'il était
+mauvais, c'est que le périmètre est la France et que dans ce périmètre il
+n'apportait plus rien.
+
+Son seul avantage irremplaçable était de séparer le feuillu **sempervirent** du
+**caducifolié**, distinction que CORINE (311 les confond), ESA WorldCover (une
+seule classe *Tree cover*) et la HRL *Dominant Leaf Type* (feuillu/résineux
+seulement, vérifié le 2026-08-18) ne font pas.
+
+Mais **la BD Forêt la fait**, et plus finement : `FF1G06-06` chêne sempervirent
+contre `FF1G01-01` chêne décidu, c'est-à-dire l'essence et non la seule
+phénologie foliaire.
+
+Ce qui a rendu cet argument décisif est arrivé après ce rapport :
+`fev_fuel_attach()` accepte désormais une source catégorielle, donc la BD Forêt
+survit **à côté** d'une classe décidée par un raster à 10 m au lieu d'être
+écrasée par elle. Avant cela, mettre WorldCover au-dessus coûtait l'essence, et
+CLCplus gardait un intérêt. Après, non.
+
+Bilan de la voie A telle qu'elle a réellement été suivie :
+
+| Objectif du § 3 | Tenu par |
+|---|---|
+| Source 10 m raster, sans esquilles | **WorldCover** — et récupérable sans compte |
+| Millésime récent | **WorldCover** 2021 |
+| Séparation sclérophylle | **BD Forêt**, attachée |
+| Validation de la classe arbustive | `fev_fuel_profile()`, § 11 |
+
+Le reste du rapport tient. Il reste le compte rendu de l'instruction, y compris
+de la branche qui n'a pas été retenue — et c'est à ce titre qu'il n'est pas
+réécrit.
+
 ## Sources
 
 - [CLCplus Backbone — Copernicus Land Monitoring Service](https://land.copernicus.eu/en/products/clc-backbone)

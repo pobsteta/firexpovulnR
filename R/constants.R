@@ -81,107 +81,11 @@
 # fed the initial production of any department -- only an update.
 .FEV_BDFORET_V2_WINDOW <- c(2007L, 2018L)
 
-# Minimum mapping unit per source, with whether the source claims COMPLETE
-# coverage of its extent. Both matter for repairing rasterisation gaps.
-#
-# The reasoning: a source cannot represent an object smaller than its own minimum
-# mapping unit. So a hole smaller than the MMU, inside the extent of a source that
-# claims complete coverage, cannot be a real land-cover unit -- it is a
-# sub-cell topological gap left by rasterising polygons that share a boundary.
-# Above the MMU the hole may be genuine and must stay empty.
-#
-# This is what makes fev_fuel_fill_gaps() a repair rather than a guess, and why
-# the threshold is a property of the data rather than a tuning knob.
-#
-# Verified on the shipped extracts 2026-08-17: the smallest CORINE polygon is
-# 24.92 ha (Couchey) and 24.93 ha (Maures), against a specified 25 ha -- so the
-# figure below is not merely documented, it is observed. The largest residual gap
-# was 0.25 ha, a hundredfold smaller.
-#
-# `grid_driver` records whether a source is one the working grid is chosen FOR.
-# BD Forêt v2 and CLCplus can be primary, so asking for a cell finer than their
-# own mapped width wastes work and is worth saying. CORINE cannot: it exists here
-# to fill what the primary leaves empty, which means it must be rasterised onto
-# whatever grid the primary chose. Warning that 25 m is finer than CORINE's 100 m
-# width would fire on the package's own normal workflow and be wrong about it --
-# matching the primary's grid is mandatory, not waste.
-#
-# `native` records whether the source is a POLYGON coverage or already a raster,
-# and it is not a detail: rasterisation slivers are an artefact of the vector
-# path. A natively raster source has no shared polygon boundary to fall between,
-# so it has no slivers to repair -- and, symmetrically, any hole it does carry is
-# real. Its smallest representable object is one pixel, so no hole can ever be
-# below its minimum mapping unit. Both facts point the same way: never fill.
-#
-# That is a different reason from BD Foret's, and fev_fuel_fill_gaps() says which
-# one applies rather than collapsing the two into one message.
-#
-#   CORINE Land Cover: MMU 25 ha, minimum width 100 m, complete coverage of the
-#     EEA area. Copernicus Land Monitoring Service product specification.
-#   BD Foret v2: MMU 0.5 ha, minimum mapped width 20 m -- but it maps FORMATIONS
-#     VEGETALES ONLY, so its silence means "not forest", which is information
-#     rather than a gap. Never used to justify a fill.
-#   CLCplus Backbone: a 10 m RASTER derived from Sentinel-2 time series, 11
-#     classes, complete coverage of the EEA area, EPSG:3035. Verified 2026-08-18
-#     on the EEA catalogue record for the 2023 vintage. No MMU applies -- see
-#     `native` above.
-.FEV_FUEL_MMU <- list(
-  bdforet_v2   = list(mmu_ha = 0.5, min_width_m = 20, complete = FALSE,
-                      native = "vector", grid_driver = TRUE),
-  clc          = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
-                      native = "vector", grid_driver = FALSE),
-  clc_1990     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
-                      native = "vector", grid_driver = FALSE),
-  clc_2000     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
-                      native = "vector", grid_driver = FALSE),
-  clc_2006     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
-                      native = "vector", grid_driver = FALSE),
-  clc_2012     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
-                      native = "vector", grid_driver = FALSE),
-  clc_2018     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
-                      native = "vector", grid_driver = FALSE),
-  clcplus_2018 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
-                      native = "raster", grid_driver = TRUE),
-  clcplus_2021 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
-                      native = "raster", grid_driver = TRUE),
-  clcplus_2023 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
-                      native = "raster", grid_driver = TRUE),
-  worldcover_2020 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
-                         native = "raster", grid_driver = TRUE),
-  worldcover_2021 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
-                         native = "raster", grid_driver = TRUE),
-  lidarhd      = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
-                      native = "raster", grid_driver = FALSE),
-  custom       = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
-                      native = NA_character_, grid_driver = FALSE)
-)
-
-# CLCplus Backbone special cell values, from the EEA catalogue record for the
-# 2023 vintage, verified 2026-08-18. 253 is a real class of sorts -- seawater --
-# while 254 and 255 are the absence of one, and the fetcher separates them:
-# "outside the product area" and "no data" are unknown ground, not land cover.
-# CLCplus is distributed as 100 x 100 km tiles on the EEA reference grid, whose
-# cell code is the cell size followed by the lower-left coordinate in units of
-# that size, in EPSG:3035. Verified 2026-08-18 on the CLMS product page (tiling)
-# and the EEA reference grid documentation (coding).
-.FEV_EEA_TILE_M <- 1e5
-
-# A sanity envelope for the EEA reference grid, NOT a published grid extent --
-# it is generous on purpose. Its job is to catch an area that has no business
-# being expressed on a Europe-centred equal-area grid at all: CLCplus also
-# covers the French overseas departments, but as separate products in their own
-# UTM zones (verified 2026-08-18 on the GeoServer WMS layer list, which names
-# GF/32622, GP/32620, MQ/32620, RE/32740 and YT/32738). Reunion forced through
-# EPSG:3035 lands at a negative northing and would otherwise be handed back a
-# tile code of "E99N-31".
-.FEV_EEA_GRID_BOX <- c(xmin = 1e6, ymin = 1e6, xmax = 7.5e6, ymax = 5.5e6)
-
 # ESA WorldCover -------------------------------------------------------------
 #
-# The one 10 m land cover this package can actually FETCH. CLCplus sits behind
-# EU Login; WorldCover is a cloud-optimised GeoTIFF on a public bucket, so the
-# window an analysis needs can be read over HTTP without downloading a tile and
-# without an account.
+# The package's 10 m land cover: a cloud-optimised GeoTIFF on a public bucket,
+# so the window an analysis needs can be read over HTTP without downloading a
+# tile and without an account.
 #
 # Verified 2026-08-18, and the last of these from the product file itself:
 #   - bucket and path pattern: real listing of the v200/2021/map prefix;
@@ -207,30 +111,71 @@
 .FEV_WORLDCOVER_TILE_DEG <- 3L
 .FEV_WORLDCOVER_NODATA <- 0L
 
-.FEV_CLCPLUS_NODATA <- c(254L, 255L)
-.FEV_CLCPLUS_SEAWATER <- 253L
-
-# Independent validation of the 2018 and 2021 raster gave overall accuracies of
-# 85.2% and 85.3%, both with a 0.5% margin of error. Producer's and user's
-# accuracies meet the per-class target of at least 85% for every class EXCEPT
-# three, which are stated to be regionally lower: 5 (low-growing woody plants),
-# 8 (lichens and mosses) and 9 (non- and sparsely vegetated). The reasons given
-# are fuzzy class definition, limited spectral-temporal separability, and sparse
-# reference data.
+# Minimum mapping unit per source, with whether the source claims COMPLETE
+# coverage of its extent. Both matter for repairing rasterisation gaps.
 #
-# Class 5 is maquis and garrigue. The weakest class of the product is the one
-# that carries the fire risk in the Var, and fev_fetch_clcplus() says so out
-# loud rather than leaving it in a PDF.
+# The reasoning: a source cannot represent an object smaller than its own minimum
+# mapping unit. So a hole smaller than the MMU, inside the extent of a source that
+# claims complete coverage, cannot be a real land-cover unit -- it is a
+# sub-cell topological gap left by rasterising polygons that share a boundary.
+# Above the MMU the hole may be genuine and must stay empty.
 #
-# Verified 2026-08-18. The per-class figures themselves are NOT public: the ATBD
-# was read and contains none, and the validation reports are announced as
-# forthcoming. So this records which classes are weak, not by how much -- which
-# is the honest limit of what is known.
-.FEV_CLCPLUS_ACCURACY <- list(
-  overall = c(`2018` = 85.2, `2021` = 85.3),
-  margin_pct = 0.5,
-  target_per_class_pct = 85,
-  weak_classes = c(5L, 8L, 9L)
+# This is what makes fev_fuel_fill_gaps() a repair rather than a guess, and why
+# the threshold is a property of the data rather than a tuning knob.
+#
+# Verified on the shipped extracts 2026-08-17: the smallest CORINE polygon is
+# 24.92 ha (Couchey) and 24.93 ha (Maures), against a specified 25 ha -- so the
+# figure below is not merely documented, it is observed. The largest residual gap
+# was 0.25 ha, a hundredfold smaller.
+#
+# `grid_driver` records whether a source is one the working grid is chosen FOR.
+# BD Forêt v2 and WorldCover can be primary, so asking for a cell finer than their
+# own mapped width wastes work and is worth saying. CORINE cannot: it exists here
+# to fill what the primary leaves empty, which means it must be rasterised onto
+# whatever grid the primary chose. Warning that 25 m is finer than CORINE's 100 m
+# width would fire on the package's own normal workflow and be wrong about it --
+# matching the primary's grid is mandatory, not waste.
+#
+# `native` records whether the source is a POLYGON coverage or already a raster,
+# and it is not a detail: rasterisation slivers are an artefact of the vector
+# path. A natively raster source has no shared polygon boundary to fall between,
+# so it has no slivers to repair -- and, symmetrically, any hole it does carry is
+# real. Its smallest representable object is one pixel, so no hole can ever be
+# below its minimum mapping unit. Both facts point the same way: never fill.
+#
+# That is a different reason from BD Foret's, and fev_fuel_fill_gaps() says which
+# one applies rather than collapsing the two into one message.
+#
+#   CORINE Land Cover: MMU 25 ha, minimum width 100 m, complete coverage of the
+#     EEA area. Copernicus Land Monitoring Service product specification.
+#   BD Foret v2: MMU 0.5 ha, minimum mapped width 20 m -- but it maps FORMATIONS
+#     VEGETALES ONLY, so its silence means "not forest", which is information
+#     rather than a gap. Never used to justify a fill.
+#   ESA WorldCover: a 10 m RASTER from Sentinel-1 and Sentinel-2, 11 classes,
+#     complete coverage, EPSG:4326. No MMU applies -- see `native` above.
+.FEV_FUEL_MMU <- list(
+  bdforet_v2   = list(mmu_ha = 0.5, min_width_m = 20, complete = FALSE,
+                      native = "vector", grid_driver = TRUE),
+  clc          = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_1990     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2000     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2006     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2012     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2018     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  worldcover_2020 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
+                         native = "raster", grid_driver = TRUE),
+  worldcover_2021 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
+                         native = "raster", grid_driver = TRUE),
+  lidarhd      = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
+                      native = "raster", grid_driver = FALSE),
+  custom       = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
+                      native = NA_character_, grid_driver = FALSE)
 )
 
 # LiDAR HD, verified 2026-08-17 by GetCapabilities, DescribeFeatureType and real
@@ -671,9 +616,6 @@ fev_fuel_weights <- function(weights = NULL, quiet = FALSE) {
   worldcover_2021 = 40L,
   worldcover_2020 = 40L,
   bdforet_v2      = 30L,
-  clcplus_2023    = 20L,
-  clcplus_2021    = 20L,
-  clcplus_2018    = 20L,
   clc             = 10L,
   clc_2018        = 10L,
   clc_2012        = 10L,

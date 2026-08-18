@@ -1,5 +1,15 @@
 # Brief — Phase 10 : CLCplus Backbone comme source de combustible
 
+> **Périmé le 2026-08-18.** Ce brief a été exécuté en entier, puis CLCplus a été
+> retiré du paquet : le périmètre est la France, et la BD Forêt y fait la
+> séparation sempervirent/caducifolié plus finement, par l'essence. Depuis que
+> `fev_fuel_attach()` la garde vivante à côté d'une classe décidée par un raster
+> à 10 m, CLCplus n'apportait plus rien. Le rôle de source 10 m est tenu par
+> `fev_fetch_worldcover()`. Voir l'épilogue du rapport de phase 10 et NEWS 0.21.0.
+>
+> Conservé comme document de travail : il dit ce qui a été exigé et pourquoi,
+> et les étapes 2, 3 et 4 ont produit des fonctions qui, elles, sont restées.
+
 Fait suite à `phase10-rapport-sentinel.md`, qui instruit les voies satellitaires
 et écarte les autres. Ce brief ne retient que ce que ce rapport recommande.
 

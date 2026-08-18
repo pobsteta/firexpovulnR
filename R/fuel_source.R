@@ -33,7 +33,7 @@
 #' @section On the target resolution:
 #' `res` defaults to 25 m, and the floor below which it buys nothing is a
 #' property of the source, not a constant: BD Forêt v2's minimum mapped width is
-#' 20 m, CLCplus Backbone's is 10 m. Below its source's own width a grid
+#' 20 m, ESA WorldCover's is 10 m. Below its source's own width a grid
 #' resolves boundaries the data never had. At 100 m the advantage over CORINE —
 #' whose native raster is 100 m — disappears entirely. Between those, the cost
 #' is quadratic in memory and in focal-window time.
@@ -67,8 +67,8 @@
 #' @param x A [fev_source] from [fev_fetch_bdforet()] or [fev_fetch_corine()],
 #'   or a plain `sf`, `SpatVector` or `SpatRaster`.
 #' @param type Source type: `"bdforet_v2"`, `"clc_2018"` (and the other CORINE
-#'   vintages), `"clcplus_2023"` (and 2018, 2021), `"worldcover_2021"` (and
-#'   2020), `"lidarhd"` (phase 8, not implemented) or `"custom"`.
+#'   vintages), `"worldcover_2021"` (and 2020), `"lidarhd"` (phase 8, not
+#'   implemented) or `"custom"`.
 #' @param res Target cell size in CRS units, metres for the projected
 #'   defaults. See the resolution section.
 #' @param crs_work EPSG code of the working CRS. Default `2154`, BD Forêt's
@@ -113,7 +113,7 @@
 #'
 #' @export
 fev_fuel_source <- function(x,
-                            type = c("bdforet_v2", "clc_2018", "clcplus_2023",
+                            type = c("bdforet_v2", "clc_2018",
                                      "worldcover_2021", "lidarhd", "custom"),
                             res = 25,
                             crs_work = 2154,
@@ -221,7 +221,6 @@ new_fev_fuel_source <- function(categorical = NULL, continuous = NULL,
 # lookup.
 .FEV_FUEL_TYPES <- c("bdforet_v2",
                      "clc", paste0("clc_", c(1990, 2000, 2006, 2012, 2018)),
-                     paste0("clcplus_", c(2018, 2021, 2023)),
                      paste0("worldcover_", c(2020, 2021)),
                      "lidarhd", "custom")
 
@@ -249,9 +248,9 @@ fev_fuel_default_lookup <- function(type) {
 #' Refuse a resolution that makes no sense, and say why for the ones that do
 #'
 #' The floor is not a constant: it is the minimum mapped width of the source in
-#' hand, read from `.FEV_FUEL_MMU`. BD For\u00eat v2 resolves 20 m, CLCplus Backbone
-#' 10 m, and telling a CLCplus user that 10 m is finer than BD For\u00eat's detail
-#' would be both wrong and confusing.
+#' hand, read from `.FEV_FUEL_MMU`. BD For\u00eat v2 resolves 20 m, ESA WorldCover
+#' 10 m, and telling a WorldCover user that 10 m is finer than BD For\u00eat's
+#' detail would be both wrong and confusing.
 #'
 #' @noRd
 fev_check_res <- function(res, type = "bdforet_v2") {
