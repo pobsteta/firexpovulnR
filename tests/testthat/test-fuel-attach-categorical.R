@@ -28,8 +28,12 @@ test_that("a categorical source is carried alongside, not merged", {
 })
 
 test_that("the species survives a merge that gave WorldCover every pixel", {
-  merged <- suppressWarnings(suppressMessages(fev_fuel_merge(bd(), wc())))
-  # The merge really did leave BD Forêt nothing.
+  # Since 0.23.0 the ranking puts BD Forêt first, so this scenario has to be
+  # asked for -- and it is the one attach exists for: a user who wants the 10 m
+  # class and the vintage, and refuses to pay for them with the botany.
+  merged <- suppressWarnings(suppressMessages(
+    fev_fuel_merge(bd(), wc(), hierarchy = "secondary_first")
+  ))
   src <- fev_cat_levels(fev_fuel_categorical(merged)[["source"]])
   expect_equal(src[[2]][1], "worldcover_2021")
 

@@ -106,7 +106,11 @@ mk_source <- function(type, code, n = 8, res = 25, millesime = 2014) {
                                    register = "categorical"))
 }
 
-test_that("WorldCover outranks BD Foret whichever position it is passed in", {
+test_that("BD Foret outranks WorldCover whichever position it is passed in", {
+  # The ranking follows the measurement: on the same 25 m grid over the Maures
+  # LiDAR plots, BD Forêt explains more of every understorey metric than
+  # WorldCover does. It was the other way round in 0.19.0 and 0.20.0, on a
+  # judgement made before the figures existed.
   wc <- mk_source("worldcover_2021", 20)
   bd <- mk_source("bdforet_v2", 20)
 
@@ -116,21 +120,30 @@ test_that("WorldCover outranks BD Foret whichever position it is passed in", {
     lv <- terra::levels(fev_fuel_categorical(m)[["source"]])[[1]]
     lv$class[1]
   }
-  expect_equal(winner(a), "worldcover_2021")
-  expect_equal(winner(b), "worldcover_2021")
+  expect_equal(winner(a), "bdforet_v2")
+  expect_equal(winner(b), "bdforet_v2")
 })
 
 test_that("the ranking is a property of the type, not of argument order", {
   h <- firexpovulnR:::fev_fuel_rank_hierarchy
   expect_equal(h(mk_source("bdforet_v2", 20), mk_source("worldcover_2021", 20)),
-               "secondary_first")
-  expect_equal(h(mk_source("worldcover_2021", 20), mk_source("bdforet_v2", 20)),
                "primary_first")
-  # BD Forêt over CORINE, which is what every earlier version did.
+  expect_equal(h(mk_source("worldcover_2021", 20), mk_source("bdforet_v2", 20)),
+               "secondary_first")
+  # BD Forêt over CORINE, which is what every version has done.
   expect_equal(h(mk_source("bdforet_v2", 20), mk_source("clc_2018", 323)),
                "primary_first")
   expect_equal(h(mk_source("clc_2018", 323), mk_source("bdforet_v2", 20)),
                "secondary_first")
+  # And WorldCover still beats CORINE.
+  expect_equal(h(mk_source("clc_2018", 323), mk_source("worldcover_2021", 20)),
+               "secondary_first")
+})
+
+test_that("the ranking matches the measured order", {
+  pr <- firexpovulnR:::.FEV_FUEL_PRIORITY
+  expect_gt(pr[["bdforet_v2"]], pr[["worldcover_2021"]])
+  expect_gt(pr[["worldcover_2021"]], pr[["clc_2018"]])
 })
 
 test_that("an unrankable source falls back to argument order", {
@@ -144,11 +157,12 @@ test_that("an unrankable source falls back to argument order", {
 test_that("an explicit hierarchy still overrides the ranking", {
   wc <- mk_source("worldcover_2021", 20)
   bd <- mk_source("bdforet_v2", 20)
+  # Against the ranking, which now puts BD Forêt first.
   m <- suppressWarnings(suppressMessages(
-    fev_fuel_merge(bd, wc, hierarchy = "primary_first")
+    fev_fuel_merge(bd, wc, hierarchy = "secondary_first")
   ))
   lv <- terra::levels(fev_fuel_categorical(m)[["source"]])[[1]]
-  expect_equal(lv$class[1], "bdforet_v2")
+  expect_equal(lv$class[1], "worldcover_2021")
 })
 
 test_that("a source that fills nothing is announced as a replacement", {

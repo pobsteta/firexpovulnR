@@ -618,22 +618,27 @@ fev_fuel_weights <- function(weights = NULL, quiet = FALSE) {
 # Thematic depth does: species and crown cover are real information about
 # structure, and a single "Tree cover" class is not.
 #
-# WorldCover is nonetheless ranked on top here, on an explicit decision, because
-# what this measurement holds constant is exactly what WorldCover is for: 10 m
-# instead of 25, and a 2021 vintage everywhere instead of 2008-2018 in France
-# only. The trade is resolution and recency against thematic depth, and it is
-# now quantified rather than argued.
+# The ranking below FOLLOWS that measurement: BD Foret decides the class, and
+# WorldCover fills what it leaves unmapped. It was the other way round in 0.19.0
+# and 0.20.0, on a judgement made before the figures existed.
+#
+# What the measurement deliberately holds constant is exactly what WorldCover is
+# for: 10 m instead of 25, and a 2021 vintage everywhere instead of 2008-2018 in
+# France only. Ranking BD Foret first therefore buys thematic depth and gives up
+# resolution and recency -- a real trade, now made with the numbers in hand. For
+# a study outside France, or one where the vintage matters more than the species,
+# pass hierarchy explicitly at the call site.
+#
+# It costs less than it used to: since fev_fuel_attach() takes a categorical
+# source, whichever loses still travels alongside instead of being discarded.
 #
 # Two caveats on the figures: two plots of one massif, 566 cells; and the class
 # counts differ (6, 3, 5), which mechanically favours the richer nomenclature --
 # though 6 against 5 does not explain a factor of four.
-#
-# To follow the measurement instead, swap the two ranks below, or pass
-# hierarchy = "primary_first" with BD Foret as primary at the call site.
 .FEV_FUEL_PRIORITY <- c(
-  worldcover_2021 = 40L,
-  worldcover_2020 = 40L,
-  bdforet_v2      = 30L,
+  bdforet_v2      = 40L,
+  worldcover_2021 = 30L,
+  worldcover_2020 = 30L,
   clc             = 10L,
   clc_2018        = 10L,
   clc_2012        = 10L,
