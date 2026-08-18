@@ -1,3 +1,44 @@
+# firexpovulnR 0.25.1 (2026-08-18)
+
+### Huit dalles inversées puis jetées, sur une extension de fichier
+
+Défaut trouvé en lançant la campagne, pas en la testant. `fev_lidar_batch()`
+écrivait chaque raster sous un nom temporaire avant de le renommer — la
+précaution est bonne, une écriture interrompue ne doit jamais passer pour une
+dalle finie — mais le nom était construit ainsi :
+
+```r
+tmp <- paste0(dest, ".part")   # ..._fuel.tif.part
+```
+
+`terra::writeRaster()` déduit son pilote de l'extension, et sur `.part` il
+refuse net : *« cannot guess file type from filename »*. Chaque dalle était donc
+téléchargée, fenêtrée, inversée pendant deux minutes — **puis jetée à la
+dernière ligne**. Le pire endroit possible pour échouer : tout le coût payé,
+rien de gardé.
+
+Le suffixe passe **avant** l'extension : `_fuel.part.tif`. Le pilote redevient
+déductible, et la reprise ne peut pas s'y tromper puisqu'elle teste `_fuel.tif`
+au nom exact.
+
+### Pourquoi ni les tests ni le `check` ne pouvaient le voir
+
+Tout `test-lidar-batch.R` pointe vers `example.invalid`. Chaque dalle y échoue au
+téléchargement, donc **aucun test n'atteignait l'écriture** : la suite couvrait
+la reprise, le plan et la répartition, et laissait sans surveillance la seule
+ligne qui produit le résultat. Trois tests s'ajoutent, dont un qui écrit
+réellement un raster sous le nom temporaire — un test sur la seule forme de la
+chaîne aurait passé sur `.tif.part` aussi, s'il avait été écrit pour coller au
+code.
+
+### Le manifeste dit maintenant pourquoi
+
+`failed` sans raison renvoie à un log qui peut ne plus exister, et la raison
+n'arrivait qu'à la toute fin : un `warning` différé s'accumule dans un
+`Rscript` et ne s'imprime qu'au retour de l'appel de haut niveau, pages après la
+dalle qui l'a levée. Une colonne `error`, remplie au moment de l'échec, et le
+message par dalle qui la porte.
+
 # firexpovulnR 0.25.0 (2026-08-18)
 
 ### Les dalles d'une session partielle sont réparties, pas voisines

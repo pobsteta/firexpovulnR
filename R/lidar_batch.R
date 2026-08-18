@@ -78,12 +78,15 @@
 #' @param quiet Suppress progress reporting.
 #'
 #' @return A data frame, one row per tile: `tile`, `status`, `points`,
-#'   `seconds`, `path`, `rank`. `status` is `"done"` for a tile whose raster
-#'   already exists, `"next"` for one this run will take, `"todo"` for one left
-#'   for a later run, and `"written"` or `"failed"` afterwards. `rank` gives the
-#'   position in the traversal, so a dry run shows the actual batch rather than
-#'   the index order. Also written to `manifest.csv` in `out_dir` after every
-#'   tile, so an interrupted run leaves a readable record.
+#'   `seconds`, `path`, `error`, `rank`. `status` is `"done"` for a tile whose
+#'   raster already exists, `"next"` for one this run will take, `"todo"` for
+#'   one left for a later run, and `"written"` or `"failed"` afterwards.
+#'   `error` carries the reason a tile failed, so the manifest answers the
+#'   question on its own rather than sending you back to a console log.
+#'   `rank` gives the position in the traversal, so a dry run shows the actual
+#'   batch rather than the index order. Also written to `manifest.csv` in
+#'   `out_dir` after every tile, so an interrupted run leaves a readable
+#'   record.
 #'
 #' @seealso [fev_fuel_lidar()] for the inversion and what it costs,
 #'   [fev_lidarhd_available()] for the coverage check.
@@ -145,6 +148,11 @@ fev_lidar_batch <- function(aoi,
     tile = tiles, status = ifelse(done, "done", "todo"),
     points = NA_real_, seconds = NA_real_,
     path = ifelse(done, dest, NA_character_),
+    # A manifest that says "failed" without saying why sends you back to a log
+    # that may no longer exist -- and the reason only reached the console as a
+    # deferred warning at the very end of the run, long after the tile that
+    # raised it had scrolled past.
+    error = NA_character_,
     stringsAsFactors = FALSE
   )
 
@@ -193,12 +201,14 @@ fev_lidar_batch <- function(aoi,
     plan$points[i] <- row$points
     plan$seconds[i] <- round(proc.time()[["elapsed"]] - t0, 1)
     plan$path[i] <- row$path
+    plan$error[i] <- row$error
     # Rewritten after every tile: an interrupted run must still leave a record
     # that says which tiles were attempted and which failed.
     utils::write.csv(plan, file.path(out_dir, "manifest.csv"), row.names = FALSE)
     if (!quiet) {
+      why <- if (is.na(plan$error[i])) "" else paste0(" -- ", plan$error[i])
       fev_inform("[{which(todo == i)}/{length(todo)}] {tiles[i]}: \\
-                  {plan$status[i]} in {plan$seconds[i]}s.",
+                  {plan$status[i]} in {plan$seconds[i]}s{why}.",
                  .envir = environment())
     }
   }
@@ -223,8 +233,8 @@ fev_lidar_batch <- function(aoi,
 #' @noRd
 fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
                                 keep_las, quiet) {
-  fail <- function() list(status = "failed", points = NA_real_,
-                          path = NA_character_)
+  fail <- function(why) list(status = "failed", points = NA_real_,
+                             path = NA_character_, error = why)
   las_file <- file.path(las_dir, basename(url))
 
   if (!file.exists(las_file) || file.size(las_file) < 1e6) {
@@ -239,7 +249,7 @@ fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
     }, error = function(e) FALSE, warning = function(w) FALSE)
     if (!isTRUE(ok)) {
       unlink(las_file)
-      return(fail())
+      return(fail("download failed"))
     }
   }
 
@@ -250,23 +260,42 @@ fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
     }
     n <- lidR::npoints(las)
     r <- suppressMessages(fev_fuel_lidar(las, res = res))
-    tmp <- paste0(dest, ".part")
+    tmp <- fev_lidar_part_path(dest)
     terra::writeRaster(fev_fuel_continuous(r), tmp, overwrite = TRUE)
     # Rename only once written: a half-written raster must never look finished
     # to the next run's resume check.
     file.rename(tmp, dest)
-    list(status = "written", points = n, path = dest)
+    list(status = "written", points = n, path = dest, error = NA_character_)
   }, error = function(e) {
     if (!quiet) {
       fev_warn("{tile} failed: {conditionMessage(e)}", .envir = environment())
     }
-    fail()
+    fail(conditionMessage(e))
   })
 
   if (!keep_las) {
     unlink(las_file)
   }
   out
+}
+
+#' Where a tile is written before it counts as finished
+#'
+#' The suffix goes BEFORE the extension, not after it. `terra::writeRaster()`
+#' picks its driver from the extension, so `..._fuel.tif.part` is not a slightly
+#' odd name -- it is a name terra refuses outright, with "cannot guess file type
+#' from filename". That refusal cost a whole eight-tile campaign: every tile
+#' downloaded, every tile inverted for two minutes, and every one thrown away on
+#' the last line. The tests could not see it because they point at
+#' `example.invalid`, so every tile failed at the download and no test ever
+#' reached the write.
+#'
+#' `_fuel.part.tif` keeps the driver inferable and still cannot be mistaken for
+#' a finished tile, since resume tests `_fuel.tif` by exact name.
+#'
+#' @noRd
+fev_lidar_part_path <- function(dest) {
+  sub("\\.tif$", ".part.tif", dest)
 }
 
 #' A centred square of a tile

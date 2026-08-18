@@ -183,3 +183,47 @@ test_that("spread can be turned off, and then index order applies", {
                           dry_run = TRUE, quiet = TRUE)
   expect_equal(nrow(plan), 36L)
 })
+
+# The write, which no test above reaches -----------------------------------
+#
+# Everything before this points at example.invalid, so every tile fails at the
+# download and the run never gets as far as writing a raster. That blind spot
+# cost a full campaign: `paste0(dest, ".part")` produced "..._fuel.tif.part",
+# terra could not guess a driver from it, and all eight tiles died on the last
+# line after two minutes of inversion each. The suite was green throughout.
+
+test_that("the temporary name keeps the extension terra needs", {
+  tmp <- firexpovulnR:::fev_lidar_part_path("/out/LHD_FXX_0978_6252_fuel.tif")
+  expect_match(tmp, "\\.tif$")
+  # And it must still be distinguishable from a finished tile, since resume
+  # tests the final name by exact match.
+  expect_false(tmp == "/out/LHD_FXX_0978_6252_fuel.tif")
+})
+
+test_that("a raster can actually be written to the temporary name", {
+  # The regression itself: not that the string looks right, but that terra
+  # accepts it. A name test alone would have passed on ".tif.part" too, had it
+  # been written to match the code.
+  d <- withr::local_tempdir()
+  dest <- file.path(d, "LHD_FXX_0978_6252_fuel.tif")
+  tmp <- firexpovulnR:::fev_lidar_part_path(dest)
+  r <- terra::rast(nrows = 4, ncols = 4, vals = seq_len(16))
+  expect_no_error(terra::writeRaster(r, tmp, overwrite = TRUE))
+  expect_true(file.rename(tmp, dest))
+  expect_true(file.exists(dest))
+})
+
+test_that("a failed tile records why it failed", {
+  # "failed" with no reason sends the operator back to a log that may be gone,
+  # and the reason used to surface only as a deferred warning at the end of the
+  # run -- pages after the tile that raised it.
+  d <- withr::local_tempdir()
+  plan <- suppressWarnings(
+    fev_lidar_batch(fake_index("a"), d, quiet = TRUE)
+  )
+  expect_equal(plan$status, "failed")
+  expect_true("error" %in% names(plan))
+  expect_false(is.na(plan$error))
+  manifest <- utils::read.csv(file.path(d, "manifest.csv"))
+  expect_true("error" %in% names(manifest))
+})

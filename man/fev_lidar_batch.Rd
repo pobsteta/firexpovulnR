@@ -47,12 +47,15 @@ downloading anything.}
 }
 \value{
 A data frame, one row per tile: \code{tile}, \code{status}, \code{points},
-\code{seconds}, \code{path}, \code{rank}. \code{status} is \code{"done"} for a tile whose raster
-already exists, \code{"next"} for one this run will take, \code{"todo"} for one left
-for a later run, and \code{"written"} or \code{"failed"} afterwards. \code{rank} gives the
-position in the traversal, so a dry run shows the actual batch rather than
-the index order. Also written to \code{manifest.csv} in \code{out_dir} after every
-tile, so an interrupted run leaves a readable record.
+\code{seconds}, \code{path}, \code{error}, \code{rank}. \code{status} is \code{"done"} for a tile whose
+raster already exists, \code{"next"} for one this run will take, \code{"todo"} for
+one left for a later run, and \code{"written"} or \code{"failed"} afterwards.
+\code{error} carries the reason a tile failed, so the manifest answers the
+question on its own rather than sending you back to a console log.
+\code{rank} gives the position in the traversal, so a dry run shows the actual
+batch rather than the index order. Also written to \code{manifest.csv} in
+\code{out_dir} after every tile, so an interrupted run leaves a readable
+record.
 }
 \description{
 Walks a set of LiDAR HD tiles one at a time: downloads, inverts to fuel
