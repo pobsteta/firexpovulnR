@@ -143,7 +143,8 @@ fev_fuel_types <- function() {
 #' cpl[cpl$code %in% c("3", "4"), c("code", "label", "fuel_type")]
 #'
 #' @export
-fev_fuel_lookup <- function(type = c("bdforet_v2", "clc", "clcplus"),
+fev_fuel_lookup <- function(type = c("bdforet_v2", "clc", "clcplus",
+                                    "worldcover"),
                             file = NULL) {
   if (!is.null(file)) {
     if (!file.exists(file)) {
@@ -157,7 +158,8 @@ fev_fuel_lookup <- function(type = c("bdforet_v2", "clc", "clcplus"),
   type <- match.arg(type[1], c(
     "bdforet_v2",
     "clc", paste0("clc_", c(1990, 2000, 2006, 2012, 2018)),
-    "clcplus", paste0("clcplus_", c(2018, 2021, 2023))
+    "clcplus", paste0("clcplus_", c(2018, 2021, 2023)),
+    "worldcover", paste0("worldcover_", c(2020, 2021))
   ))
   # Neither nomenclature's fuel semantics change with the vintage: CORINE 323 is
   # sclerophyllous vegetation in 1990 as in 2018, and CLCplus class 4 is
@@ -166,7 +168,9 @@ fev_fuel_lookup <- function(type = c("bdforet_v2", "clc", "clcplus"),
   # Order matters here: "clcplus_2023" starts with "clc" too, so the longer stem
   # has to be tested first or every CLCplus request would silently read the
   # CORINE table -- 44 unrelated codes, and not one of them matching.
-  stem <- if (startsWith(type, "clcplus")) {
+  stem <- if (startsWith(type, "worldcover")) {
+    "worldcover"
+  } else if (startsWith(type, "clcplus")) {
     "clcplus"
   } else if (startsWith(type, "clc")) {
     "clc"

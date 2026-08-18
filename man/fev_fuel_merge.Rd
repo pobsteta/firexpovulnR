@@ -7,7 +7,7 @@
 fev_fuel_merge(
   primary,
   secondary,
-  hierarchy = c("primary_first", "secondary_first")
+  hierarchy = c("auto", "primary_first", "secondary_first")
 )
 }
 \arguments{
@@ -16,8 +16,11 @@ categorical register.}
 
 \item{secondary}{The auxiliary fuel source.}
 
-\item{hierarchy}{\code{"primary_first"} (default) or \code{"secondary_first"}, which
-swaps the two roles — including which grid the result lands on.}
+\item{hierarchy}{\code{"auto"} (default) ranks the two sources by type and lets
+the higher one win whichever position it was passed in; see the section on
+ranking. \code{"primary_first"} and \code{"secondary_first"} decide by argument
+position instead, \code{"secondary_first"} swapping the two roles — including
+which grid the result lands on.}
 }
 \value{
 A \code{fev_fuel_source} whose categorical register has two layers,
@@ -46,6 +49,25 @@ reported per source, or at least alongside the source proportions that
 Merging is \strong{idempotent} on that layer: re-merging an already-merged source
 with the same auxiliary changes no pixel and no attribution, because pixels
 already attributed keep their original source.
+}
+
+\section{Which source wins, and why it is not argument order}{
+
+\code{hierarchy = "auto"} reads a rank per source type rather than trusting the
+order you happened to write. The ranking, highest first: \strong{ESA WorldCover},
+then \strong{BD Forêt v2}, then \strong{CLCplus Backbone}, then \strong{CORINE}. Sources of
+equal or unknown rank fall back to argument order, which is what every
+earlier version did — so \code{fev_fuel_merge(bdforet, corine)} is unchanged.
+
+WorldCover sits on top deliberately, and the choice has a measured cost. It
+buys 10 m and a 2021 vintage everywhere, against 25 m and a 2008–2018 vintage
+for BD Forêt. It pays in thematic depth: no species, no crown cover, and a
+\emph{Shrubland} class that separates the LiDAR-measured understorey at only 0.688
+at best on the two Maures plots — its \emph{Shrubland} and \emph{Tree cover} cells
+carrying practically the same understorey.
+
+If that trade is wrong for your study, say so explicitly:
+\code{fev_fuel_merge(bdforet, worldcover, hierarchy = "primary_first")}.
 }
 
 \section{What gets reprojected}{

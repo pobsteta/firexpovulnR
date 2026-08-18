@@ -31,6 +31,23 @@
 #' with the same auxiliary changes no pixel and no attribution, because pixels
 #' already attributed keep their original source.
 #'
+#' @section Which source wins, and why it is not argument order:
+#' `hierarchy = "auto"` reads a rank per source type rather than trusting the
+#' order you happened to write. The ranking, highest first: **ESA WorldCover**,
+#' then **BD Forêt v2**, then **CLCplus Backbone**, then **CORINE**. Sources of
+#' equal or unknown rank fall back to argument order, which is what every
+#' earlier version did — so `fev_fuel_merge(bdforet, corine)` is unchanged.
+#'
+#' WorldCover sits on top deliberately, and the choice has a measured cost. It
+#' buys 10 m and a 2021 vintage everywhere, against 25 m and a 2008–2018 vintage
+#' for BD Forêt. It pays in thematic depth: no species, no crown cover, and a
+#' *Shrubland* class that separates the LiDAR-measured understorey at only 0.688
+#' at best on the two Maures plots — its *Shrubland* and *Tree cover* cells
+#' carrying practically the same understorey.
+#'
+#' If that trade is wrong for your study, say so explicitly:
+#' `fev_fuel_merge(bdforet, worldcover, hierarchy = "primary_first")`.
+#'
 #' @section What gets reprojected:
 #' The primary is never touched. When the auxiliary sits on a different CRS or
 #' a different grid it is reprojected or resampled onto the primary's grid with
@@ -47,8 +64,11 @@
 #' @param primary The primary fuel source, a `fev_fuel_source` with a
 #'   categorical register.
 #' @param secondary The auxiliary fuel source.
-#' @param hierarchy `"primary_first"` (default) or `"secondary_first"`, which
-#'   swaps the two roles — including which grid the result lands on.
+#' @param hierarchy `"auto"` (default) ranks the two sources by type and lets
+#'   the higher one win whichever position it was passed in; see the section on
+#'   ranking. `"primary_first"` and `"secondary_first"` decide by argument
+#'   position instead, `"secondary_first"` swapping the two roles — including
+#'   which grid the result lands on.
 #'
 #' @return A `fev_fuel_source` whose categorical register has two layers,
 #'   `class` and `source`, and whose lookup is the union of both tables.
@@ -73,12 +93,17 @@
 #'
 #' @export
 fev_fuel_merge <- function(primary, secondary,
-                           hierarchy = c("primary_first", "secondary_first")) {
+                           hierarchy = c("auto", "primary_first",
+                                         "secondary_first")) {
   hierarchy <- match.arg(hierarchy)
   fev_check_fuel_source(primary, "primary")
   fev_check_fuel_source(secondary, "secondary")
   fev_fuel_require_register(primary, "categorical", "fev_fuel_merge")
   fev_fuel_require_register(secondary, "categorical", "fev_fuel_merge")
+
+  if (identical(hierarchy, "auto")) {
+    hierarchy <- fev_fuel_rank_hierarchy(primary, secondary)
+  }
 
   if (identical(hierarchy, "secondary_first")) {
     tmp <- primary
@@ -165,6 +190,23 @@ fev_fuel_merge <- function(primary, secondary,
   names(src) <- "source"
 
   out_cat <- c(merged, src)
+
+  # A complete-coverage source on top leaves the other nothing to fill, and the
+  # word "merge" makes that easy to miss. Worth saying once, out loud: this is
+  # not a merge any more, it is a replacement.
+  n_secondary <- as.numeric(terra::global(
+    src == match(s_label, src_labels), "sum", na.rm = TRUE
+  )[1, 1])
+  if (isTRUE(n_secondary == 0)) {
+    fev_warn(c(
+      "{.val {s_label}} contributed no cell: {.val {p_label}} maps every \\
+       pixel it could have filled.",
+      i = "A complete-coverage source on top is a replacement, not a merge -- \\
+           nothing of {.val {s_label}} survives in the result.",
+      i = "If you meant it to fill gaps instead, pass \\
+           {.code hierarchy = \"primary_first\"} with it as {.arg primary}."
+    ), class = "fev_merge_no_contribution", .envir = environment())
+  }
 
   lookup <- fev_merge_lookups(primary$lookup, secondary$lookup)
 
@@ -289,4 +331,27 @@ fev_merge_millesime <- function(primary, secondary) {
   }
   out <- c(as_named(primary), as_named(secondary))
   out[!duplicated(names(out))]
+}
+
+
+#' Rank two sources by type rather than by argument order
+#'
+#' Argument order is a poor arbiter: it records which object the user happened
+#' to name first, not which dataset should decide a pixel. This reads the
+#' shipped ranking instead, and falls back to argument order whenever the
+#' ranking has nothing to say -- unknown types, custom sources, or a tie.
+#'
+#' @noRd
+fev_fuel_rank_hierarchy <- function(primary, secondary) {
+  rank_of <- function(x) {
+    types <- fev_fuel_components(x)
+    known <- .FEV_FUEL_PRIORITY[types[types %in% names(.FEV_FUEL_PRIORITY)]]
+    if (!length(known)) NA_integer_ else max(known)
+  }
+  p <- rank_of(primary)
+  s <- rank_of(secondary)
+  if (is.na(p) || is.na(s) || p >= s) {
+    return("primary_first")
+  }
+  "secondary_first"
 }

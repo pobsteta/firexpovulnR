@@ -20,7 +20,10 @@ record for the 2023 vintage,
 Nomenclature derived from the EAGLE Land Cover Components.
 }
 \usage{
-fev_fuel_lookup(type = c("bdforet_v2", "clc", "clcplus"), file = NULL)
+fev_fuel_lookup(
+  type = c("bdforet_v2", "clc", "clcplus", "worldcover"),
+  file = NULL
+)
 }
 \arguments{
 \item{type}{Nomenclature to load: \code{"bdforet_v2"}, \code{"clc"} or \code{"clcplus"}.

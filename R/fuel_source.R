@@ -67,8 +67,8 @@
 #' @param x A [fev_source] from [fev_fetch_bdforet()] or [fev_fetch_corine()],
 #'   or a plain `sf`, `SpatVector` or `SpatRaster`.
 #' @param type Source type: `"bdforet_v2"`, `"clc_2018"` (and the other CORINE
-#'   vintages), `"clcplus_2023"` (and 2018, 2021), `"lidarhd"` (phase 8, not
-#'   implemented) or `"custom"`.
+#'   vintages), `"clcplus_2023"` (and 2018, 2021), `"worldcover_2021"` (and
+#'   2020), `"lidarhd"` (phase 8, not implemented) or `"custom"`.
 #' @param res Target cell size in CRS units, metres for the projected
 #'   defaults. See the resolution section.
 #' @param crs_work EPSG code of the working CRS. Default `2154`, BD Forêt's
@@ -114,7 +114,7 @@
 #' @export
 fev_fuel_source <- function(x,
                             type = c("bdforet_v2", "clc_2018", "clcplus_2023",
-                                     "lidarhd", "custom"),
+                                     "worldcover_2021", "lidarhd", "custom"),
                             res = 25,
                             crs_work = 2154,
                             field = NULL,
@@ -222,6 +222,7 @@ new_fev_fuel_source <- function(categorical = NULL, continuous = NULL,
 .FEV_FUEL_TYPES <- c("bdforet_v2",
                      "clc", paste0("clc_", c(1990, 2000, 2006, 2012, 2018)),
                      paste0("clcplus_", c(2018, 2021, 2023)),
+                     paste0("worldcover_", c(2020, 2021)),
                      "lidarhd", "custom")
 
 #' @noRd

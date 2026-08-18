@@ -146,6 +146,10 @@
                       native = "raster", grid_driver = TRUE),
   clcplus_2023 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
                       native = "raster", grid_driver = TRUE),
+  worldcover_2020 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
+                         native = "raster", grid_driver = TRUE),
+  worldcover_2021 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
+                         native = "raster", grid_driver = TRUE),
   lidarhd      = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
                       native = "raster", grid_driver = FALSE),
   custom       = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
@@ -171,6 +175,37 @@
 # EPSG:3035 lands at a negative northing and would otherwise be handed back a
 # tile code of "E99N-31".
 .FEV_EEA_GRID_BOX <- c(xmin = 1e6, ymin = 1e6, xmax = 7.5e6, ymax = 5.5e6)
+
+# ESA WorldCover -------------------------------------------------------------
+#
+# The one 10 m land cover this package can actually FETCH. CLCplus sits behind
+# EU Login; WorldCover is a cloud-optimised GeoTIFF on a public bucket, so the
+# window an analysis needs can be read over HTTP without downloading a tile and
+# without an account.
+#
+# Verified 2026-08-18, and the last of these from the product file itself:
+#   - bucket and path pattern: real listing of the v200/2021/map prefix;
+#   - 3 x 3 degree tiles in EPSG:4326, named by their SOUTH-WEST corner --
+#     N42E006 was read and its extent is exactly 6-9 E, 42-45 N;
+#   - uint8, and NODATA IS 0: the file's own colour table gives value 0 an
+#     alpha of 0, and Digital Earth Africa's specification states it outright;
+#   - the eleven class codes were confirmed against the colour table EMBEDDED IN
+#     THE RASTER, every one of the eleven RGB triplets matching the published
+#     legend. That is verification from the data rather than from a document
+#     about the data.
+.FEV_WORLDCOVER_BUCKET <-
+  "https://esa-worldcover.s3.eu-central-1.amazonaws.com"
+
+# v100 is the 2020 map, v200 the 2021 one. They are separate products rather
+# than a time series: the producers warn against differencing them for change
+# detection, because method changes dominate real change.
+.FEV_WORLDCOVER_VERSIONS <- list(
+  `2020` = list(version = "v100", accuracy_pct = 74.4, margin_pct = 0.1),
+  `2021` = list(version = "v200", accuracy_pct = 76.7, margin_pct = 0.5)
+)
+
+.FEV_WORLDCOVER_TILE_DEG <- 3L
+.FEV_WORLDCOVER_NODATA <- 0L
 
 .FEV_CLCPLUS_NODATA <- c(254L, 255L)
 .FEV_CLCPLUS_SEAWATER <- 253L
@@ -611,3 +646,38 @@ fev_fuel_weights <- function(weights = NULL, quiet = FALSE) {
 # why the package requests in EPSG:4326 where the axis convention is
 # unambiguous. Determined experimentally on 2026-08-15.
 .FEV_WFS_REQUEST_CRS <- 4326L
+
+
+# Which source wins a pixel when two of them map it -------------------------
+#
+# `fev_fuel_merge(hierarchy = "auto")` reads this instead of trusting argument
+# order. Higher wins. Equal or unknown ranks fall back to argument order, which
+# is the behaviour every earlier version had.
+#
+# The ordering below is a JUDGEMENT, not a measurement, and one of its rows is
+# worth arguing about:
+#
+#   WorldCover on top was chosen deliberately, for 10 m and a recent vintage
+#   everywhere. The cost is real and measured: on the two Maures LiDAR plots its
+#   Shrubland class separates the understorey only weakly (0.55-0.69, against 0.5
+#   for no information), and its Shrubland and Tree cover classes carry
+#   practically the same measured understorey. It also has no species and no
+#   crown-cover reading, both of which BD Foret does have.
+#
+#   Put differently: this ranking buys resolution and recency, and pays in
+#   thematic depth. Reverse the two ranks below, or pass hierarchy explicitly,
+#   if that trade is wrong for your study.
+.FEV_FUEL_PRIORITY <- c(
+  worldcover_2021 = 40L,
+  worldcover_2020 = 40L,
+  bdforet_v2      = 30L,
+  clcplus_2023    = 20L,
+  clcplus_2021    = 20L,
+  clcplus_2018    = 20L,
+  clc             = 10L,
+  clc_2018        = 10L,
+  clc_2012        = 10L,
+  clc_2006        = 10L,
+  clc_2000        = 10L,
+  clc_1990        = 10L
+)

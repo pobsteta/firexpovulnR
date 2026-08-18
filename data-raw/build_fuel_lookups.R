@@ -270,6 +270,50 @@ clcplus <- tibble_rows(
 # non-fuel, which is the one reading the package refuses everywhere else.
 
 # --------------------------------------------------------------------------
+# ESA WorldCover -- 11 classes, 10 m raster, Sentinel-1 + Sentinel-2
+# --------------------------------------------------------------------------
+# Codes and labels verified 2026-08-18 AGAINST THE PRODUCT ITSELF: the colour
+# table embedded in tile N42E006 gives all eleven RGB triplets, and every one
+# matches the published legend. That is verification from the data rather than
+# from a document about the data, and it is the strongest route this package
+# has used for any nomenclature.
+#
+# WHAT THIS SOURCE IS FOR, and it is worth being blunt. WorldCover is ranked
+# ABOVE BD Foret in .FEV_FUEL_PRIORITY, so by default it decides the class of
+# every pixel it maps. It buys 10 m and a 2021 vintage everywhere. It pays in
+# thematic depth, and the bill was measured rather than guessed:
+#
+#   - On the two Maures LiDAR plots its Shrubland class separates the measured
+#     understorey at 0.688 at best (load 0-1 m) and 0.55-0.58 elsewhere, against
+#     0.5 for no information at all.
+#   - Its Shrubland and Tree cover cells carry practically the same understorey:
+#     median bush height 3.2 m against 2.8 m, median load 1-3 m 0.068 against
+#     0.066. The shrub class does not say where the surface fuel is.
+#   - There is no species and no crown-cover reading. BD Foret separates holm
+#     oak from beech and closed from open; this nomenclature cannot.
+#
+# So every vegetation row below is `ambiguous`, and fev_fuel_profile() is how a
+# user settles the doubt on their own ground instead of arguing about it.
+
+worldcover <- tibble_rows(
+  # code    label                        crown  fuel_type              burnable confidence   notes
+  r("10",   "Tree cover",                NA,    "broadleaf_closed",    TRUE,    "ambiguous", "Any tree cover at all: conifer and broadleaf, evergreen and deciduous, closed and open, all in one class. Mapped to the closed broadleaf type because that is the commonest case in the areas this package targets, but the class genuinely does not say. This is the single biggest loss against BD Foret, which separates species and crown cover."),
+  r("20",   "Shrubland",                 NA,    "shrubland",           TRUE,    "ambiguous", "THE CLASS THIS PACKAGE NEEDS MOST AND TRUSTS LEAST. Measured against LiDAR on the two Maures plots it separates the understorey at 0.688 at best, and its cells carry practically the same measured understorey as Tree cover cells. Treat it as a hint, not as a maquis map, until fev_fuel_profile() says otherwise on your ground."),
+  r("30",   "Grassland",                 NA,    "grassland",           TRUE,    "clear",     "Herbaceous formation. Fine fuel, cured for part of the year."),
+  r("40",   "Cropland",                  NA,    "cropland",            FALSE,   "ambiguous", "Worked agricultural land. FALSE for the same reason as CORINE 211: stubble carries fire for a few weeks a year and the mask has no season."),
+  r("50",   "Built-up",                  NA,    "non_fuel",            FALSE,   "ambiguous", "Built surface. Same reservation as CORINE 112: the wildland-urban interface is where exposure matters most, and the class records buildings rather than the fuel between them. Non-fuel here, an ASSET in fev_vuln_layer()."),
+  r("60",   "Bare / sparse vegetation",  NA,    "sparse_vegetation",   TRUE,    "ambiguous", "Bare and sparsely vegetated. Holds both genuine fuel breaks and discontinuous fuel, as CORINE 331-333 do. Burnable TRUE with a low availability weight."),
+  r("70",   "Snow and ice",              NA,    "non_fuel",            FALSE,   "clear",     "Permanent snow and ice."),
+  r("80",   "Permanent water bodies",    NA,    "non_fuel",            FALSE,   "clear",     "Open water."),
+  r("90",   "Herbaceous wetland",        NA,    "grassland",           TRUE,    "ambiguous", "Herbaceous vegetation on saturated ground. Real biomass, but wet for most of the year -- burnable TRUE on the biomass, with the moisture left to the availability weight rather than pretended away here."),
+  r("95",   "Mangroves",                 NA,    "non_fuel",            FALSE,   "ambiguous", "Absent from this package's target areas. FALSE on the grounds that a tidal evergreen forest does not carry wildfire in any regime this package models; the row exists so that a code present in the data never reads as NA."),
+  r("100",  "Moss and lichen",           NA,    "sparse_vegetation",   TRUE,    "ambiguous", "Moss and lichen cover, at altitude or on rock. Carries fire poorly and rarely. Kept burnable for consistency with CORINE 333 rather than on evidence.")
+)
+# Code 0 is deliberately ABSENT: it is the product's nodata, not a class, and
+# fev_fetch_worldcover() turns it into NA. Giving it a fuel type would assert
+# that unknown ground is non-fuel.
+
+# --------------------------------------------------------------------------
 # Validation, then write
 # --------------------------------------------------------------------------
 # These checks are the reason this script exists rather than two hand-edited
@@ -300,6 +344,8 @@ validate <- function(x, nomenclature, expected_n) {
 bdforet <- validate(bdforet, "bdforet_v2", 32L)
 clc     <- validate(clc, "clc", 44L)
 clcplus <- validate(clcplus, "clcplus", 12L)
+# 11 classes: the WorldCover legend, verified against the raster's colour table.
+worldcover <- validate(worldcover, "worldcover", 11L)
 
 out_dir <- file.path("inst", "extdata")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -315,9 +361,11 @@ write_lookup <- function(x, file) {
 write_lookup(bdforet, file.path(out_dir, "fuel_lookup_bdforet_v2.csv"))
 write_lookup(clc, file.path(out_dir, "fuel_lookup_clc.csv"))
 write_lookup(clcplus, file.path(out_dir, "fuel_lookup_clcplus.csv"))
+write_lookup(worldcover, file.path(out_dir, "fuel_lookup_worldcover.csv"))
 
 # A summary worth reading after every rebuild: it says how much of each
 # nomenclature the package is guessing at.
 print(table(bdforet$fuel_type, bdforet$confidence))
 print(table(clc$fuel_type, clc$confidence))
 print(table(clcplus$fuel_type, clcplus$confidence))
+print(table(worldcover$fuel_type, worldcover$confidence))
