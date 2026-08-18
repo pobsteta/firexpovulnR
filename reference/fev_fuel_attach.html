@@ -15,7 +15,7 @@ one."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.22.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.23.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -112,6 +112,21 @@ botany from BD Forêt riding alongside in its own layer.</p>
 <code><a href="fev_fuel_fill_gaps.html">fev_fuel_fill_gaps()</a></code> leaves it alone — its <code>NA</code> mean "not forest here",
 which is information, and filling them from a modal neighbour would invent
 species.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="what-it-costs-measured">What it costs, measured<a class="anchor" aria-label="anchor" href="#what-it-costs-measured"></a></h2>
+
+
+<p>Slow, and slow enough to plan around. Attempted on the development machine
+2026-08-18, on real LiDAR HD tiles over the Maures at 25 m — every figure is
+a <strong>lower bound</strong>, because none of the three runs completed:</p><table class="table table"><tr><td>Extent</td><td>Points</td><td>Wall clock</td></tr><tr><td>250 m square</td><td>3.0 M</td><td>&gt; 25 min, unfinished</td></tr><tr><td>500 m square</td><td>11.1 M</td><td>&gt; 40 min, unfinished</td></tr><tr><td>1 km tile</td><td>full</td><td>&gt; 90 min, unfinished</td></tr></table><p>Downloading is not the bottleneck: a 248 MB tile arrived in 42 s. The
+inversion is.</p>
+<p>Two consequences worth stating. A departmental run is a batch job with a
+resume path, not something to start interactively — which is why the phase 8
+brief asked for one. And <strong>do not buy speed by thinning the cloud</strong>: the
+understorey stratum is the first thing to disappear as pulse density falls,
+so thinning biases exactly the quantity this function exists to measure. See
+<code><a href="fev_lidar_density.html">fev_lidar_density()</a></code>.</p>
     </div>
     <div class="section level2">
     <h2 id="coverage-is-a-per-metric-mask-not-a-source-layer">Coverage is a per-metric mask, not a source layer<a class="anchor" aria-label="anchor" href="#coverage-is-a-per-metric-mask-not-a-source-layer"></a></h2>

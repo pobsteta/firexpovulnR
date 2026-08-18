@@ -1,5 +1,60 @@
 # Changelog
 
+## firexpovulnR 0.23.0 (2026-08-18)
+
+#### Élargir la mesure au-delà des deux placettes : tenté, et hors de portée
+
+Le résultat est négatif et vaut d’être consigné. Traiter davantage de
+dalles LiDAR HD pour élargir l’échantillon a échoué non par manque de
+donnée — 505 dalles sont disponibles sur le massif, et une dalle de 248
+Mo arrive en 42 s — mais sur le **coût d’inversion** de
+[`fev_fuel_lidar()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.md).
+
+Trois tentatives, toutes des bornes inférieures puisqu’aucune n’a abouti
+: 250 m et 3,0 M de points, plus de 25 min ; 500 m et 11,1 M de points,
+plus de 40 min ; une dalle entière, plus de 90 min.
+
+Ces chiffres sont désormais dans la documentation de
+[`fev_fuel_lidar()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.md),
+avec les deux conséquences qu’ils imposent : un traitement départemental
+est un travail par lots avec reprise, pas une commande interactive ; et
+**on n’achète pas de la vitesse en éclaircissant le nuage**, puisque la
+strate de sous-étage est la première à disparaître quand la densité
+baisse — ce serait fausser précisément la grandeur mesurée.
+
+La mesure reste donc ce qu’elle était : deux placettes, 566 cellules, un
+massif. Un ordre de grandeur et une méthode, ce que le code, NEWS et
+l’article disaient déjà.
+
+#### La BD Forêt décide désormais la classe
+
+`.FEV_FUEL_PRIORITY` suit la mesure publiée en 0.22.0 au lieu de la
+contredire. L’ordre est maintenant **BD Forêt v2, puis WorldCover, puis
+CORINE** ; il était WorldCover en tête en 0.19.0 et 0.20.0, sur un
+jugement porté avant que les chiffres n’existent.
+
+Rappel de ce qui a tranché : sur la même grille de 25 m, les mêmes
+cellules et le même LiDAR, la BD Forêt explique davantage de **chacune**
+des cinq métriques de sous-étage — jusqu’à 43,0 % contre 7,8 % sur le
+couvert de houppier — tout en étant la plus ancienne des trois sources.
+
+**Ce que ce choix coûte**, et il faut le dire : la mesure neutralise
+volontairement le 10 m et le millésime 2021, c’est-à-dire ce qui fait
+l’intérêt de WorldCover. Pour une étude hors de France, ou une étude où
+la fraîcheur prime sur l’essence, passer `hierarchy` explicitement à
+l’appel.
+
+Le coût est moindre qu’il ne l’aurait été avant la 0.20.0 : depuis que
+[`fev_fuel_attach()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_attach.md)
+accepte une source catégorielle, celle qui perd voyage à côté au lieu
+d’être jetée.
+
+Deux tests ont changé de sens plutôt que d’être supprimés. Celui qui
+vérifiait que l’essence survit à une fusion gagnée par WorldCover
+demande désormais ce cas explicitement — c’est devenu le scénario d’un
+utilisateur qui veut le 10 m sans payer en botanique, et c’est
+précisément ce pour quoi l’attache existe.
+
 ## firexpovulnR 0.22.0 (2026-08-18)
 
 #### `fev_exposure(trim = )` — le cadre blanc de 500 m disparaît

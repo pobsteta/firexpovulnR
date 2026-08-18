@@ -70,6 +70,31 @@ and the exposure chain all read `class` and ignore it, and
 leaves it alone — its `NA` mean "not forest here", which is information,
 and filling them from a modal neighbour would invent species.
 
+## What it costs, measured
+
+Slow, and slow enough to plan around. Attempted on the development
+machine 2026-08-18, on real LiDAR HD tiles over the Maures at 25 m —
+every figure is a **lower bound**, because none of the three runs
+completed:
+
+|              |        |                       |
+|--------------|--------|-----------------------|
+| Extent       | Points | Wall clock            |
+| 250 m square | 3.0 M  | \> 25 min, unfinished |
+| 500 m square | 11.1 M | \> 40 min, unfinished |
+| 1 km tile    | full   | \> 90 min, unfinished |
+
+Downloading is not the bottleneck: a 248 MB tile arrived in 42 s. The
+inversion is.
+
+Two consequences worth stating. A departmental run is a batch job with a
+resume path, not something to start interactively — which is why the
+phase 8 brief asked for one. And **do not buy speed by thinning the
+cloud**: the understorey stratum is the first thing to disappear as
+pulse density falls, so thinning biases exactly the quantity this
+function exists to measure. See
+[`fev_lidar_density()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_density.md).
+
 ## Coverage is a per-metric mask, not a source layer
 
 LiDAR HD is still being flown, so the continuous register is full of

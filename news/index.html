@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.22.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.23.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,24 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.23.0" id="firexpovulnr-0230-2026-08-18">firexpovulnR 0.23.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0230-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="élargir-la-mesure-au-delà-des-deux-placettes--tenté-et-hors-de-portée-0-23-0">Élargir la mesure au-delà des deux placettes : tenté, et hors de portée<a class="anchor" aria-label="anchor" href="#%C3%A9largir-la-mesure-au-del%C3%A0-des-deux-placettes--tent%C3%A9-et-hors-de-port%C3%A9e-0-23-0"></a></h4>
+<p>Le résultat est négatif et vaut d’être consigné. Traiter davantage de dalles LiDAR HD pour élargir l’échantillon a échoué non par manque de donnée — 505 dalles sont disponibles sur le massif, et une dalle de 248 Mo arrive en 42 s — mais sur le <strong>coût d’inversion</strong> de <code><a href="../reference/fev_fuel_lidar.html">fev_fuel_lidar()</a></code>.</p>
+<p>Trois tentatives, toutes des bornes inférieures puisqu’aucune n’a abouti : 250 m et 3,0 M de points, plus de 25 min ; 500 m et 11,1 M de points, plus de 40 min ; une dalle entière, plus de 90 min.</p>
+<p>Ces chiffres sont désormais dans la documentation de <code><a href="../reference/fev_fuel_lidar.html">fev_fuel_lidar()</a></code>, avec les deux conséquences qu’ils imposent : un traitement départemental est un travail par lots avec reprise, pas une commande interactive ; et <strong>on n’achète pas de la vitesse en éclaircissant le nuage</strong>, puisque la strate de sous-étage est la première à disparaître quand la densité baisse — ce serait fausser précisément la grandeur mesurée.</p>
+<p>La mesure reste donc ce qu’elle était : deux placettes, 566 cellules, un massif. Un ordre de grandeur et une méthode, ce que le code, NEWS et l’article disaient déjà.</p>
+</div>
+<div class="section level4">
+<h4 id="la-bd-forêt-décide-désormais-la-classe-0-23-0">La BD Forêt décide désormais la classe<a class="anchor" aria-label="anchor" href="#la-bd-for%C3%AAt-d%C3%A9cide-d%C3%A9sormais-la-classe-0-23-0"></a></h4>
+<p><code>.FEV_FUEL_PRIORITY</code> suit la mesure publiée en 0.22.0 au lieu de la contredire. L’ordre est maintenant <strong>BD Forêt v2, puis WorldCover, puis CORINE</strong> ; il était WorldCover en tête en 0.19.0 et 0.20.0, sur un jugement porté avant que les chiffres n’existent.</p>
+<p>Rappel de ce qui a tranché : sur la même grille de 25 m, les mêmes cellules et le même LiDAR, la BD Forêt explique davantage de <strong>chacune</strong> des cinq métriques de sous-étage — jusqu’à 43,0 % contre 7,8 % sur le couvert de houppier — tout en étant la plus ancienne des trois sources.</p>
+<p><strong>Ce que ce choix coûte</strong>, et il faut le dire : la mesure neutralise volontairement le 10 m et le millésime 2021, c’est-à-dire ce qui fait l’intérêt de WorldCover. Pour une étude hors de France, ou une étude où la fraîcheur prime sur l’essence, passer <code>hierarchy</code> explicitement à l’appel.</p>
+<p>Le coût est moindre qu’il ne l’aurait été avant la 0.20.0 : depuis que <code><a href="../reference/fev_fuel_attach.html">fev_fuel_attach()</a></code> accepte une source catégorielle, celle qui perd voyage à côté au lieu d’être jetée.</p>
+<p>Deux tests ont changé de sens plutôt que d’être supprimés. Celui qui vérifiait que l’essence survit à une fusion gagnée par WorldCover demande désormais ce cas explicitement — c’est devenu le scénario d’un utilisateur qui veut le 10 m sans payer en botanique, et c’est précisément ce pour quoi l’attache existe.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.22.0" id="firexpovulnr-0220-2026-08-18">firexpovulnR 0.22.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0220-2026-08-18"></a></h2>
 <div class="section level4">
