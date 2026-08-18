@@ -98,21 +98,81 @@
 # figure below is not merely documented, it is observed. The largest residual gap
 # was 0.25 ha, a hundredfold smaller.
 #
+# `grid_driver` records whether a source is one the working grid is chosen FOR.
+# BD Forêt v2 and CLCplus can be primary, so asking for a cell finer than their
+# own mapped width wastes work and is worth saying. CORINE cannot: it exists here
+# to fill what the primary leaves empty, which means it must be rasterised onto
+# whatever grid the primary chose. Warning that 25 m is finer than CORINE's 100 m
+# width would fire on the package's own normal workflow and be wrong about it --
+# matching the primary's grid is mandatory, not waste.
+#
+# `native` records whether the source is a POLYGON coverage or already a raster,
+# and it is not a detail: rasterisation slivers are an artefact of the vector
+# path. A natively raster source has no shared polygon boundary to fall between,
+# so it has no slivers to repair -- and, symmetrically, any hole it does carry is
+# real. Its smallest representable object is one pixel, so no hole can ever be
+# below its minimum mapping unit. Both facts point the same way: never fill.
+#
+# That is a different reason from BD Foret's, and fev_fuel_fill_gaps() says which
+# one applies rather than collapsing the two into one message.
+#
 #   CORINE Land Cover: MMU 25 ha, minimum width 100 m, complete coverage of the
 #     EEA area. Copernicus Land Monitoring Service product specification.
 #   BD Foret v2: MMU 0.5 ha, minimum mapped width 20 m -- but it maps FORMATIONS
 #     VEGETALES ONLY, so its silence means "not forest", which is information
 #     rather than a gap. Never used to justify a fill.
+#   CLCplus Backbone: a 10 m RASTER derived from Sentinel-2 time series, 11
+#     classes, complete coverage of the EEA area, EPSG:3035. Verified 2026-08-18
+#     on the EEA catalogue record for the 2023 vintage. No MMU applies -- see
+#     `native` above.
 .FEV_FUEL_MMU <- list(
-  bdforet_v2 = list(mmu_ha = 0.5, min_width_m = 20, complete = FALSE),
-  clc        = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
-  clc_1990   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
-  clc_2000   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
-  clc_2006   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
-  clc_2012   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
-  clc_2018   = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE),
-  lidarhd    = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE),
-  custom     = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE)
+  bdforet_v2   = list(mmu_ha = 0.5, min_width_m = 20, complete = FALSE,
+                      native = "vector", grid_driver = TRUE),
+  clc          = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_1990     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2000     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2006     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2012     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clc_2018     = list(mmu_ha = 25,  min_width_m = 100, complete = TRUE,
+                      native = "vector", grid_driver = FALSE),
+  clcplus_2018 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
+                      native = "raster", grid_driver = TRUE),
+  clcplus_2021 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
+                      native = "raster", grid_driver = TRUE),
+  clcplus_2023 = list(mmu_ha = NA_real_, min_width_m = 10, complete = TRUE,
+                      native = "raster", grid_driver = TRUE),
+  lidarhd      = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
+                      native = "raster", grid_driver = FALSE),
+  custom       = list(mmu_ha = NA_real_, min_width_m = NA_real_, complete = FALSE,
+                      native = NA_character_, grid_driver = FALSE)
+)
+
+# CLCplus Backbone special cell values, from the EEA catalogue record for the
+# 2023 vintage, verified 2026-08-18. 253 is a real class of sorts -- seawater --
+# while 254 and 255 are the absence of one, and the fetcher separates them:
+# "outside the product area" and "no data" are unknown ground, not land cover.
+.FEV_CLCPLUS_NODATA <- c(254L, 255L)
+.FEV_CLCPLUS_SEAWATER <- 253L
+
+# Independent validation of the 2018 and 2021 raster gave overall accuracies of
+# 85.2% and 85.3%, both with a 0.5% margin of error. The target is 90% overall
+# with no more than 15% omission or commission per class -- but the producers
+# state that class 5 (low-growing woody plants) and class 8 (lichens and mosses)
+# carry HIGHER tolerances, from fuzzy class definition, limited spectral-temporal
+# separability, and sparse reference data.
+#
+# Class 5 is maquis and garrigue. The weakest class of the product is the one
+# that carries the fire risk in the Var, and fev_fetch_clcplus() says so out
+# loud rather than leaving it in a PDF.
+.FEV_CLCPLUS_ACCURACY <- list(
+  overall = c(`2018` = 85.2, `2021` = 85.3),
+  margin_pct = 0.5,
+  weak_classes = c(5L, 8L)
 )
 
 # LiDAR HD, verified 2026-08-17 by GetCapabilities, DescribeFeatureType and real

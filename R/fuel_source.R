@@ -31,11 +31,19 @@
 #' class. Use [fev_fuel_registers()] to see which are populated.
 #'
 #' @section On the target resolution:
-#' `res` defaults to 25 m. Below 20 m nothing is gained: BD Forêt v2's minimum
-#' mapped width is 20 m, so a finer grid resolves boundaries the source never
-#' had. At 100 m the advantage over CORINE — whose native raster is 100 m —
-#' disappears entirely, and with it the reason for preferring BD Forêt. Between
-#' those, the cost is quadratic in memory and in focal-window time.
+#' `res` defaults to 25 m, and the floor below which it buys nothing is a
+#' property of the source, not a constant: BD Forêt v2's minimum mapped width is
+#' 20 m, CLCplus Backbone's is 10 m. Below its source's own width a grid
+#' resolves boundaries the data never had. At 100 m the advantage over CORINE —
+#' whose native raster is 100 m — disappears entirely. Between those, the cost
+#' is quadratic in memory and in focal-window time.
+#'
+#' One resolution earns its cost for a reason unrelated to detail. `fev_exposure()`
+#' requires `res <= radius / 3`, so the 30 m radiant-heat radius is **refused**
+#' at 25 m and becomes computable at 10 m — exactly, since 10 = 30 / 3. A 10 m
+#' source is therefore the only way to reach that scale at all, and it costs
+#' about 39 times the focal work of 25 m: 6.25 times the cells, each with 6.25
+#' times the window.
 #'
 #' @section On the vintage:
 #' For `type = "bdforet_v2"` the vintage is **required**. BD Forêt v2 was built
@@ -59,7 +67,8 @@
 #' @param x A [fev_source] from [fev_fetch_bdforet()] or [fev_fetch_corine()],
 #'   or a plain `sf`, `SpatVector` or `SpatRaster`.
 #' @param type Source type: `"bdforet_v2"`, `"clc_2018"` (and the other CORINE
-#'   vintages), `"lidarhd"` (phase 8, not implemented) or `"custom"`.
+#'   vintages), `"clcplus_2023"` (and 2018, 2021), `"lidarhd"` (phase 8, not
+#'   implemented) or `"custom"`.
 #' @param res Target cell size in CRS units, metres for the projected
 #'   defaults. See the resolution section.
 #' @param crs_work EPSG code of the working CRS. Default `2154`, BD Forêt's
@@ -104,7 +113,8 @@
 #'
 #' @export
 fev_fuel_source <- function(x,
-                            type = c("bdforet_v2", "clc_2018", "lidarhd", "custom"),
+                            type = c("bdforet_v2", "clc_2018", "clcplus_2023",
+                                     "lidarhd", "custom"),
                             res = 25,
                             crs_work = 2154,
                             field = NULL,
@@ -129,7 +139,7 @@ fev_fuel_source <- function(x,
     ), class = "fev_not_implemented")
   }
 
-  fev_check_res(res)
+  fev_check_res(res, type)
 
   # Provenance and vintage may both travel with a fetched source. Read them
   # before unwrapping, and let explicit arguments win.
@@ -209,7 +219,9 @@ new_fev_fuel_source <- function(categorical = NULL, continuous = NULL,
 # Accepted type strings. CORINE's fuel semantics do not change with the
 # vintage, so every clc_* year is a valid type and they all read the same
 # lookup.
-.FEV_FUEL_TYPES <- c("bdforet_v2", "clc", paste0("clc_", c(1990, 2000, 2006, 2012, 2018)),
+.FEV_FUEL_TYPES <- c("bdforet_v2",
+                     "clc", paste0("clc_", c(1990, 2000, 2006, 2012, 2018)),
+                     paste0("clcplus_", c(2018, 2021, 2023)),
                      "lidarhd", "custom")
 
 #' @noRd
@@ -234,22 +246,35 @@ fev_fuel_default_lookup <- function(type) {
 }
 
 #' Refuse a resolution that makes no sense, and say why for the ones that do
+#'
+#' The floor is not a constant: it is the minimum mapped width of the source in
+#' hand, read from `.FEV_FUEL_MMU`. BD For\u00eat v2 resolves 20 m, CLCplus Backbone
+#' 10 m, and telling a CLCplus user that 10 m is finer than BD For\u00eat's detail
+#' would be both wrong and confusing.
+#'
 #' @noRd
-fev_check_res <- function(res) {
+fev_check_res <- function(res, type = "bdforet_v2") {
   if (!is.numeric(res) || length(res) != 1L || is.na(res) || res <= 0) {
     fev_abort("{.arg res} must be a single positive number, in CRS units.")
   }
-  if (res < 20) {
+  spec <- .FEV_FUEL_MMU[[type]]
+  floor_m <- if (is.null(spec)) NA_real_ else spec$min_width_m
+  # Only for a source the grid is chosen for. An auxiliary source has to be
+  # rasterised onto whatever grid the primary picked, so a cell finer than its
+  # own width is required of it, not wasted on it.
+  drives <- !is.null(spec) && isTRUE(spec$grid_driver)
+
+  if (drives && !is.na(floor_m) && res < floor_m) {
     fev_inform(c(
-      "{.arg res} = {.val {res}} m is finer than the source's own detail.",
-      i = "BD For\u00eat v2's minimum mapped width is 20 m, so a finer grid \\
+      "{.arg res} = {.val {res}} m is finer than {.val {type}}'s own detail.",
+      i = "Its minimum mapped width is {.val {floor_m}} m, so a finer grid \\
            resolves boundaries the data never had. Cost is quadratic."
-    ), class = "fev_res_too_fine")
+    ), class = "fev_res_too_fine", .envir = environment())
   }
   if (res >= 100) {
     fev_warn(c(
-      "{.arg res} = {.val {res}} m cancels the advantage of BD For\u00eat over \\
-       CORINE.",
+      "{.arg res} = {.val {res}} m cancels the advantage of a fine source \\
+       over CORINE.",
       i = "CORINE's native raster is 100 m. At this cell size the finer \\
            minimum mapping unit buys nothing."
     ), class = "fev_res_too_coarse")

@@ -1,3 +1,71 @@
+# firexpovulnR 0.15.0 (2026-08-18)
+
+### `fev_fetch_clcplus()` — CLCplus Backbone, raster 10 m issu de Sentinel-2
+
+Première livraison de la phase 10, dont le rapport de faisabilité
+(`specs/phase10-rapport-sentinel.md`) écarte les autres voies satellitaires.
+
+* **Ce n'est pas un téléchargeur, et c'est délibéré.** Le Copernicus Land
+  Monitoring Service sert ce produit derrière EU Login et un échange de jeton
+  OAuth2, et le brief interdit au paquet de manipuler un jeton personnel — la
+  règle même qui avait envoyé la phase 9 vers Open-Meteo. La fonction importe
+  donc un fichier récupéré à la main et l'enregistre comme tel dans la
+  provenance. La forme honnête d'une source sous jeton est un bon message
+  d'erreur, pas un gestionnaire d'identifiants.
+* **L'absence n'est pas une classe.** Les codes 254 (hors zone du produit) et
+  255 (pas de donnée) deviennent `NA` à l'import. Leur donner un type de
+  combustible affirmerait que le sol inconnu est non-combustible, ce que le
+  paquet refuse partout ailleurs. Le code 253, tampon d'eau côtière, est une
+  surface et reste une classe — l'extrait des Maures atteint la mer.
+* Le raster arrive **catégoriel**, étiqueté depuis la table de correspondance,
+  sinon `fev_fuel_source(register = "auto")` lirait la classe 5 comme la mesure
+  de cinq de quelque chose.
+
+### Ce que ce produit échange contre CORINE
+
+Il ne la remplace pas, il l'échange — d'où l'intérêt que `fev_fuel_merge()`
+garde les deux.
+
+* **Gain sur l'arboré :** CORINE 311 mettait chêne vert et hêtre dans la même
+  classe, limite que la table CORINE de ce paquet énonçait déjà. CLCplus sépare
+  feuillu caducifolié (classe 3) et sempervirent (classe 4), et autour de la
+  Méditerranée le second *est* le type sclérophylle.
+* **Perte sur l'arbustif :** là où CORINE distingue 322, 323 et 324, CLCplus
+  fond tout dans la classe 5. Maquis, lande et régénération post-incendie
+  deviennent une seule valeur.
+* **Et la classe faible est celle qui brûle.** La validation indépendante donne
+  85,2 % et 85,3 % de précision globale pour 2018 et 2021, mais les producteurs
+  déclarent des tolérances d'erreur *supérieures* pour la classe 5. La fonction
+  le dit à l'import plutôt que de le laisser dans un PDF, et chaque ligne de
+  végétation de la table est marquée `ambiguous`.
+
+### `fev_fuel_fill_gaps()` distingue deux refus qu'il confondait
+
+Une source nativement raster n'a pas d'esquille : les esquilles viennent du
+chemin vectoriel, un centre de cellule ne tombant dans aucun de deux polygones
+mitoyens. Et son plus petit objet représentable étant le pixel, aucun trou ne
+peut passer sous son unité minimale. Les deux faits disent la même chose —
+ne jamais combler — mais pour une raison opposée à celle de la BD Forêt, dont
+le silence est une information. Le message le dit désormais, au lieu de servir
+« aucune composante ne couvre son emprise entière » à un produit qui, lui, la
+couvre.
+
+### `fev_check_res()` ne cite plus la BD Forêt en dur
+
+Le plancher sous lequel une résolution n'apporte rien est une propriété de la
+source, pas une constante : 20 m pour la BD Forêt v2, 10 m pour CLCplus. La
+fonction lit maintenant `min_width_m` dans `.FEV_FUEL_MMU`. Annoncer à un
+utilisateur de CLCplus que 10 m est plus fin que le détail de la BD Forêt était
+faux et déroutant.
+
+### La raison de descendre à 10 m
+
+Documentée dans `fev_fuel_source()`, et ce n'est pas la finesse du contour.
+`fev_exposure()` garde `res <= radius / 3` : à 25 m le rayon de rayonnement
+thermique de 30 m est **refusé**, à 10 m il passe tout juste, puisque
+10 = 30 / 3. Une source à 10 m est donc le seul moyen d'atteindre cette échelle,
+et elle coûte environ **39 fois** le travail focal du 25 m.
+
 # firexpovulnR 0.14.0 (2026-08-17)
 
 ### `fev_fuel_fill_gaps()` — réparer les esquilles de rastérisation

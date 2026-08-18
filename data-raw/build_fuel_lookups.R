@@ -202,6 +202,65 @@ clc <- tibble_rows(
 )
 
 # --------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+# CLCplus Backbone -- 11 classes, 10 m raster, Sentinel-2 time series
+# --------------------------------------------------------------------------
+# Codes and labels verified 2026-08-18 on the EEA catalogue record for the 2023
+# vintage (DOI 10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2). Nomenclature
+# derived from the EAGLE Land Cover Components.
+#
+# WHAT THIS TABLE TRADES, and it is a trade in both directions.
+#
+# It GAINS the distinction CORINE could not make. The note on CLC 311 in the
+# table above says it outright: "Cannot separate evergreen sclerophyll from
+# deciduous -- holm oak and beech land in the same class." CLCplus splits that
+# into classes 3 and 4, so a Maures holm-oak wood and a Burgundy beech wood stop
+# being the same pixel value. For a Mediterranean fuel model that is the single
+# most useful thing this nomenclature does.
+#
+# It LOSES the shrub layer's detail. CORINE separates 321 natural grassland, 322
+# moors and heathland, 323 sclerophyllous vegetation and 324 transitional
+# woodland-shrub. CLCplus collapses all the woody ones into class 5. Maquis,
+# heath and post-fire regeneration become indistinguishable -- and 323 is the
+# class the CORINE table calls "the most important class CORINE contributes".
+#
+# So this source does not simply supersede CORINE. It is better on the tree
+# layer and worse on the shrub layer, which is why fev_fuel_merge() keeping both
+# remains the right architecture.
+#
+# ACCURACY, and it lands badly for us. Independent validation of the 2018 and
+# 2021 raster gave 85.2% and 85.3% overall. But the producers state that class 5
+# and class 8 carry higher error tolerances than the other nine, from fuzzy class
+# definition, limited spectral-temporal separability and sparse reference data.
+# Class 5 is the maquis. The weakest class of the product is the one that burns.
+# Every class-5 row below is therefore `ambiguous`, and phase 10 step 2 exists to
+# measure this locally against LiDAR HD before anyone trusts it.
+#
+# Crown cover is NA throughout: unlike BD Forêt, this nomenclature records no
+# cover threshold at all. Mapping the tree classes onto the `_closed` types is
+# this package's reading, not the producer's, and it is flagged as such.
+
+clcplus <- tibble_rows(
+  # code   label                                  crown  fuel_type              burnable confidence   notes
+  r("1",   "Sealed",                              NA,    "non_fuel",            FALSE,   "clear",     "Sealed surface. The EAGLE definition is artificial impervious cover, so vegetation inside it is below the pixel rather than absent."),
+  r("2",   "Woody - needle leaved trees",         NA,    "conifer_closed",      TRUE,    "ambiguous", "Conifer. Mapped to the closed type because the nomenclature records NO crown cover threshold -- unlike BD Forêt, which states 40%. An open pine stand and a closed one are the same class here, and the closed reading overstates the fuel of the former."),
+  r("3",   "Woody - broadleaved deciduous trees", NA,    "broadleaf_closed",    TRUE,    "ambiguous", "Deciduous broadleaf. Same crown cover caveat as class 2. Its existence is a real gain: CORINE 311 could not separate this from evergreen sclerophyll."),
+  r("4",   "Woody - broadleaved evergreen trees", NA,    "sclerophyll_closed",  TRUE,    "ambiguous", "Evergreen broadleaf. Around the Mediterranean this is holm and cork oak, which is exactly the sclerophyll type -- the distinction CORINE 311 could not make. Ambiguous rather than clear because at European scale the class also holds evergreen broadleaf that is not sclerophyllous, and because crown cover is unrecorded."),
+  r("5",   "Low-growing woody plants",            NA,    "shrubland",           TRUE,    "ambiguous", "Bushes and shrubs: maquis, garrigue, heath and post-fire regeneration all at once, where CORINE separates 322, 323 and 324. THE WEAKEST CLASS OF THE PRODUCT -- the producers give it a higher error tolerance than the others, from fuzzy definition and limited spectral separability. It is also the class that carries fire in the Var. Validate locally before trusting it."),
+  r("6",   "Permanent herbaceous",                NA,    "grassland",           TRUE,    "clear",     "Permanent herbaceous cover. Closest to CORINE 321 natural grassland: fine fuel, cured for part of the year."),
+  r("7",   "Periodically herbaceous",             NA,    "cropland",            FALSE,   "ambiguous", "Herbaceous with a cultivation or management cycle -- arable ground, in practice. Treated as CORINE 211 is: FALSE, with the same reservation that stubble carries fire for a few weeks a year and the mask has no season."),
+  r("8",   "Lichens and mosses",                  NA,    "sparse_vegetation",   TRUE,    "ambiguous", "Lichen and moss cover, on rock or at altitude. Carries fire poorly and rarely. Shares class 5's higher error tolerance. Marginal in both study areas, kept burnable for consistency with CORINE 333 rather than on evidence."),
+  r("9",   "Non- and sparsely-vegetated",         NA,    "sparse_vegetation",   TRUE,    "ambiguous", "Bare and sparsely vegetated ground. Merges what CORINE splits across 331, 332 and 333, so it holds both genuine fuel breaks (bare rock) and discontinuous fuel. Burnable TRUE with a low availability weight, as for CORINE 333."),
+  r("10",  "Water",                               NA,    "non_fuel",            FALSE,   "clear",     "Inland and marine water."),
+  r("11",  "Snow and ice",                        NA,    "non_fuel",            FALSE,   "clear",     "Permanent snow and ice."),
+  r("253", "Coastal seawater buffer",             NA,    "non_fuel",            FALSE,   "clear",     "A production artefact rather than an observed class: the seaward buffer of the coastline. Non-fuel, and mapped here so that a coastal AOI -- the Maures reach the sea -- does not leave unmatched pixels.")
+)
+# 254 (outside area) and 255 (no data) are deliberately ABSENT from this table.
+# They are the absence of a class, not a class, and fev_fetch_clcplus() turns
+# them into NA. Giving them a fuel type would assert that unknown ground is
+# non-fuel, which is the one reading the package refuses everywhere else.
+
+# --------------------------------------------------------------------------
 # Validation, then write
 # --------------------------------------------------------------------------
 # These checks are the reason this script exists rather than two hand-edited
@@ -228,8 +287,10 @@ validate <- function(x, nomenclature, expected_n) {
 
 # 32 posts: announced by cartes.gouv.fr for BD Forêt v2.
 # 44 classes: the CLC level 3 count, in both nomenclature publications.
+# 12 rows for CLCplus: the 11 published classes plus 253, the seawater buffer.
 bdforet <- validate(bdforet, "bdforet_v2", 32L)
 clc     <- validate(clc, "clc", 44L)
+clcplus <- validate(clcplus, "clcplus", 12L)
 
 out_dir <- file.path("inst", "extdata")
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -244,8 +305,10 @@ write_lookup <- function(x, file) {
 
 write_lookup(bdforet, file.path(out_dir, "fuel_lookup_bdforet_v2.csv"))
 write_lookup(clc, file.path(out_dir, "fuel_lookup_clc.csv"))
+write_lookup(clcplus, file.path(out_dir, "fuel_lookup_clcplus.csv"))
 
 # A summary worth reading after every rebuild: it says how much of each
 # nomenclature the package is guessing at.
 print(table(bdforet$fuel_type, bdforet$confidence))
 print(table(clc$fuel_type, clc$confidence))
+print(table(clcplus$fuel_type, clcplus$confidence))

@@ -49,6 +49,7 @@ reference:
     - fev_fetch_fwi
     - fev_fetch_bdforet
     - fev_fetch_corine
+    - fev_fetch_clcplus
     - fev_fetch_burnt
     - fev_bdforet_millesime
     - fev_lidarhd_available

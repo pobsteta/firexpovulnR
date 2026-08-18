@@ -104,6 +104,23 @@ fev_fuel_fill_gaps <- function(fuel, max_gap = NULL, quiet = FALSE) {
   }
 
   if (is.null(max_gap)) {
+    if (identical(mmu$reason, "raster_native")) {
+      # Nothing is filled, and for the opposite reason to the one below: this
+      # source maps its whole extent, but it was never a polygon coverage, so it
+      # has no shared boundary to fall between and no sliver to repair. What
+      # holes it has are real.
+      fev_inform(c(
+        "Nothing to repair: {.val {mmu$raster_from}} {?is/are} natively \\
+         raster.",
+        i = "Rasterisation slivers come from the vector path -- a cell centre \\
+             falling in neither of two polygons that share a boundary.",
+        i = "A raster has no shared boundary, and its smallest representable \\
+             object is one cell, so no hole can be below its mapping unit.",
+        i = "The {n_na} empty cell{?s} here {?is/are} therefore real. Pass \\
+             {.arg max_gap} to fill anyway, as a stated assumption."
+      ), .envir = environment())
+      return(fuel)
+    }
     if (is.na(mmu$mmu_ha)) {
       # Not a refusal: nothing is filled, and the reason is that no component
       # claims to map its whole extent, so silence here may be information.
@@ -251,12 +268,24 @@ fev_fuel_mmu <- function(components) {
   known <- components[components %in% names(.FEV_FUEL_MMU)]
   complete <- Filter(function(k) isTRUE(.FEV_FUEL_MMU[[k]]$complete), known)
   if (!length(complete)) {
-    return(list(mmu_ha = NA_real_, from = NULL))
+    return(list(mmu_ha = NA_real_, from = NULL, reason = "partial_coverage"))
   }
   areas <- vapply(complete, function(k) .FEV_FUEL_MMU[[k]]$mmu_ha, numeric(1))
+  if (all(is.na(areas))) {
+    # Complete coverage, and yet nothing a minimum mapping unit can license:
+    # every complete component here is a native raster, whose smallest
+    # representable object is one cell. No hole can be below that, so none is a
+    # sliver. A different refusal from the one above, and it is said differently.
+    return(list(mmu_ha = NA_real_, from = NULL, reason = "raster_native",
+                raster_from = complete))
+  }
+  # A mixed merge -- say CORINE polygons under a CLCplus raster -- keeps the
+  # vector component's unit: that component really was rasterised, and really
+  # does leave slivers.
   pick <- complete[which.max(areas)]
   list(mmu_ha = unname(areas[which.max(areas)]),
-       from = paste0(pick, " minimum mapping unit"))
+       from = paste0(pick, " minimum mapping unit"),
+       reason = "mmu")
 }
 
 #' Mark repaired cells in the source layer

@@ -6,7 +6,7 @@
 \usage{
 fev_fuel_source(
   x,
-  type = c("bdforet_v2", "clc_2018", "lidarhd", "custom"),
+  type = c("bdforet_v2", "clc_2018", "clcplus_2023", "lidarhd", "custom"),
   res = 25,
   crs_work = 2154,
   field = NULL,
@@ -24,7 +24,8 @@ fev_fuel_source(
 or a plain \code{sf}, \code{SpatVector} or \code{SpatRaster}.}
 
 \item{type}{Source type: \code{"bdforet_v2"}, \code{"clc_2018"} (and the other CORINE
-vintages), \code{"lidarhd"} (phase 8, not implemented) or \code{"custom"}.}
+vintages), \code{"clcplus_2023"} (and 2018, 2021), \code{"lidarhd"} (phase 8, not
+implemented) or \code{"custom"}.}
 
 \item{res}{Target cell size in CRS units, metres for the projected
 defaults. See the resolution section.}
@@ -79,11 +80,19 @@ class. Use \code{\link[=fev_fuel_registers]{fev_fuel_registers()}} to see which 
 
 \section{On the target resolution}{
 
-\code{res} defaults to 25 m. Below 20 m nothing is gained: BD Forêt v2's minimum
-mapped width is 20 m, so a finer grid resolves boundaries the source never
-had. At 100 m the advantage over CORINE — whose native raster is 100 m —
-disappears entirely, and with it the reason for preferring BD Forêt. Between
-those, the cost is quadratic in memory and in focal-window time.
+\code{res} defaults to 25 m, and the floor below which it buys nothing is a
+property of the source, not a constant: BD Forêt v2's minimum mapped width is
+20 m, CLCplus Backbone's is 10 m. Below its source's own width a grid
+resolves boundaries the data never had. At 100 m the advantage over CORINE —
+whose native raster is 100 m — disappears entirely. Between those, the cost
+is quadratic in memory and in focal-window time.
+
+One resolution earns its cost for a reason unrelated to detail. \code{fev_exposure()}
+requires \code{res <= radius / 3}, so the 30 m radiant-heat radius is \strong{refused}
+at 25 m and becomes computable at 10 m — exactly, since 10 = 30 / 3. A 10 m
+source is therefore the only way to reach that scale at all, and it costs
+about 39 times the focal work of 25 m: 6.25 times the cells, each with 6.25
+times the window.
 }
 
 \section{On the vintage}{
