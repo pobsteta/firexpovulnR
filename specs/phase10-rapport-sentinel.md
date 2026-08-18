@@ -263,17 +263,27 @@ nativement à 10 m, descendre à 10 m cesse d'être une invention.
 
 L'argument le plus fort n'est pas la finesse du contour mais **le rayon de 30 m**.
 Le paquet expose trois rayons (`constants.R:303`) : 30 m rayonnement thermique,
-100 m brandons courts, 500 m brandons longs.
+100 m brandons courts, 500 m brandons longs. Et `fev_exposure()` garde déjà
+`res <= radius / 3` (`exposure.R:132`, condition `fev_res_too_coarse`), au motif
+que sous ce rapport l'anneau ne fait plus qu'une poignée de cellules et que la
+proportion se quantifie en quelques valeurs — même contrainte que `fireexposuR`.
 
-| Rayon | Cellules de rayon à 25 m | à 10 m |
-|---|---|---|
-| 30 m | **1,2** — fenêtre dégénérée en 3×3 | 3,0 |
-| 100 m | 4,0 | 10,0 |
-| 500 m | 20,0 | 50,0 |
+| Rayon | `radius / 3` | 25 m | 10 m |
+|---|---|---|---|
+| 30 m | 10 m | **refusé** | **10 m — passe tout juste** |
+| 100 m | 33,3 m | passe | passe |
+| 500 m | 166,7 m | passe | passe |
 
-À 25 m, l'échelle du rayonnement thermique est gravement sous-échantillonnée.
-C'est là que le 10 m paierait. À 500 m, la fraction focale converge et le gain
-est marginal.
+Le constat n'est donc pas que le rayonnement thermique est mal échantillonné à
+25 m : **il est indisponible.** `fev_exposure(type = "radiant")` s'arrête sur une
+erreur tant que la grille est à 25 m.
+
+Et le seuil tombe exactement sur 10 m. **10 m est la grille la plus grossière sur
+laquelle le rayon de rayonnement thermique devient calculable selon la règle que
+le paquet s'est lui-même donnée.** C'est le seul argument de résolution qui ne
+soit pas une préférence : il débloque une des trois échelles du modèle, aujourd'hui
+hors d'atteinte. À 500 m au contraire la fraction focale converge, et le gain du
+10 m y est marginal.
 
 Le prix est sévère : ×6,25 cellules et ×6,25 surface de fenêtre, soit **~39× le
 coût focal**. `fev_check_focal_cost()` refuserait vraisemblablement l'emprise des
@@ -313,7 +323,7 @@ pour Sentinel, `rGEDI` pour GEDI. Tous non testés ici.
 | B — Sentinel-1 | à instruire | covariable plausible sur formations basses, jamais source autonome |
 | C — GEDI × S2 pour la hauteur | **ne pas recalculer** | FORMS existe, 10 m, CC-BY ; à ingérer si besoin |
 | C' — GEDI × S2 pour le sous-étage | **non** | GEDI aveugle sous ~30 m de canopée ; le contournement phénologique s'effondre en sempervirent |
-| Descente à 10 m | conditionnelle | seulement avec source native 10 m, et ~39× le coût focal |
+| Descente à 10 m | **motivée**, si source native 10 m | seule grille où `type = "radiant"` cesse d'être refusé ; prix ~39× le coût focal |
 
 **Le sous-étage méditerranéen reste le domaine du LiDAR HD.** Rien dans ce qui a
 été instruit ne permet de retirer à la phase 8 ce rôle-là, ni d'atténuer la limite
