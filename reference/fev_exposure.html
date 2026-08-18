@@ -9,7 +9,7 @@ how much of the surrounding landscape could carry fire to it."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.21.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.22.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -54,6 +54,7 @@ how much of the surrounding landscape could carry fire to it.</p>
 <span>  no_burn <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  lookup <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  na_rm <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  trim <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  filename <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  <span class="va">...</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -104,6 +105,13 @@ contain only 1 and <code>NA</code>.</p></dd>
 them. <code>FALSE</code> matches <code>fireexposuR</code>; <code>TRUE</code> is more forgiving at the edges
 of a study area, at the cost of computing a proportion over fewer cells
 than the ring contains.</p></dd>
+
+
+<dt id="arg-trim">trim<a class="anchor" aria-label="anchor" href="#arg-trim"></a></dt>
+<dd><p>Optional area to report on, smaller than the one computed. The
+focal pass runs on the full extent, then the result is cropped and masked
+to <code>trim</code>. This is what removes the edge frame rather than hiding it — see
+the section below.</p></dd>
 
 
 <dt id="arg-filename">filename<a class="anchor" aria-label="anchor" href="#arg-filename"></a></dt>
@@ -181,6 +189,27 @@ in-memory one are not bit-identical; pass
 weighted exposure: each surrounding cell contributes its availability rather
 than a flat 1. That is a departure from the published metric, which is
 binary, so it is not the default and the record says which was used.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="the-edge-frame-and-how-to-be-rid-of-it">The edge frame, and how to be rid of it<a class="anchor" aria-label="anchor" href="#the-edge-frame-and-how-to-be-rid-of-it"></a></h2>
+
+
+<p>The outer ring of a focal result is not a measurement. It is the window
+hanging off the edge of the data, and with <code>na_rm = FALSE</code> it comes back
+empty — the white frame on every exposure map this package has ever drawn.</p>
+<p><code>na_rm = TRUE</code> looks like the fix and is not: it computes each edge cell over
+whatever part of the ring happens to have data, which understates exposure
+there by about 30% on the Maures extract (0.32 against 0.46) and does so
+invisibly. A white frame is more honest than a wrong number.</p>
+<p>The real fix has two halves, and the package used to supply only the first:
+compute on more ground than you report on. Build the fuel source on an area
+buffered by at least the radius, then pass the area you actually mean to
+report as <code>trim</code>.</p>
+<p></p><div class="sourceCode r"><pre><code><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_source.html">fev_fuel_source</a></span><span class="op">(</span><span class="va">bdforet</span>, aoi <span class="op">=</span> <span class="fu">sf</span><span class="fu">::</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/geos_unary.html" class="external-link">st_buffer</a></span><span class="op">(</span><span class="va">study</span>, <span class="fl">500</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">fuel</span>, radius <span class="op">=</span> <span class="fl">500</span>, trim <span class="op">=</span> <span class="va">study</span><span class="op">)</span></span></code></pre><p></p></div>
+<p>Every reported cell then has a complete ring behind it. The frame is still
+computed — it has to be, to make the inside correct — but it is cut away
+instead of published.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>

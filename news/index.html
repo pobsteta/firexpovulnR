@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.21.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.22.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,59 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.22.0" id="firexpovulnr-0220-2026-08-18">firexpovulnR 0.22.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0220-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="fev_exposuretrim----le-cadre-blanc-de-m-disparaît-0-22-0">
+<code>fev_exposure(trim = )</code> — le cadre blanc de 500 m disparaît<a class="anchor" aria-label="anchor" href="#fev_exposuretrim----le-cadre-blanc-de-m-dispara%C3%AEt-0-22-0"></a></h4>
+<p>L’anneau extérieur d’un résultat focal n’est pas une mesure : c’est la fenêtre qui déborde du bord de la donnée. Avec <code>na_rm = FALSE</code> il revient vide, et c’est le cadre blanc de toutes les cartes d’exposition publiées jusqu’ici.</p>
+<p>Le paquet donnait déjà la moitié du remède, dans le message <code>fev_extent_too_small</code> : calculer sur plus grand qu’on ne publie. <code>trim</code> fournit l’autre moitié.</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_source.html">fev_fuel_source</a></span><span class="op">(</span><span class="va">bdforet</span>, aoi <span class="op">=</span> <span class="fu">sf</span><span class="fu">::</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/geos_unary.html" class="external-link">st_buffer</a></span><span class="op">(</span><span class="va">study</span>, <span class="fl">500</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span>
+<span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">fuel</span>, radius <span class="op">=</span> <span class="fl">500</span>, trim <span class="op">=</span> <span class="va">study</span><span class="op">)</span></span></code></pre></div>
+<p>Mesuré sur l’emprise des Maures : <strong>9,3 % de cellules vides sans recadrage, 0,3 % avec</strong>. Le cadre est toujours calculé — il le faut, pour que l’intérieur soit juste — puis coupé au lieu d’être publié. Les valeurs conservées sont exactement celles qui avaient été calculées, un test le vérifie cellule par cellule.</p>
+<p>Une marge insuffisante est <strong>refusée bruyamment</strong> : recadrer sur une zone que le tampon n’a jamais couverte fait entrer une partie du cadre dans la surface rapportée, ce qui est pire que de le laisser visible.</p>
+</div>
+<div class="section level4">
+<h4 id="la-hiérarchie-des-sources-est-mesurée-et-la-mesure-la-contredit-0-22-0">La hiérarchie des sources est mesurée, et la mesure la contredit<a class="anchor" aria-label="anchor" href="#la-hi%C3%A9rarchie-des-sources-est-mesur%C3%A9e-et-la-mesure-la-contredit-0-22-0"></a></h4>
+<p><code>.FEV_FUEL_PRIORITY</code> portait un commentaire admettant que son ordre était un jugement. Il ne l’est plus. Les trois sources placées sur la même grille de 25 m, sur les mêmes cellules, confrontées au même LiDAR — part de variance expliquée par l’appartenance de classe :</p>
+<table style="width:100%;" class="table"><colgroup><col width="14%"><col width="14%"><col width="14%"><col width="14%"><col width="14%"><col width="14%"><col width="14%"></colgroup><thead><tr><th>Source</th>
+<th>classes</th>
+<th><code>H_Bush</code></th>
+<th><code>FL_0_1</code></th>
+<th><code>FL_1_3</code></th>
+<th><code>Cover</code></th>
+<th><code>PAI_tot</code></th>
+</tr></thead><tbody><tr><td><strong>BD Forêt v2</strong></td>
+<td>6</td>
+<td><strong>18,2</strong></td>
+<td><strong>15,0</strong></td>
+<td><strong>8,2</strong></td>
+<td><strong>43,0</strong></td>
+<td><strong>15,1</strong></td>
+</tr><tr><td>CORINE 2018</td>
+<td>3</td>
+<td>8,8</td>
+<td>4,7</td>
+<td>0,6</td>
+<td>25,0</td>
+<td>5,3</td>
+</tr><tr><td>WorldCover 2021</td>
+<td>5</td>
+<td>4,0</td>
+<td>8,4</td>
+<td>5,2</td>
+<td>7,8</td>
+<td>8,2</td>
+</tr></tbody></table><p>La BD Forêt gagne les cinq, en étant <strong>la plus ancienne des trois</strong> — millésime 2014, antérieur au feu. La récence n’explique donc pas l’écart ; la profondeur thématique le fait.</p>
+<p>L’ordre livré n’est pas modifié : WorldCover reste en tête, sur décision explicite, parce que la mesure <strong>neutralise volontairement</strong> ce qui fait son intérêt — 10 m et un millésime 2021 partout. Mais le commentaire porte désormais les chiffres et dit comment inverser en une ligne.</p>
+</div>
+<div class="section level4">
+<h4 id="les-deux-articles-au-niveau-du-code-0-22-0">Les deux articles au niveau du code<a class="anchor" aria-label="anchor" href="#les-deux-articles-au-niveau-du-code-0-22-0"></a></h4>
+<ul><li>Combustible construit sur l’emprise <strong>tamponnée de 500 m</strong>, exposition recadrée par <code>trim</code> : plus de cadre blanc sur aucune carte.</li>
+<li>L’article des Maures gagne la comparaison des trois sources, avec le code WorldCover montré mais <strong>non exécuté</strong> — une vignette ne doit pas dépendre d’un service distant, sinon le <code>R CMD check</code> rougit le jour d’une panne de bucket.</li>
+</ul></div>
+</div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.21.0" id="firexpovulnr-0210-2026-08-18">firexpovulnR 0.21.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0210-2026-08-18"></a></h2>
 <div class="section level4">
 <h4 id="clcplus-backbone-retiré-0-21-0">CLCplus Backbone retiré<a class="anchor" aria-label="anchor" href="#clcplus-backbone-retir%C3%A9-0-21-0"></a></h4>
@@ -57,7 +110,7 @@
 <code>fev_fuel_attach()</code> garde les deux, au lieu d’en sacrifier une<a class="anchor" aria-label="anchor" href="#fev_fuel_attach-garde-les-deux-au-lieu-den-sacrifier-une-0-20-0"></a></h4>
 <p>Réponse à la conséquence livrée en 0.19.0 : WorldCover placé au-dessus prend <strong>tous</strong> les pixels, et l’essence et le taux de couvert de la BD Forêt disparaissent avec elle.</p>
 <p>La fonction accepte désormais une source <strong>catégorielle</strong> en second argument, et non plus seulement un registre continu. Ce qu’elle porte décide où elle atterrit — des métriques continues vont au registre continu, une couche de classes devient une couche nommée du registre catégoriel. Dans les deux cas elle <strong>n’arbitre aucun pixel</strong>, ce qui est toute la différence avec <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code>.</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_merge.html">fev_fuel_merge</a></span><span class="op">(</span><span class="va">bdforet</span>, <span class="va">worldcover</span><span class="op">)</span>   <span class="co"># WorldCover décide `class`</span></span>
 <span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_attach.html">fev_fuel_attach</a></span><span class="op">(</span><span class="va">fuel</span>, <span class="va">bdforet</span><span class="op">)</span>        <span class="co"># l'essence survit à côté</span></span></code></pre></div>
 <p>Mesuré sur les Maures : <code>class</code> reste à WorldCover au 10 m, et la couche <code>bdforet_v2</code> attachée conserve <strong>27 classes TFV sur 81,1 % des cellules cartographiées</strong> — dont le chêne vert, <code>FF1G06-06</code>, sur 1 520 475 cellules, que la nomenclature WorldCover ne sait pas exprimer.</p>

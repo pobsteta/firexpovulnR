@@ -1,5 +1,65 @@
 # Changelog
 
+## firexpovulnR 0.22.0 (2026-08-18)
+
+#### `fev_exposure(trim = )` — le cadre blanc de 500 m disparaît
+
+L’anneau extérieur d’un résultat focal n’est pas une mesure : c’est la
+fenêtre qui déborde du bord de la donnée. Avec `na_rm = FALSE` il
+revient vide, et c’est le cadre blanc de toutes les cartes d’exposition
+publiées jusqu’ici.
+
+Le paquet donnait déjà la moitié du remède, dans le message
+`fev_extent_too_small` : calculer sur plus grand qu’on ne publie. `trim`
+fournit l’autre moitié.
+
+``` r
+
+fuel <- fev_fuel_source(bdforet, aoi = sf::st_buffer(study, 500), ...)
+expo <- fev_exposure(fuel, radius = 500, trim = study)
+```
+
+Mesuré sur l’emprise des Maures : **9,3 % de cellules vides sans
+recadrage, 0,3 % avec**. Le cadre est toujours calculé — il le faut,
+pour que l’intérieur soit juste — puis coupé au lieu d’être publié. Les
+valeurs conservées sont exactement celles qui avaient été calculées, un
+test le vérifie cellule par cellule.
+
+Une marge insuffisante est **refusée bruyamment** : recadrer sur une
+zone que le tampon n’a jamais couverte fait entrer une partie du cadre
+dans la surface rapportée, ce qui est pire que de le laisser visible.
+
+#### La hiérarchie des sources est mesurée, et la mesure la contredit
+
+`.FEV_FUEL_PRIORITY` portait un commentaire admettant que son ordre
+était un jugement. Il ne l’est plus. Les trois sources placées sur la
+même grille de 25 m, sur les mêmes cellules, confrontées au même LiDAR —
+part de variance expliquée par l’appartenance de classe :
+
+| Source          | classes | `H_Bush` | `FL_0_1` | `FL_1_3` | `Cover`  | `PAI_tot` |
+|-----------------|---------|----------|----------|----------|----------|-----------|
+| **BD Forêt v2** | 6       | **18,2** | **15,0** | **8,2**  | **43,0** | **15,1**  |
+| CORINE 2018     | 3       | 8,8      | 4,7      | 0,6      | 25,0     | 5,3       |
+| WorldCover 2021 | 5       | 4,0      | 8,4      | 5,2      | 7,8      | 8,2       |
+
+La BD Forêt gagne les cinq, en étant **la plus ancienne des trois** —
+millésime 2014, antérieur au feu. La récence n’explique donc pas l’écart
+; la profondeur thématique le fait.
+
+L’ordre livré n’est pas modifié : WorldCover reste en tête, sur décision
+explicite, parce que la mesure **neutralise volontairement** ce qui fait
+son intérêt — 10 m et un millésime 2021 partout. Mais le commentaire
+porte désormais les chiffres et dit comment inverser en une ligne.
+
+#### Les deux articles au niveau du code
+
+- Combustible construit sur l’emprise **tamponnée de 500 m**, exposition
+  recadrée par `trim` : plus de cadre blanc sur aucune carte.
+- L’article des Maures gagne la comparaison des trois sources, avec le
+  code WorldCover montré mais **non exécuté** — une vignette ne doit pas
+  dépendre d’un service distant, sinon le `R CMD check` rougit le jour
+  d’une panne de bucket.
+
 ## firexpovulnR 0.21.0 (2026-08-18)
 
 #### CLCplus Backbone retiré

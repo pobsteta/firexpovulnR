@@ -13,6 +13,7 @@ fev_exposure(
   no_burn = NULL,
   lookup = NULL,
   na_rm = FALSE,
+  trim = NULL,
   filename = "",
   ...,
   quiet = FALSE
@@ -61,6 +62,13 @@ Khan, S.I. et al. (2025), *Natural Hazards* 121: 16273-16295,
   `FALSE` matches `fireexposuR`; `TRUE` is more forgiving at the edges
   of a study area, at the cost of computing a proportion over fewer
   cells than the ring contains.
+
+- trim:
+
+  Optional area to report on, smaller than the one computed. The focal
+  pass runs on the full extent, then the result is cropped and masked to
+  `trim`. This is what removes the edge frame rather than hiding it —
+  see the section below.
 
 - filename:
 
@@ -139,6 +147,30 @@ layer instead of a binary mask gives a weighted exposure: each
 surrounding cell contributes its availability rather than a flat 1. That
 is a departure from the published metric, which is binary, so it is not
 the default and the record says which was used.
+
+## The edge frame, and how to be rid of it
+
+The outer ring of a focal result is not a measurement. It is the window
+hanging off the edge of the data, and with `na_rm = FALSE` it comes back
+empty — the white frame on every exposure map this package has ever
+drawn.
+
+`na_rm = TRUE` looks like the fix and is not: it computes each edge cell
+over whatever part of the ring happens to have data, which understates
+exposure there by about 30% on the Maures extract (0.32 against 0.46)
+and does so invisibly. A white frame is more honest than a wrong number.
+
+The real fix has two halves, and the package used to supply only the
+first: compute on more ground than you report on. Build the fuel source
+on an area buffered by at least the radius, then pass the area you
+actually mean to report as `trim`.
+
+    fuel <- fev_fuel_source(bdforet, aoi = sf::st_buffer(study, 500), ...)
+    expo <- fev_exposure(fuel, radius = 500, trim = study)
+
+Every reported cell then has a complete ring behind it. The frame is
+still computed — it has to be, to make the inside correct — but it is
+cut away instead of published.
 
 ## See also
 

@@ -107,19 +107,25 @@ millesime_prudent
 
 ``` r
 
+emprise <- st_buffer(study, 500)          # le rayon d'exposition, en marge
+
 primaire <- fev_fuel_source(bdforet, type = "bdforet_v2", res = 25,
-                            aoi = study, millesime = millesime_prudent)
+                            aoi = emprise, millesime = millesime_prudent)
 auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
-                              aoi = study, millesime = 2018)
+                              aoi = emprise, millesime = 2018)
 fuel <- fev_fuel_merge(primaire, auxiliaire)
-#> "clc_2018" filled 278830 cells (59.3%) that
+#> "clc_2018" filled 322699 cells (61%) that
 #> "bdforet_v2" left unmapped.
 fuel <- fev_fuel_fill_gaps(fuel)
-#> 42 empty cells in 33 gaps.
-#> ✔ 42 filled: below 25 ha, so no component could have mapped them.
-#> ℹ Largest gap: 0.25 ha.
+#> 1936 empty cells in 49 gaps.
+#> ✔ 1280 filled: below 25 ha, so no component could have mapped them.
+#> ℹ Largest gap: 41 ha.
 #> ℹ Class from the modal 3x3 neighbour; the source layer records them as
 #>   "gap_filled" rather than claiming a dataset mapped them.
+#> Warning: 1 gap left empty, above 25 ha.
+#> ℹ Largest 41 ha -- a hole that size may be a real gap in the source, not a grid
+#>   artefact.
+#> ℹ `fev_exposure()` propagates each one across its whole window.
 ```
 
 Cette seconde ligne répare 42 cellules sur 469 989 — un dix-millième de
@@ -154,7 +160,7 @@ tab <- table(lv$class[match(terra::values(src)[, 1], lv$id)])
 round(100 * tab / sum(tab), 1)
 #> 
 #> bdforet_v2   clc_2018 gap_filled 
-#>       40.7       59.3        0.0
+#>       38.7       61.1        0.2
 ```
 
 ### Où les défauts du package sont mal à l’aise
@@ -165,11 +171,11 @@ ft <- fev_fuel_type(fuel)
 freq <- terra::freq(fev_data(ft))
 head(freq[order(-freq$count), c("value", "count")], 5)
 #>               value  count
-#> 5          cropland 190882
-#> 1  broadleaf_closed 148560
-#> 10         non_fuel  68311
-#> 3    conifer_closed  23656
-#> 7      mixed_closed  16721
+#> 5          cropland 215939
+#> 1  broadleaf_closed 163466
+#> 10         non_fuel  80168
+#> 3    conifer_closed  24893
+#> 7      mixed_closed  18251
 ```
 
 Le peuplement dominant est du feuillu fermé, auquel
@@ -212,10 +218,11 @@ Trait blanc, la commune. Traits rouges, les trois incendies.
 
 ``` r
 
-expo <- fev_exposure(brulable, radius = 500, type = "ember", quiet = TRUE)
+expo <- fev_exposure(brulable, radius = 500, type = "ember",
+                     trim = study, quiet = TRUE)
 terra::global(fev_data(expo), c("mean", "max"), na.rm = TRUE)
 #>               mean max
-#> exposure 0.4550941   1
+#> exposure 0.4488757   1
 ```
 
 Le rayon de 500 m vient de travaux albertains, validés depuis au
@@ -575,13 +582,13 @@ ne peut pas être validée avec cette donnée** :
 ``` r
 
 val$auc
-#> [1] 0.8672535
+#> [1] 0.872888
 val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 #>       class pct_of_area pct_of_burnt ratio
-#> 1   0 - 0.2       52.57         0.40  0.01
-#> 2 0.2 - 0.4       28.95        36.48  1.26
-#> 3 0.4 - 0.6       16.02        27.63  1.72
-#> 4 0.6 - 0.8        2.45        35.49 14.46
+#> 1   0 - 0.2       53.53         0.40  0.01
+#> 2 0.2 - 0.4       28.89        35.56  1.23
+#> 3 0.4 - 0.6       15.39        28.49  1.85
+#> 4 0.6 - 0.8        2.19        35.56 16.25
 #> 5   0.8 - 1        0.00         0.00   NaN
 ```
 

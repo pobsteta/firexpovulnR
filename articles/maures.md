@@ -80,19 +80,25 @@ mil[, c("dep", "year", "pct_area")]
 #> 1  83 2008     48.4
 #> 2  83 2014     51.6
 
+emprise <- st_buffer(study, 500)          # le rayon d'exposition, en marge
+
 primaire <- fev_fuel_source(bdforet, type = "bdforet_v2", res = 25,
-                            aoi = study, millesime = min(mil$year))
+                            aoi = emprise, millesime = min(mil$year))
 auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
-                              aoi = study, millesime = 2018)
+                              aoi = emprise, millesime = 2018)
 fuel <- fev_fuel_merge(primaire, auxiliaire)
-#> "clc_2018" filled 128472 cells (19%) that
+#> "clc_2018" filled 157181 cells (21.1%) that
 #> "bdforet_v2" left unmapped.
 fuel <- fev_fuel_fill_gaps(fuel)
-#> 18 empty cells in 16 gaps.
-#> ✔ 18 filled: below 25 ha, so no component could have mapped them.
-#> ℹ Largest gap: 0.12 ha.
+#> 3256 empty cells in 57 gaps.
+#> ✔ 1592 filled: below 25 ha, so no component could have mapped them.
+#> ℹ Largest gap: 64.31 ha.
 #> ℹ Class from the modal 3x3 neighbour; the source layer records them as
 #>   "gap_filled" rather than claiming a dataset mapped them.
+#> Warning: 2 gaps left empty, above 25 ha.
+#> ℹ Largest 64.31 ha -- a hole that size may be a real gap in the source, not a
+#>   grid artefact.
+#> ℹ `fev_exposure()` propagates each one across its whole window.
 ```
 
 La seconde ligne répare 18 cellules non cartographiées — des esquilles
@@ -104,6 +110,13 @@ l’essentiel est que
 propage tout vide à travers sa fenêtre, donc une cellule isolée en
 efface un disque de 500 m de rayon.
 
+Le combustible est construit sur l’emprise **tamponnée de 500 m**, pas
+sur l’emprise d’étude. Une fenêtre focale de 500 m de rayon a besoin de
+sol au-delà du bord de ce qu’elle décrit ; sans cette marge, l’anneau
+déborde dans le vide et la carte revient bordée de blanc. On calcule
+donc sur plus grand qu’on ne publie, et on recadre après — voir la
+section exposition.
+
 Deux campagnes BD ORTHO, **2008 et 2014**. Retenez ce chiffre : le grand
 feu est de 2021.
 
@@ -111,7 +124,7 @@ feu est de 2021.
 
 brulable <- fev_fuel_binary(fuel)
 round(100 * terra::global(fev_data(brulable), "mean", na.rm = TRUE)[[1]], 1)
-#> [1] 85.1
+#> [1] 84
 ```
 
 ``` r
@@ -131,10 +144,11 @@ dont il sera question en section 4.
 
 ``` r
 
-expo <- fev_exposure(brulable, radius = 500, type = "ember", quiet = TRUE)
+expo <- fev_exposure(brulable, radius = 500, type = "ember",
+                     trim = study, quiet = TRUE)
 terra::global(fev_data(expo), c("mean", "max"), na.rm = TRUE)
 #>               mean max
-#> exposure 0.8645515   1
+#> exposure 0.8538179   1
 ```
 
 ``` r
@@ -346,6 +360,53 @@ du combustible, et la raison pour laquelle le registre continu existe.
 Neuf classes, 566 cellules, deux placettes d’un seul massif : un ordre
 de grandeur et une méthode, pas une validation générale.
 
+### Laquelle des trois sources en sait le plus ?
+
+La question précédente portait sur une couche fusionnée. On peut la
+poser à chaque source séparément, sur les mêmes cellules et contre le
+même LiDAR — et c’est le seul moyen de trancher autrement qu’à l’estime
+laquelle doit décider la classe.
+
+ESA WorldCover s’ajoute ici aux deux sources de l’article. Contrairement
+à la BD Forêt et à CORINE, elle se récupère sans compte, en lisant à
+distance la seule fenêtre utile :
+
+``` r
+
+wc <- fev_fetch_worldcover(zone, year = 2021)
+source_wc <- fev_fuel_source(wc, type = "worldcover_2021", res = 25, aoi = zone)
+fev_fuel_profile(source_wc, lidar_deux, quiet = TRUE)$explained
+```
+
+Le chunk n’est pas exécuté à la compilation : une vignette ne doit pas
+dépendre d’un service distant. Voici les trois profils, mesurés le
+2026-08-18, **tous à 25 m** pour que la résolution ne fausse pas la
+comparaison :
+
+| Source | classes | `H_Bush` | `FL_0_1` | `FL_1_3` | `Cover` | `PAI_tot` |
+|----|----|----|----|----|----|----|
+| **BD Forêt v2** | 6 | **18,2 %** | **15,0 %** | **8,2 %** | **43,0 %** | **15,1 %** |
+| CORINE 2018 | 3 | 8,8 % | 4,7 % | 0,6 % | 25,0 % | 5,3 % |
+| ESA WorldCover 2021 | 5 | 4,0 % | 8,4 % | 5,2 % | 7,8 % | 8,2 % |
+
+**La BD Forêt gagne sur les cinq métriques**, et elle est pourtant la
+plus ancienne des trois — millésime 2014, antérieur au feu de 2021. La
+récence n’explique donc pas l’écart : la profondeur thématique le fait.
+L’essence et le taux de couvert sont une information réelle sur la
+structure ; une classe unique « couvert arboré » n’en est pas une.
+
+Ce que cette mesure ne dit pas, et qu’il faut garder en tête : elle
+**neutralise volontairement la résolution**, en plaçant tout le monde à
+25 m. Or c’est précisément ce que WorldCover apporte — 10 m, et un
+millésime 2021 partout plutôt que 2008-2018 sur la seule France.
+L’arbitrage se joue entre profondeur thématique d’un côté, finesse et
+fraîcheur de l’autre ; il est désormais chiffré au lieu d’être discuté.
+
+Deux placettes d’un seul massif, 566 cellules, et des nomenclatures à 6,
+3 et 5 classes — un compte de classes plus élevé explique mécaniquement
+un peu plus de variance. Six contre cinq ne rend pas compte d’un facteur
+quatre.
+
 ## Greffe sur le registre catégoriel
 
 ``` r
@@ -451,17 +512,19 @@ risque moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors,
 un facteur 6,5. Les périmètres rouges sont les onze incendies, les deux
 carrés blancs les placettes LiDAR.
 
-Le cadre blanc de 500 m sur le pourtour est un effet de bord réel, non
-un artefact : la fenêtre focale y déborde de l’emprise, et il n’y a
-effectivement pas de donnée au-delà. Il est préférable au remède
-apparent `na_rm = TRUE`, qui calculerait des fenêtres tronquées — mesuré
-sur ces données, une exposition moyenne de 0,32 dans le cadre contre
-0,46 à l’intérieur, soit 30 % de sous-estimation invisible. Le trou
-blanc est plus honnête que ce chiffre-là.
+**Il n’y a plus de cadre blanc**, et c’est l’argument `trim = study` de
+l’appel ci-dessus qui l’a supprimé. Le combustible ayant été construit
+sur l’emprise tamponnée, chaque cellule publiée a un anneau complet
+derrière elle ; la couronne de 500 m où la fenêtre débordait est
+calculée — il le faut, pour que l’intérieur soit juste — puis coupée au
+lieu d’être publiée. Mesuré sur cette emprise : 9,3 % de cellules vides
+sans recadrage, 0,3 % avec.
 
-Pour le supprimer sans rien inventer, il faut récupérer le combustible
-sur l’emprise tamponnée du rayon d’exposition, puis recadrer après le
-calcul focal.
+Le remède apparent était `na_rm = TRUE`, et il fallait s’en garder : il
+calcule chaque cellule de bord sur la portion d’anneau qui a des
+données, ce qui sous-estime l’exposition d’environ 30 % — mesuré ici
+0,32 contre 0,46 — et le fait **invisiblement**. Un trou blanc valait
+mieux que ce chiffre-là ; une emprise tamponnée vaut mieux que les deux.
 
 ### Le jour de l’incendie sort premier de 1 096
 
@@ -551,16 +614,16 @@ val$temporal$table
 #> 2                         1 to 5       0       0        0
 #> 3                            > 5      11    6927      100
 val$auc
-#> [1] 0.5345634
+#> [1] 0.5468174
 ```
 
 ``` r
 
 val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 #>       class pct_of_area pct_of_burnt ratio
-#> 1   0 - 0.2       31.94        28.55  0.89
-#> 2 0.2 - 0.4       23.89        27.14  1.14
-#> 3 0.4 - 0.6       44.17        44.31  1.00
+#> 1   0 - 0.2       32.08        26.23  0.82
+#> 2 0.2 - 0.4       25.24        29.46  1.17
+#> 3 0.4 - 0.6       42.68        44.31  1.04
 #> 4 0.6 - 0.8        0.00         0.00   NaN
 #> 5   0.8 - 1        0.00         0.00   NaN
 ```
