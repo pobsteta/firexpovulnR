@@ -440,6 +440,60 @@ Ce que le WMS a tout de même donné :
   Réunion — un code qui ressemble à une tuile et n'en nomme aucune. Il refuse
   désormais.
 
+## 11. Un test sur le plus proche substitut ouvert
+
+Ajouté le 2026-08-18. CLCplus restant derrière EU Login, la question « une classe
+arbustive à 10 m issue de Sentinel-2 identifie-t-elle le sous-étage ? » a été
+posée au produit le plus proche **qui, lui, est ouvert** : **ESA WorldCover
+v200, 10 m, millésime 2021**, servi en COG sur un bucket public. La fenêtre des
+deux placettes a été lue à distance par `/vsicurl/`, sans téléchargement ni
+compte.
+
+Sa classe **20, *Shrubland***, est l'analogue de la classe 5 de CLCplus.
+
+Séparabilité de la classe 20 contre les métriques LiDAR — probabilité qu'une
+cellule de la classe dépasse une cellule hors classe, 0,5 valant absence
+d'information :
+
+| Métrique | Séparabilité |
+|---|---|
+| `FL_0_1` — charge 0-1 m | **0,688** |
+| `FL_1_3` — charge 1-3 m | 0,579 |
+| `H_Bush` | 0,554 |
+| `PAI_tot` | 0,516 |
+| `Cover` | 0,450 |
+
+Le résultat le plus parlant n'est pas là mais dans les médianes. Sur ces
+placettes, *Tree cover* et *Shrubland* portent **quasiment le même sous-étage
+mesuré** :
+
+| Classe | `H_Bush` médian | `FL_1_3` médian |
+|---|---|---|
+| 10 — Tree cover | 2,77 m | 0,0656 |
+| 20 — Shrubland | 3,22 m | 0,0678 |
+
+Autrement dit, la classe arbustive **ne dit pas où est le combustible de
+sous-étage**. C'est exactement la réserve que le § 3 formulait sur la classe 5 de
+CLCplus, et le plus proche substitut ouvert la confirme.
+
+**Quatre réserves, dont une sérieuse.**
+
+1. **Ce n'est pas CLCplus.** Autre producteur, autre nomenclature, autre méthode.
+   Cela informe la décision, cela ne valide ni n'invalide la classe 5.
+2. **Décalage temporel de quatre ans, avec un incendie au milieu** : WorldCover
+   est de 2021, le LiDAR HD de 2025, le feu d'août 2021. Une part de la faible
+   séparabilité peut être temporelle plutôt que thématique.
+3. **Suréchantillonnage** : le LiDAR à 25 m porté sur une grille à ~9 m, une
+   mesure pour ~7,7 cellules. L'échantillon effectif est bien plus petit que les
+   4 410 cellules, et la statistique est donc *optimiste* — et elle plafonne
+   déjà à 0,688.
+4. Deux placettes d'un seul massif.
+
+**Ce que cela change pour la phase 10 :** rien sur la voie A, qui reste
+recommandée pour le masque brûlable, la résolution et le millésime. Mais cela
+renforce l'exigence de l'étape 2 du brief — ne pas faire de la classe arbustive
+une source de sous-étage sans l'avoir mesurée localement.
+
 ## Sources
 
 - [CLCplus Backbone — Copernicus Land Monitoring Service](https://land.copernicus.eu/en/products/clc-backbone)
