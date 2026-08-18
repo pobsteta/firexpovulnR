@@ -392,6 +392,29 @@ fev_clcplus_tiles <- function(aoi) {
   bb <- fev_bbox(sf::st_transform(fev_as_aoi(aoi), 3035))
   size <- .FEV_EEA_TILE_M
 
+  # LAEA is centred on Europe, so a tropical area forced through it lands on
+  # coordinates that are arithmetically fine and geographically meaningless --
+  # Réunion comes out as "E99N-31". Refuse rather than hand back a tile code
+  # that looks plausible and names nothing.
+  outside <- bb[["xmin"]] < .FEV_EEA_GRID_BOX[["xmin"]] ||
+    bb[["xmax"]] > .FEV_EEA_GRID_BOX[["xmax"]] ||
+    bb[["ymin"]] < .FEV_EEA_GRID_BOX[["ymin"]] ||
+    bb[["ymax"]] > .FEV_EEA_GRID_BOX[["ymax"]]
+  if (outside) {
+    fev_abort(c(
+      "This area is outside the EEA reference grid, so it has no \\
+       {.val E..N..} tile.",
+      i = "The grid is a Europe-centred equal-area projection; a tropical \\
+           area forced through it yields a code that looks like a tile and \\
+           is not one.",
+      i = "CLCplus does cover the French overseas departments, but as \\
+           separate products in their own UTM zones -- Guyane, Guadeloupe, \\
+           Martinique, La Réunion, Mayotte. Their tiling is not this one.",
+      i = "Browse them on the CLMS portal by the territory code in the layer \\
+           name rather than by an EEA tile."
+    ), class = "fev_outside_eea_grid")
+  }
+
   # floor() on both corners, then every tile between them: an AOI that straddles
   # a tile boundary needs both, and Couchey does exactly that.
   ex <- seq(floor(bb[["xmin"]] / size), floor(bb[["xmax"]] / size))

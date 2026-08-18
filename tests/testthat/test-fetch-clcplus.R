@@ -361,3 +361,29 @@ test_that("the manual refusal names the tiles when an AOI is given", {
   # And says how to get that help when it cannot.
   expect_error(fev_fetch_clcplus(year = 2023), regexp = "name the tiles")
 })
+
+test_that("an area outside the EEA grid is refused, not given a fake tile", {
+  # Réunion forced through EPSG:3035 lands at a negative northing and used to
+  # come back as "E99N-31" -- arithmetically fine, geographically meaningless.
+  re <- sf::st_buffer(
+    sf::st_transform(
+      sf::st_as_sf(data.frame(lon = 55.5, lat = -21.1),
+                   coords = c("lon", "lat"), crs = 4326),
+      32740
+    ),
+    5000
+  )
+  expect_error(fev_clcplus_tiles(re), class = "fev_outside_eea_grid")
+  expect_error(fev_clcplus_tiles(re), regexp = "overseas")
+})
+
+test_that("the labels match the producer's own legend", {
+  # Verified against the WMS GetLegendGraphic for the 2023 layer, 2026-08-18 --
+  # which is what took these labels from "read in a search result" to "read
+  # from the provider".
+  tab <- fev_fuel_lookup("clcplus")
+  expect_equal(tab$label[tab$code == "1"], "Sealed")
+  expect_equal(tab$label[tab$code == "5"], "Low-growing woody plants")
+  expect_equal(tab$label[tab$code == "9"], "Non and sparsely vegetated")
+  expect_equal(tab$label[tab$code == "253"], "Coastal seawater buffer")
+})

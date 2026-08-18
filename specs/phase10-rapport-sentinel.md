@@ -394,8 +394,10 @@ livrer celle qui nous manque.
 ## 9. Ce qui n'a pas été vérifié
 
 - Aucun appel réel. Aucun endpoint testé, aucune emprise téléchargée.
-- Liste des 11 classes CLC+ : lue en résultat de recherche, **pas** dans le manuel
-  utilisateur. Codes et libellés à confirmer avant codage.
+- Liste des 11 classes CLC+ : **désormais vérifiée**. Le `GetLegendGraphic` du
+  WMS producteur rend les onze libellés plus 253 et 254 directement depuis le
+  style publié, et ils correspondent à la table. Une seule correction, de
+  ponctuation. Deux routes indépendantes concordent, catalogue EEA et légende.
 - Précisions par classe de CLC+ : **cherchées et introuvables**. L'ATBD 2023 a été
   lu directement et n'en contient aucune ; le manuel utilisateur n'était pas
   atteignable ; les rapports de validation sont annoncés à paraître. Ce qui est
@@ -410,6 +412,33 @@ livrer celle qui nous manque.
 - Sentinel-1 : aucune source vérifiée, section rédigée de mémoire et signalée
   comme telle.
 - ESA WorldCover, Dynamic World : non instruits.
+
+## 10. Ce que le WMS a appris, et ce qu'il ne remplace pas
+
+Ajouté le 2026-08-18, après sondage des services publics du produit.
+
+**Le WCS est désactivé.** `service=WCS` sur le GeoServer répond
+`Service WCS is disabled`. Il n'existe donc aucune route ouverte vers les
+*valeurs* de classe : le téléchargement passe obligatoirement par EU Login.
+
+**Le WMS reste ouvert, et rend des images.** On pourrait inverser la palette d'un
+PNG indexé pour en tirer des chiffres. Il ne faut pas : ce serait un rendu
+déguisé en donnée, avec une résolution rééchantillonnée et une provenance
+mensongère. Le brief l'interdit nommément.
+
+Ce que le WMS a tout de même donné :
+
+* **La légende officielle vérifie les libellés.** C'était le point le plus faible
+  de ce rapport ; il est levé.
+* **La clé de lecture** : la classe 5 est le brun. Sur l'extrait des Maures, le
+  tiers nord en est largement couvert, ce qui recoupe grossièrement l'emprise du
+  feu de 2021 — la régénération post-incendie étant du ligneux bas. **Hypothèse à
+  tester, pas résultat** : c'est de l'œil sur un rendu.
+* **CLCplus couvre aussi les DOM, en UTM et hors grille EEA.** La liste des
+  couches nomme `GF/32622`, `GP/32620`, `MQ/32620`, `RE/32740`, `YT/32738`. Cela
+  a révélé un défaut réel : `fev_clcplus_tiles()` rendait `E99N-31` pour La
+  Réunion — un code qui ressemble à une tuile et n'en nomme aucune. Il refuse
+  désormais.
 
 ## Sources
 

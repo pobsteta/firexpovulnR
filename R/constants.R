@@ -162,6 +162,16 @@
 # and the EEA reference grid documentation (coding).
 .FEV_EEA_TILE_M <- 1e5
 
+# A sanity envelope for the EEA reference grid, NOT a published grid extent --
+# it is generous on purpose. Its job is to catch an area that has no business
+# being expressed on a Europe-centred equal-area grid at all: CLCplus also
+# covers the French overseas departments, but as separate products in their own
+# UTM zones (verified 2026-08-18 on the GeoServer WMS layer list, which names
+# GF/32622, GP/32620, MQ/32620, RE/32740 and YT/32738). Reunion forced through
+# EPSG:3035 lands at a negative northing and would otherwise be handed back a
+# tile code of "E99N-31".
+.FEV_EEA_GRID_BOX <- c(xmin = 1e6, ymin = 1e6, xmax = 7.5e6, ymax = 5.5e6)
+
 .FEV_CLCPLUS_NODATA <- c(254L, 255L)
 .FEV_CLCPLUS_SEAWATER <- 253L
 

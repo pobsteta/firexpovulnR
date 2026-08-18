@@ -205,9 +205,13 @@ clc <- tibble_rows(
 # --------------------------------------------------------------------------
 # CLCplus Backbone -- 11 classes, 10 m raster, Sentinel-2 time series
 # --------------------------------------------------------------------------
-# Codes and labels verified 2026-08-18 on the EEA catalogue record for the 2023
-# vintage (DOI 10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2). Nomenclature
-# derived from the EAGLE Land Cover Components.
+# Codes and labels verified 2026-08-18, twice and independently: on the EEA
+# catalogue record for the 2023 vintage (DOI
+# 10.2909/b0bd43c6-1fa1-4d88-9c45-98b13a95d0b2), and against the producer's own
+# WMS legend graphic, which renders the eleven labels plus 253 and 254 straight
+# from the published style. The second route is what upgraded these labels from
+# "read in a search result" to "read from the provider". Nomenclature derived
+# from the EAGLE Land Cover Components.
 #
 # WHAT THIS TABLE TRADES, and it is a trade in both directions.
 #
@@ -255,7 +259,7 @@ clcplus <- tibble_rows(
   r("6",   "Permanent herbaceous",                NA,    "grassland",           TRUE,    "clear",     "Permanent herbaceous cover. Closest to CORINE 321 natural grassland: fine fuel, cured for part of the year."),
   r("7",   "Periodically herbaceous",             NA,    "cropland",            FALSE,   "ambiguous", "Herbaceous with a cultivation or management cycle -- arable ground, in practice. Treated as CORINE 211 is: FALSE, with the same reservation that stubble carries fire for a few weeks a year and the mask has no season."),
   r("8",   "Lichens and mosses",                  NA,    "sparse_vegetation",   TRUE,    "ambiguous", "Lichen and moss cover, on rock or at altitude. Carries fire poorly and rarely. One of the three classes the producers state fall regionally below the 85% per-class accuracy target. Marginal in both study areas, kept burnable for consistency with CORINE 333 rather than on evidence."),
-  r("9",   "Non- and sparsely-vegetated",         NA,    "sparse_vegetation",   TRUE,    "ambiguous", "Bare and sparsely vegetated ground. Merges what CORINE splits across 331, 332 and 333, so it holds both genuine fuel breaks (bare rock) and discontinuous fuel. Also one of the three classes stated to fall regionally below the 85% per-class target. Burnable TRUE with a low availability weight, as for CORINE 333."),
+  r("9",   "Non and sparsely vegetated",           NA,    "sparse_vegetation",   TRUE,    "ambiguous", "Bare and sparsely vegetated ground. Merges what CORINE splits across 331, 332 and 333, so it holds both genuine fuel breaks (bare rock) and discontinuous fuel. Also one of the three classes stated to fall regionally below the 85% per-class target. Burnable TRUE with a low availability weight, as for CORINE 333."),
   r("10",  "Water",                               NA,    "non_fuel",            FALSE,   "clear",     "Inland and marine water."),
   r("11",  "Snow and ice",                        NA,    "non_fuel",            FALSE,   "clear",     "Permanent snow and ice."),
   r("253", "Coastal seawater buffer",             NA,    "non_fuel",            FALSE,   "clear",     "A production artefact rather than an observed class: the seaward buffer of the coastline. Non-fuel, and mapped here so that a coastal AOI -- the Maures reach the sea -- does not leave unmatched pixels.")
