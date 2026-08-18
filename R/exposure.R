@@ -60,6 +60,30 @@
 #' than a flat 1. That is a departure from the published metric, which is
 #' binary, so it is not the default and the record says which was used.
 #'
+#' @section The edge frame, and how to be rid of it:
+#' The outer ring of a focal result is not a measurement. It is the window
+#' hanging off the edge of the data, and with `na_rm = FALSE` it comes back
+#' empty — the white frame on every exposure map this package has ever drawn.
+#'
+#' `na_rm = TRUE` looks like the fix and is not: it computes each edge cell over
+#' whatever part of the ring happens to have data, which understates exposure
+#' there by about 30% on the Maures extract (0.32 against 0.46) and does so
+#' invisibly. A white frame is more honest than a wrong number.
+#'
+#' The real fix has two halves, and the package used to supply only the first:
+#' compute on more ground than you report on. Build the fuel source on an area
+#' buffered by at least the radius, then pass the area you actually mean to
+#' report as `trim`.
+#'
+#' ```r
+#' fuel <- fev_fuel_source(bdforet, aoi = sf::st_buffer(study, 500), ...)
+#' expo <- fev_exposure(fuel, radius = 500, trim = study)
+#' ```
+#'
+#' Every reported cell then has a complete ring behind it. The frame is still
+#' computed — it has to be, to make the inside correct — but it is cut away
+#' instead of published.
+#'
 #' @param fuel A `fev_fuel_source` (reduced with [fev_fuel_binary()]), a
 #'   `fev_fuel_layer`, or a `SpatRaster` with values in `[0, 1]`.
 #' @param radius Transmission distance in CRS units. `NULL` takes it from
@@ -74,6 +98,10 @@
 #'   them. `FALSE` matches `fireexposuR`; `TRUE` is more forgiving at the edges
 #'   of a study area, at the cost of computing a proportion over fewer cells
 #'   than the ring contains.
+#' @param trim Optional area to report on, smaller than the one computed. The
+#'   focal pass runs on the full extent, then the result is cropped and masked
+#'   to `trim`. This is what removes the edge frame rather than hiding it — see
+#'   the section below.
 #' @param filename Optional output path. Given one, `terra` streams the result
 #'   to disk in blocks instead of holding it in memory — which is what makes a
 #'   departmental run possible at all.
@@ -109,6 +137,7 @@ fev_exposure <- function(fuel,
                          no_burn = NULL,
                          lookup = NULL,
                          na_rm = FALSE,
+                         trim = NULL,
                          filename = "",
                          ...,
                          quiet = FALSE) {
@@ -198,9 +227,65 @@ fev_exposure <- function(fuel,
       "graded exposure: window cells contribute availability, not 0/1" else NULL
   )
 
+  if (!is.null(trim)) {
+    exposure <- fev_exposure_trim(exposure, trim, radius, quiet)
+    prov <- fev_prov_add_step(
+      prov, fun = "fev_exposure",
+      params = list(trimmed_to_aoi = TRUE, radius = radius),
+      notes = paste0("computed on the buffered extent, reported on the AOI: ",
+                     "the edge frame is cut away rather than published")
+    )
+  }
+
   new_fev_layer(exposure, role = "exposure", provenance = prov,
                 units = "proportion of surrounding fuel, 0-1",
                 class = "fev_exposure_layer")
+}
+
+#' Cut the edge frame away instead of publishing it
+#'
+#' The outer ring of a focal result is not a value, it is the window hanging off
+#' the edge of the data. `fev_exposure()` has always said so in the message
+#' `fev_extent_too_small` -- fetch a buffered extent, report on the inner one --
+#' and this is the second half of that advice, which until now had to be done by
+#' hand and usually was not.
+#'
+#' The check refuses to trim to something the buffer never covered: if the
+#' reporting area reaches within one radius of the computed extent, the frame is
+#' inside it and cropping would only hide the artefact rather than remove it.
+#'
+#' @noRd
+fev_exposure_trim <- function(exposure, trim, radius, quiet) {
+  aoi <- fev_as_aoi(trim, crs = sf::st_crs(terra::crs(exposure)))
+  v <- terra::vect(aoi)
+
+  outer <- fev_bbox(exposure)
+  inner <- fev_bbox(v)
+  slack <- min(inner[["xmin"]] - outer[["xmin"]], outer[["xmax"]] - inner[["xmax"]],
+               inner[["ymin"]] - outer[["ymin"]], outer[["ymax"]] - inner[["ymax"]])
+  if (slack < radius) {
+    fev_warn(c(
+      "{.arg trim} leaves only {.val {round(slack)}} m of margin, against a \\
+       radius of {.val {radius}} m.",
+      i = "The edge frame reaches into the area you are reporting on, so \\
+           cropping hides part of it rather than removing it.",
+      i = "Build the fuel source on an area buffered by at least the radius, \\
+           then trim back to the one you mean to report."
+    ), class = "fev_trim_insufficient_buffer", .envir = environment())
+  }
+
+  out <- terra::mask(terra::crop(exposure, v), v)
+  if (!quiet) {
+    kept <- round(100 * terra::ncell(out) / terra::ncell(exposure), 1)
+    fev_inform(c(
+      "Trimmed to the reporting area: {kept}% of the computed cells kept.",
+      i = "The rest was the {.val {radius}} m edge frame, where the window \\
+           hung off the data. It was computed to make the inside correct, and \\
+           is cut rather than published."
+    ), .envir = environment())
+  }
+  names(out) <- names(exposure)
+  out
 }
 
 #' Say what the empty cells are about to cost

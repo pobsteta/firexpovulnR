@@ -94,10 +94,12 @@ millesime_prudent
 ## Combustible
 
 ```{r fuel}
+emprise <- st_buffer(study, 500)          # le rayon d'exposition, en marge
+
 primaire <- fev_fuel_source(bdforet, type = "bdforet_v2", res = 25,
-                            aoi = study, millesime = millesime_prudent)
+                            aoi = emprise, millesime = millesime_prudent)
 auxiliaire <- fev_fuel_source(corine, type = "clc_2018", res = 25,
-                              aoi = study, millesime = 2018)
+                              aoi = emprise, millesime = 2018)
 fuel <- fev_fuel_merge(primaire, auxiliaire)
 fuel <- fev_fuel_fill_gaps(fuel)
 ```
@@ -171,7 +173,8 @@ Trait blanc, la commune. Traits rouges, les trois incendies.
 ## Exposition
 
 ```{r exposure}
-expo <- fev_exposure(brulable, radius = 500, type = "ember", quiet = TRUE)
+expo <- fev_exposure(brulable, radius = 500, type = "ember",
+                     trim = study, quiet = TRUE)
 terra::global(fev_data(expo), c("mean", "max"), na.rm = TRUE)
 ```
 

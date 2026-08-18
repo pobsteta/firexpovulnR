@@ -599,19 +599,37 @@ fev_fuel_weights <- function(weights = NULL, quiet = FALSE) {
 # order. Higher wins. Equal or unknown ranks fall back to argument order, which
 # is the behaviour every earlier version had.
 #
-# The ordering below is a JUDGEMENT, not a measurement, and one of its rows is
-# worth arguing about:
+# The ordering below was a judgement when it was written. It is now MEASURED,
+# and the measurement contradicts it.
 #
-#   WorldCover on top was chosen deliberately, for 10 m and a recent vintage
-#   everywhere. The cost is real and measured: on the two Maures LiDAR plots its
-#   Shrubland class separates the understorey only weakly (0.55-0.69, against 0.5
-#   for no information), and its Shrubland and Tree cover classes carry
-#   practically the same measured understorey. It also has no species and no
-#   crown-cover reading, both of which BD Foret does have.
+# Method: the three sources put on the same 25 m grid over the two Maures LiDAR
+# plots -- resolution deliberately held constant, so this compares thematic
+# content per class and nothing else -- then each confronted with the LiDAR by
+# fev_fuel_profile(). Share of variance in the measured metric explained by
+# class membership, 2026-08-18:
 #
-#   Put differently: this ranking buys resolution and recency, and pays in
-#   thematic depth. Reverse the two ranks below, or pass hierarchy explicitly,
-#   if that trade is wrong for your study.
+#     source            classes  H_Bush  FL_0_1  FL_1_3  Cover  PAI_tot
+#     bdforet_v2              6    18.2    15.0     8.2   43.0     15.1
+#     clc_2018                3     8.8     4.7     0.6   25.0      5.3
+#     worldcover_2021         5     4.0     8.4     5.2    7.8      8.2
+#
+# BD Foret wins every metric, and it is the OLDEST of the three -- a 2014
+# vintage, predating the 2021 fire -- so recency does not explain the gap.
+# Thematic depth does: species and crown cover are real information about
+# structure, and a single "Tree cover" class is not.
+#
+# WorldCover is nonetheless ranked on top here, on an explicit decision, because
+# what this measurement holds constant is exactly what WorldCover is for: 10 m
+# instead of 25, and a 2021 vintage everywhere instead of 2008-2018 in France
+# only. The trade is resolution and recency against thematic depth, and it is
+# now quantified rather than argued.
+#
+# Two caveats on the figures: two plots of one massif, 566 cells; and the class
+# counts differ (6, 3, 5), which mechanically favours the richer nomenclature --
+# though 6 against 5 does not explain a factor of four.
+#
+# To follow the measurement instead, swap the two ranks below, or pass
+# hierarchy = "primary_first" with BD Foret as primary at the call site.
 .FEV_FUEL_PRIORITY <- c(
   worldcover_2021 = 40L,
   worldcover_2020 = 40L,
