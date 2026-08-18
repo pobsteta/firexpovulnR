@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.17.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.18.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,18 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.18.0" id="firexpovulnr-0180-2026-08-18">firexpovulnR 0.18.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0180-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="fev_clcplus_tiles--quelles-tuiles-télécharger-0-18-0">
+<code>fev_clcplus_tiles()</code> — quelles tuiles télécharger<a class="anchor" aria-label="anchor" href="#fev_clcplus_tiles--quelles-tuiles-t%C3%A9l%C3%A9charger-0-18-0"></a></h4>
+<p>CLCplus est diffusé en tuiles de <strong>100 x 100 km</strong> en GeoTIFF nuage-optimisé sur la grille de référence EEA. Puisque le téléchargement est manuel — le produit est derrière EU Login — le moins que ce paquet puisse faire est de dire exactement quelles tuiles prendre, plutôt que de laisser le calcul à faire sur une carte.</p>
+<p>Le code de cellule EEA est la taille suivie du coin inférieur gauche exprimé en unités de cette taille, en EPSG:3035 : une tuile de 100 km dont le coin est à 4 000 000 m est et 2 200 000 m nord s’appelle <code>E40N22</code>.</p>
+<p>Pour les deux emprises embarquées : <strong>les Maures tiennent dans une seule tuile, <code>E40N22</code></strong> ; <strong>Couchey en chevauche deux</strong>, <code>E39N26</code> et <code>E39N27</code>, parce que l’emprise traverse le northing 2 700 000 — une seule tuile y laisserait un trou.</p>
+<p>Le refus de <code><a href="../reference/fev_fetch_clcplus.html">fev_fetch_clcplus()</a></code> nomme désormais ces tuiles quand un <code>aoi</code> lui est passé. Nommer la tuile est la chose la plus utile qu’un refus puisse faire quand la récupération doit se faire à la main.</p>
+<p>L’arithmétique est le système de codage documenté de la grille EEA ; <strong>le préfixe exact que le CLMS met devant dans ses noms de fichiers n’a pas été vérifié</strong>, donc cherchez la partie <code>E..N..</code> dans la liste de téléchargement.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.17.0" id="firexpovulnr-0170-2026-08-18">firexpovulnR 0.17.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0170-2026-08-18"></a></h2>
 <div class="section level4">
