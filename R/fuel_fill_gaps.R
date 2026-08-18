@@ -203,8 +203,15 @@ fev_fuel_fill_gaps <- function(fuel, max_gap = NULL, quiet = FALSE) {
     fev_restore_cat_levels(out, layer)
   }
 
+  # Only the layers this operation owns. An attached classification -- BD Forêt
+  # riding alongside a WorldCover `class`, say -- has its own NAs meaning "not
+  # forest here", and filling those from a modal neighbour would invent species.
+  own <- names(cat_r) %in% c("class", "source")
   layers <- lapply(seq_len(terra::nlyr(cat_r)), function(i) {
     layer <- cat_r[[i]]
+    if (!own[i]) {
+      return(layer)
+    }
     if (identical(names(cat_r)[i], "source")) {
       # A repaired cell must NOT claim that CORINE mapped it. It gets its own
       # level instead, so the repair stays visible in the data rather than only

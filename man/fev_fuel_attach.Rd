@@ -4,31 +4,60 @@
 \alias{fev_fuel_attach}
 \title{Attach continuous fuel metrics to a categorical fuel source}
 \usage{
-fev_fuel_attach(primary, lidar)
+fev_fuel_attach(primary, extra, name = NULL)
 }
 \arguments{
-\item{primary}{A \code{fev_fuel_source} with a categorical register.}
+\item{primary}{A \code{fev_fuel_source} with a categorical register. It keeps
+deciding \code{class}.}
 
-\item{lidar}{A \code{fev_fuel_source} with a continuous register, from
-\code{\link[=fev_fuel_lidar]{fev_fuel_lidar()}}.}
+\item{extra}{A \code{fev_fuel_source} to carry alongside. With a continuous
+register — from \code{\link[=fev_fuel_lidar]{fev_fuel_lidar()}} — it populates the continuous one. With
+only a categorical register, its classes become an extra layer.}
+
+\item{name}{Name for the attached categorical layer. \code{NULL} uses the source's
+own label. Ignored for a continuous attachment.}
 }
 \value{
-\code{primary}, with its continuous register populated.
+\code{primary}, with the extra description carried alongside.
 }
 \description{
-Grafts a LiDAR-derived continuous register onto a fuel source that already
-carries a categorical one, so a single object holds both descriptions of the
-same ground.
+Carries a second description of the same ground alongside the first, instead
+of making the two compete for the pixel. What the attached source holds
+decides where it lands: \strong{continuous} metrics populate the continuous
+register, a \strong{class} layer becomes a named extra layer of the categorical
+one.
 }
 \section{Why this is not fev_fuel_merge()}{
 
-\code{\link[=fev_fuel_merge]{fev_fuel_merge()}} arbitrates between sources that compete for the same
-pixel: BD Forêt and CORINE both propose a class, one has to win, and the
-per-pixel \code{source} layer records which. LiDAR competes for nothing. It
-carries quantities neither categorical source has — bulk density, crown base
-height, load by stratum — on the same ground. Folding that into \code{merge} would
-give one function two incompatible behaviours, so it is a separate operation
-writing to a separate register.
+\code{\link[=fev_fuel_merge]{fev_fuel_merge()}} arbitrates. Two sources propose a class for the same
+pixel, one has to win, and the per-pixel \code{source} layer records which. The
+loser's information is gone.
+
+Attaching arbitrates nothing. LiDAR competes for nothing to begin with — bulk
+density and crown base height are quantities no categorical source has. And a
+second classification need not compete either, if you want it for the
+attributes the deciding one lacks rather than for the class itself.
+}
+
+\section{Keeping the species when a 10 m raster decides the class}{
+
+This is the case the categorical branch exists for. With
+\code{fev_fuel_merge(hierarchy = "auto")}, ESA WorldCover outranks BD Forêt and,
+having complete coverage, takes \strong{every} pixel — BD Forêt contributes
+nothing, and its species and crown cover go with it.
+
+Attaching it afterwards keeps both: the 10 m class from WorldCover, and the
+botany from BD Forêt riding alongside in its own layer.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{fuel <- fev_fuel_merge(bdforet, worldcover)   # WorldCover decides `class`
+fuel <- fev_fuel_attach(fuel, bdforet)        # species survives beside it
+}\if{html}{\out{</div>}}
+
+The attached layer decides no pixel. \code{fev_fuel_binary()},
+\code{fev_fuel_type()} and the exposure chain all read \code{class} and ignore it, and
+\code{fev_fuel_fill_gaps()} leaves it alone — its \code{NA} mean "not forest here",
+which is information, and filling them from a modal neighbour would invent
+species.
 }
 
 \section{Coverage is a per-metric mask, not a source layer}{
@@ -56,6 +85,16 @@ lidar <- fev_fuel_source(cbd, type = "custom", register = "continuous",
 
 both <- fev_fuel_attach(fuel, lidar)
 fev_fuel_registers(both)
+
+# And the categorical branch: a second classification kept alongside rather
+# than made to compete.
+other <- terra::rast(cat_r)
+terra::values(other) <- rep_len(1:2, 64)
+levels(other) <- data.frame(id = 1:2, class = c("10", "20"))
+names(other) <- "class"
+wc <- fev_fuel_source(other, type = "worldcover_2021", register = "categorical")
+
+names(fev_fuel_categorical(fev_fuel_attach(wc, fuel)))
 
 }
 \seealso{

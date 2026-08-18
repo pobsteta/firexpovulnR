@@ -437,18 +437,41 @@ fev_lidar_clean <- function(raw, wanted) {
 
 #' Attach continuous fuel metrics to a categorical fuel source
 #'
-#' Grafts a LiDAR-derived continuous register onto a fuel source that already
-#' carries a categorical one, so a single object holds both descriptions of the
-#' same ground.
+#' Carries a second description of the same ground alongside the first, instead
+#' of making the two compete for the pixel. What the attached source holds
+#' decides where it lands: **continuous** metrics populate the continuous
+#' register, a **class** layer becomes a named extra layer of the categorical
+#' one.
 #'
 #' @section Why this is not fev_fuel_merge():
-#' [fev_fuel_merge()] arbitrates between sources that compete for the same
-#' pixel: BD Forêt and CORINE both propose a class, one has to win, and the
-#' per-pixel `source` layer records which. LiDAR competes for nothing. It
-#' carries quantities neither categorical source has — bulk density, crown base
-#' height, load by stratum — on the same ground. Folding that into `merge` would
-#' give one function two incompatible behaviours, so it is a separate operation
-#' writing to a separate register.
+#' [fev_fuel_merge()] arbitrates. Two sources propose a class for the same
+#' pixel, one has to win, and the per-pixel `source` layer records which. The
+#' loser's information is gone.
+#'
+#' Attaching arbitrates nothing. LiDAR competes for nothing to begin with — bulk
+#' density and crown base height are quantities no categorical source has. And a
+#' second classification need not compete either, if you want it for the
+#' attributes the deciding one lacks rather than for the class itself.
+#'
+#' @section Keeping the species when a 10 m raster decides the class:
+#' This is the case the categorical branch exists for. With
+#' `fev_fuel_merge(hierarchy = "auto")`, ESA WorldCover outranks BD Forêt and,
+#' having complete coverage, takes **every** pixel — BD Forêt contributes
+#' nothing, and its species and crown cover go with it.
+#'
+#' Attaching it afterwards keeps both: the 10 m class from WorldCover, and the
+#' botany from BD Forêt riding alongside in its own layer.
+#'
+#' ```r
+#' fuel <- fev_fuel_merge(bdforet, worldcover)   # WorldCover decides `class`
+#' fuel <- fev_fuel_attach(fuel, bdforet)        # species survives beside it
+#' ```
+#'
+#' The attached layer decides no pixel. `fev_fuel_binary()`,
+#' `fev_fuel_type()` and the exposure chain all read `class` and ignore it, and
+#' `fev_fuel_fill_gaps()` leaves it alone — its `NA` mean "not forest here",
+#' which is information, and filling them from a modal neighbour would invent
+#' species.
 #'
 #' @section Coverage is a per-metric mask, not a source layer:
 #' LiDAR HD is still being flown, so the continuous register is full of holes
@@ -456,11 +479,15 @@ fev_lidar_clean <- function(raw, wanted) {
 #' categorical cells that get continuous values, because a fuel object whose two
 #' registers describe different subsets of the map is easy to misread.
 #'
-#' @param primary A `fev_fuel_source` with a categorical register.
-#' @param lidar A `fev_fuel_source` with a continuous register, from
-#'   [fev_fuel_lidar()].
+#' @param primary A `fev_fuel_source` with a categorical register. It keeps
+#'   deciding `class`.
+#' @param extra A `fev_fuel_source` to carry alongside. With a continuous
+#'   register — from [fev_fuel_lidar()] — it populates the continuous one. With
+#'   only a categorical register, its classes become an extra layer.
+#' @param name Name for the attached categorical layer. `NULL` uses the source's
+#'   own label. Ignored for a continuous attachment.
 #'
-#' @return `primary`, with its continuous register populated.
+#' @return `primary`, with the extra description carried alongside.
 #'
 #' @seealso [fev_fuel_lidar()], [fev_fuel_merge()], [fev_fuel_registers()].
 #'
@@ -482,15 +509,33 @@ fev_lidar_clean <- function(raw, wanted) {
 #' both <- fev_fuel_attach(fuel, lidar)
 #' fev_fuel_registers(both)
 #'
+#' # And the categorical branch: a second classification kept alongside rather
+#' # than made to compete.
+#' other <- terra::rast(cat_r)
+#' terra::values(other) <- rep_len(1:2, 64)
+#' levels(other) <- data.frame(id = 1:2, class = c("10", "20"))
+#' names(other) <- "class"
+#' wc <- fev_fuel_source(other, type = "worldcover_2021", register = "categorical")
+#'
+#' names(fev_fuel_categorical(fev_fuel_attach(wc, fuel)))
+#'
 #' @export
-fev_fuel_attach <- function(primary, lidar) {
+fev_fuel_attach <- function(primary, extra, name = NULL) {
   fev_check_fuel_source(primary, "primary")
-  fev_check_fuel_source(lidar, "lidar")
+  fev_check_fuel_source(extra, "extra")
   fev_fuel_require_register(primary, "categorical", "fev_fuel_attach")
-  fev_fuel_require_register(lidar, "continuous", "fev_fuel_attach")
+
+  # One meaning, two registers. What the attached source CARRIES decides where
+  # it lands: continuous metrics go to the continuous register, a class layer
+  # becomes a named extra layer of the categorical one. Neither competes for the
+  # pixel, which is the whole difference from fev_fuel_merge().
+  has_cont <- "continuous" %in% fev_fuel_registers(extra)
+  if (!has_cont) {
+    return(fev_fuel_attach_categorical(primary, extra, name))
+  }
 
   cat_layer <- primary$categorical[["class"]]
-  cont <- lidar$continuous
+  cont <- extra$continuous
 
   if (!fev_crs_equal(cont, cat_layer)) {
     fev_warn(c(
@@ -525,7 +570,7 @@ fev_fuel_attach <- function(primary, lidar) {
     ), class = "fev_partial_continuous", .envir = environment())
   }
 
-  prov <- fev_prov_merge(primary$provenance, lidar$provenance)
+  prov <- fev_prov_merge(primary$provenance, extra$provenance)
   prov <- fev_prov_add_step(
     prov, fun = "fev_fuel_attach",
     params = list(metrics = names(cont), n_metrics = terra::nlyr(cont),
@@ -540,11 +585,98 @@ fev_fuel_attach <- function(primary, lidar) {
   new_fev_fuel_source(
     categorical = primary$categorical,
     continuous  = cont,
-    units       = c(primary$units, lidar$units)[names(cont)],
+    units       = c(primary$units, extra$units)[names(cont)],
     lookup      = primary$lookup,
     type        = paste(unique(c(fev_fuel_components(primary), "lidarhd")),
                         collapse = "+"),
-    millesime   = fev_merge_millesime(primary, lidar),
+    millesime   = fev_merge_millesime(primary, extra),
+    provenance  = prov
+  )
+}
+
+
+#' Carry a second classification alongside, without arbitrating the pixel
+#'
+#' The categorical counterpart of the continuous graft. Where
+#' [fev_fuel_merge()] makes two class layers compete and one of them lose, this
+#' keeps both: the primary keeps deciding `class`, and the other source's codes
+#' ride along in a layer of their own.
+#'
+#' The case it exists for: with `fev_fuel_merge(hierarchy = "auto")` putting a
+#' 10 m raster on top, BD Forêt loses every pixel and its species and crown
+#' cover go with it. Attaching it afterwards keeps the resolution AND the
+#' botany.
+#'
+#' @noRd
+fev_fuel_attach_categorical <- function(primary, extra, name = NULL) {
+  fev_fuel_require_register(extra, "categorical", "fev_fuel_attach")
+
+  cat_r <- primary$categorical
+  layer <- extra$categorical[["class"]]
+
+  name <- name %||% fev_fuel_label(extra)
+  if (name %in% names(cat_r)) {
+    fev_abort(c(
+      "The categorical register already has a layer called {.val {name}}.",
+      i = "Pass {.arg name} to give this one a different one."
+    ), class = "fev_attach_name_taken", .envir = environment())
+  }
+
+  target <- cat_r[["class"]]
+  if (!fev_crs_equal(layer, target)) {
+    fev_warn(c(
+      "Reprojecting {.val {name}} from {.val {fev_crs_label(layer)}} to \\
+       {.val {fev_crs_label(target)}} with nearest neighbour.",
+      i = "It is a class layer, so no other method is defensible; boundaries \\
+           move by up to half a cell. Logged in the provenance."
+    ), class = "fev_categorical_reprojected", .envir = environment())
+    layer <- terra::project(layer, target, method = "near")
+  }
+  if (!terra::compareGeom(layer, target, stopOnError = FALSE)) {
+    layer <- terra::resample(layer, target, method = "near")
+  }
+  layer <- fev_restore_cat_levels(layer, extra$categorical[["class"]])
+  names(layer) <- name
+
+  covered <- as.numeric(terra::global(!is.na(layer), "sum", na.rm = TRUE)[1, 1])
+  mapped <- as.numeric(terra::global(!is.na(target), "sum", na.rm = TRUE)[1, 1])
+  pct <- if (mapped > 0) round(100 * covered / mapped, 1) else NA_real_
+
+  # Name what actually decides `class`. On a merged source that is the winning
+  # dataset, read off the source layer -- not the combined type string, which
+  # lists every component and reads as though all of them decided it.
+  decider <- if ("source" %in% names(cat_r)) {
+    lv <- fev_cat_levels(cat_r[["source"]])
+    if (!is.null(lv) && nrow(lv)) lv[[2]][1] else fev_fuel_label(primary)
+  } else {
+    fev_fuel_label(primary)
+  }
+  fev_inform(c(
+    "Attached {.val {name}} alongside {.field class}, covering {pct}% of the \\
+     mapped cells.",
+    i = "It decides no pixel: {.field class} still comes from \\
+         {.val {decider}}. Use it for what the deciding source does not \\
+         carry -- species, crown cover.",
+    i = "{.fn fev_fuel_fill_gaps} leaves it alone: its {.val NA} mean \\
+         {.q not forest here}, which is information."
+  ), .envir = environment())
+
+  prov <- fev_prov_add_step(
+    primary$provenance,
+    fun = "fev_fuel_attach",
+    params = list(attached = name, register = "categorical",
+                  pct_categorical_covered = pct),
+    notes = "second classification carried alongside; no pixel arbitration"
+  )
+
+  new_fev_fuel_source(
+    categorical = c(cat_r, layer),
+    continuous  = primary$continuous,
+    units       = primary$units,
+    lookup      = fev_merge_lookups(primary$lookup, extra$lookup),
+    type        = paste(unique(c(fev_fuel_components(primary),
+                                 fev_fuel_components(extra))), collapse = "+"),
+    millesime   = primary$millesime,
     provenance  = prov
   )
 }

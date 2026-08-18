@@ -282,17 +282,31 @@ test_that("attach reports how much of the categorical register it covers", {
   expect_equal(step$params$pct_categorical_covered, 50)
 })
 
-test_that("attach needs the right register on each side", {
+test_that("attach needs a categorical primary, whatever is attached to it", {
   cat_r <- synth_class_raster(nrow = 4, ncol = 4)
   fuel <- fev_fuel_source(cat_r, type = "bdforet_v2", millesime = 2014)
-  expect_error(fev_fuel_attach(fuel, fuel), class = "fev_missing_register")
 
   cont <- terra::rast(cat_r)
   terra::values(cont) <- 0.2
   names(cont) <- "CBD_max"
   lidar <- fev_fuel_source(cont, type = "custom", register = "continuous")
+
+  # The primary must always carry the class layer that keeps deciding pixels.
   expect_error(fev_fuel_attach(lidar, lidar), class = "fev_missing_register")
   expect_error(fev_fuel_attach("nope", lidar), class = "fev_error")
+})
+
+test_that("attaching a categorical source is now the feature, not an error", {
+  # Contract change: it used to require a continuous register on the right.
+  # Carrying a second CLASSIFICATION alongside is the whole point of the
+  # categorical branch -- keeping BD Forêt's species when a 10 m raster has
+  # taken every pixel of `class`.
+  cat_r <- synth_class_raster(nrow = 4, ncol = 4)
+  fuel <- fev_fuel_source(cat_r, type = "bdforet_v2", millesime = 2014)
+
+  out <- suppressMessages(fev_fuel_attach(fuel, fuel, name = "essence"))
+  expect_true("essence" %in% names(fev_fuel_categorical(out)))
+  expect_equal(names(fev_fuel_categorical(out))[1], "class")
 })
 
 test_that("attach realigns a continuous grid, with bilinear this time", {
