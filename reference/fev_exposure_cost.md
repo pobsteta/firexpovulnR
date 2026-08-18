@@ -20,7 +20,7 @@ fev_exposure_cost(x, res = NULL, radius = NULL, rate = 2e+08)
 
   A fuel layer: `SpatRaster`,
   [fev_fuel_source](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_source.md)
-  or fev_layer.
+  or `fev_layer`.
 
 - res:
 
