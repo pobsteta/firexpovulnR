@@ -13,7 +13,7 @@ again — it picks up where it stopped."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.25.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.27.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -119,12 +119,15 @@ downloading anything.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A data frame, one row per tile: <code>tile</code>, <code>status</code>, <code>points</code>,
-<code>seconds</code>, <code>path</code>, <code>rank</code>. <code>status</code> is <code>"done"</code> for a tile whose raster
-already exists, <code>"next"</code> for one this run will take, <code>"todo"</code> for one left
-for a later run, and <code>"written"</code> or <code>"failed"</code> afterwards. <code>rank</code> gives the
-position in the traversal, so a dry run shows the actual batch rather than
-the index order. Also written to <code>manifest.csv</code> in <code>out_dir</code> after every
-tile, so an interrupted run leaves a readable record.</p>
+<code>seconds</code>, <code>path</code>, <code>error</code>, <code>rank</code>. <code>status</code> is <code>"done"</code> for a tile whose
+raster already exists, <code>"next"</code> for one this run will take, <code>"todo"</code> for
+one left for a later run, and <code>"written"</code> or <code>"failed"</code> afterwards.
+<code>error</code> carries the reason a tile failed, so the manifest answers the
+question on its own rather than sending you back to a console log.
+<code>rank</code> gives the position in the traversal, so a dry run shows the actual
+batch rather than the index order. Also written to <code>manifest.csv</code> in
+<code>out_dir</code> after every tile, so an interrupted run leaves a readable
+record.</p>
     </div>
     <div class="section level2">
     <h2 id="why-resume-is-the-point">Why resume is the point<a class="anchor" aria-label="anchor" href="#why-resume-is-the-point"></a></h2>

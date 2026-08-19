@@ -75,12 +75,14 @@ fev_lidar_batch(
 ## Value
 
 A data frame, one row per tile: `tile`, `status`, `points`, `seconds`,
-`path`, `rank`. `status` is `"done"` for a tile whose raster already
-exists, `"next"` for one this run will take, `"todo"` for one left for a
-later run, and `"written"` or `"failed"` afterwards. `rank` gives the
-position in the traversal, so a dry run shows the actual batch rather
-than the index order. Also written to `manifest.csv` in `out_dir` after
-every tile, so an interrupted run leaves a readable record.
+`path`, `error`, `rank`. `status` is `"done"` for a tile whose raster
+already exists, `"next"` for one this run will take, `"todo"` for one
+left for a later run, and `"written"` or `"failed"` afterwards. `error`
+carries the reason a tile failed, so the manifest answers the question
+on its own rather than sending you back to a console log. `rank` gives
+the position in the traversal, so a dry run shows the actual batch
+rather than the index order. Also written to `manifest.csv` in `out_dir`
+after every tile, so an interrupted run leaves a readable record.
 
 ## Why resume is the point
 

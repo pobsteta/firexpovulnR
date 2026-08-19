@@ -1,5 +1,186 @@
 # Changelog
 
+## firexpovulnR 0.27.0 (2026-08-19)
+
+#### Trente-deux fenêtres, et l’écart se creuse au lieu de se combler
+
+La section des Maures passe de douze fenêtres à **trente-deux**, de 1
+176 à **3 110 cellules**. Les chiffres bougent, et pas dans le sens
+confortable :
+
+|         | 12 fenêtres | 32 fenêtres |
+|---------|-------------|-------------|
+| Couvert | 0,73        | **0,65**    |
+| CFL     | 0,65        | **0,55**    |
+| CBD max | 0,26        | **0,20**    |
+
+**Plus on regarde de massif, moins la classe suffit.** Un échantillon
+élargi aurait pu stabiliser les proportions ; il a fait baisser le
+pouvoir explicatif de la nomenclature sur les six métriques. La
+conclusion tient donc plus fermement qu’avant : la BD Forêt explique
+bien le couvert, deux à trois fois moins la structure verticale, et le
+moins la densité apparente de houppier — la variable dont dépend le
+passage en cime.
+
+Chez les chênes sempervirents, désormais 520 cellules d’un seul code, la
+charge de houppier va de **0,05 à 1,98 kg/m²** : un rapport de quarante
+dans une classe que la base traite comme homogène.
+
+`FF2-81-81` (pins autres que maritime) rejoint `FO2` comme seconde
+classe qui sépare réellement — 25 % de cellules continues contre 85 à 98
+% ailleurs, et 8,5 m de vide sous les houppiers. Le point commun des
+deux n’est pas l’essence mais le fait qu’elles décrivent une
+**structure**.
+
+#### WorldCover ne rattrape rien, et la mesure le dit
+
+Ajouter WorldCover à la BD Forêt ne change les six R² qu’à la troisième
+décimale. Elle classe 73 % des cellules du massif en « couvert arboré ».
+
+Sur les 637 cellules sans polygone BD Forêt, ses cinq étiquettes
+recouvrent une seule réalité mesurée : couvert de 0,00 à 0,21, charge de
+houppier de 0,08 à 0,17. Un « couvert arboré » à 0,06 de couvert mesuré
+n’est pas du couvert arboré. La BD Forêt a raison de ne rien mettre là.
+
+Ce qui manque au paquet n’est donc pas une étiquette plus fine, c’est
+une mesure — donc de la couverture LiDAR, pas une source catégorielle de
+plus.
+
+## firexpovulnR 0.26.1 (2026-08-19)
+
+#### Un tiers de fichier passait pour un téléchargement réussi
+
+Une dalle sur douze a échoué en campagne, sur
+`reading header.evlrs[0].reserved`. Le fichier local pesait **122 Mo
+contre 290 Mo annoncés par le serveur** : le téléchargement s’était
+arrêté au tiers, et le contrôle `taille > 1 Mo` — pensé pour repérer un
+fichier vide, pas un fichier tronqué — l’avait accepté.
+
+L’échec n’était pas le pire. Avec `keep_las = TRUE`, le fichier tronqué
+restait en cache, et la reprise ne demande que *le fichier est-il là* :
+la dalle aurait rejoué le même échec **à chaque relance, indéfiniment**.
+
+- La taille annoncée par le serveur est lue et comparée, avant et après
+  téléchargement. Un fichier court est un téléchargement raté, et le
+  message le chiffre : `download truncated: 122 of 290 MB`.
+- **Un nuage qui ne se lit pas est supprimé du cache.** `keep_las`
+  épargne des re-téléchargements ; il ne conserve pas un fichier
+  corrompu.
+
+La lecture de l’en-tête est séparée de sa récupération pour être
+testable sans réseau. Trois tests, dont `Content-Length: 0` — qui ne
+doit pas être pris pour un fichier vide, sous peine de vider le cache
+entier sur un serveur qui rembourre ses en-têtes.
+
+Vérifié en reprise : la dalle rejouée s’est retéléchargée entière et a
+produit son raster sur 2,83 M de points.
+
+## firexpovulnR 0.26.0 (2026-08-19)
+
+#### Treize fenêtres sur vingt-quatre tombaient hors de la zone d’étude
+
+[`fev_lidarhd_available()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidarhd_available.md)
+retient toute dalle qui **intersecte** l’emprise, et `window` découpait
+ensuite un carré centré sur **la dalle**. Sur une dalle de bordure, ce
+carré part entièrement dans le hors-champ. Mesuré sur la campagne des
+Maures : **13 des 24 premières fenêtres étaient hors de la zone
+d’étude**, inversées au prix fort, indiscernables des onze autres dans
+le manifeste, et décrivant un terrain que personne n’avait demandé.
+
+Le défaut ne se voyait nulle part. Le manifeste disait `written`, les
+rasters étaient valides, les métriques plausibles — et fausses de sujet.
+Il n’est apparu qu’en croisant les sorties avec la BD Forêt : 46 % des
+cellules sans polygone, un « trou de couverture » qui n’existait pas.
+Ramené aux fenêtres légitimes, ce chiffre tombe à 17 %.
+
+`fev_lidar_window_centres()` centre désormais le carré sur
+l’intersection dalle × emprise **rétrécie d’une demi-fenêtre**. Ce qui
+survit à ce rétrécissement est exactement l’ensemble des positions où le
+carré tient tout entier dans la zone — donc le même calcul place la
+fenêtre et décide si la dalle est exploitable. Une dalle sans centre est
+une dalle à écarter, pas une dalle à découper de travers : elle reçoit
+le statut `"outside"`, et leur nombre est annoncé. Sur les Maures, 43
+dalles sur 505.
+
+La traversée du plus éloigné se fait maintenant sur les **centres de
+fenêtre** et non sur les centres de dalle : une fois le carré replacé
+dans l’emprise, ce sont eux que la répartition doit tenir écartés.
+
+Quatre tests s’ajoutent, dont un qui vérifie que le **carré entier** —
+pas seulement son centre — est contenu dans l’emprise. Les tests
+existants ne pouvaient rien voir : ils ne passent jamais d’emprise,
+seulement un index.
+
+#### La vignette des Maures chiffre enfin ce qu’elle affirmait
+
+Une section nouvelle porte la démonstration de deux placettes à **douze
+fenêtres réparties sur le massif, 1 176 cellules**. Ce que la classe TFV
+explique :
+
+|             | BD Forêt v2 | WorldCover | les deux |
+|-------------|-------------|------------|----------|
+| Couvert     | 0,73        | 0,05       | 0,73     |
+| CFL         | 0,65        | 0,04       | 0,65     |
+| FSG         | 0,34        | 0,02       | 0,35     |
+| **CBD max** | **0,26**    | 0,01       | 0,27     |
+
+Le gradient va dans le sens redouté : la nomenclature explique très bien
+le couvert, deux fois moins bien la structure verticale, et le moins la
+densité apparente de houppier — la variable dont dépend le passage en
+cime. Dans la seule classe des chênes sempervirents, 273 cellules, la
+charge de houppier va de 0,44 à 1,98 kg/m².
+
+**Ajouter WorldCover n’apporte rien** : troisième colonne identique à la
+première. Sur ce massif elle classe 69 % des cellules en « couvert
+arboré », et ses quatre étiquettes sur les cellules hors BD Forêt
+recouvrent une seule réalité structurelle. Ce qui manque n’est pas une
+étiquette plus fine, c’est une mesure — donc de la couverture LiDAR, pas
+une source catégorielle de plus.
+
+## firexpovulnR 0.25.1 (2026-08-18)
+
+#### Huit dalles inversées puis jetées, sur une extension de fichier
+
+Défaut trouvé en lançant la campagne, pas en la testant.
+[`fev_lidar_batch()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_batch.md)
+écrivait chaque raster sous un nom temporaire avant de le renommer — la
+précaution est bonne, une écriture interrompue ne doit jamais passer
+pour une dalle finie — mais le nom était construit ainsi :
+
+``` r
+
+tmp <- paste0(dest, ".part")   # ..._fuel.tif.part
+```
+
+[`terra::writeRaster()`](https://rspatial.github.io/terra/reference/writeRaster.html)
+déduit son pilote de l’extension, et sur `.part` il refuse net : *«
+cannot guess file type from filename »*. Chaque dalle était donc
+téléchargée, fenêtrée, inversée pendant deux minutes — **puis jetée à la
+dernière ligne**. Le pire endroit possible pour échouer : tout le coût
+payé, rien de gardé.
+
+Le suffixe passe **avant** l’extension : `_fuel.part.tif`. Le pilote
+redevient déductible, et la reprise ne peut pas s’y tromper puisqu’elle
+teste `_fuel.tif` au nom exact.
+
+#### Pourquoi ni les tests ni le `check` ne pouvaient le voir
+
+Tout `test-lidar-batch.R` pointe vers `example.invalid`. Chaque dalle y
+échoue au téléchargement, donc **aucun test n’atteignait l’écriture** :
+la suite couvrait la reprise, le plan et la répartition, et laissait
+sans surveillance la seule ligne qui produit le résultat. Trois tests
+s’ajoutent, dont un qui écrit réellement un raster sous le nom
+temporaire — un test sur la seule forme de la chaîne aurait passé sur
+`.tif.part` aussi, s’il avait été écrit pour coller au code.
+
+#### Le manifeste dit maintenant pourquoi
+
+`failed` sans raison renvoie à un log qui peut ne plus exister, et la
+raison n’arrivait qu’à la toute fin : un `warning` différé s’accumule
+dans un `Rscript` et ne s’imprime qu’au retour de l’appel de haut
+niveau, pages après la dalle qui l’a levée. Une colonne `error`, remplie
+au moment de l’échec, et le message par dalle qui la porte.
+
 ## firexpovulnR 0.25.0 (2026-08-18)
 
 #### Les dalles d’une session partielle sont réparties, pas voisines

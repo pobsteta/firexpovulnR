@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.25.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.27.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,103 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.27.0" id="firexpovulnr-0270-2026-08-19">firexpovulnR 0.27.0 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0270-2026-08-19"></a></h2>
+<div class="section level4">
+<h4 id="trente-deux-fenêtres-et-lécart-se-creuse-au-lieu-de-se-combler-0-27-0">Trente-deux fenêtres, et l’écart se creuse au lieu de se combler<a class="anchor" aria-label="anchor" href="#trente-deux-fen%C3%AAtres-et-l%C3%A9cart-se-creuse-au-lieu-de-se-combler-0-27-0"></a></h4>
+<p>La section des Maures passe de douze fenêtres à <strong>trente-deux</strong>, de 1 176 à <strong>3 110 cellules</strong>. Les chiffres bougent, et pas dans le sens confortable :</p>
+<table class="table"><thead><tr><th></th>
+<th>12 fenêtres</th>
+<th>32 fenêtres</th>
+</tr></thead><tbody><tr><td>Couvert</td>
+<td>0,73</td>
+<td><strong>0,65</strong></td>
+</tr><tr><td>CFL</td>
+<td>0,65</td>
+<td><strong>0,55</strong></td>
+</tr><tr><td>CBD max</td>
+<td>0,26</td>
+<td><strong>0,20</strong></td>
+</tr></tbody></table><p><strong>Plus on regarde de massif, moins la classe suffit.</strong> Un échantillon élargi aurait pu stabiliser les proportions ; il a fait baisser le pouvoir explicatif de la nomenclature sur les six métriques. La conclusion tient donc plus fermement qu’avant : la BD Forêt explique bien le couvert, deux à trois fois moins la structure verticale, et le moins la densité apparente de houppier — la variable dont dépend le passage en cime.</p>
+<p>Chez les chênes sempervirents, désormais 520 cellules d’un seul code, la charge de houppier va de <strong>0,05 à 1,98 kg/m²</strong> : un rapport de quarante dans une classe que la base traite comme homogène.</p>
+<p><code>FF2-81-81</code> (pins autres que maritime) rejoint <code>FO2</code> comme seconde classe qui sépare réellement — 25 % de cellules continues contre 85 à 98 % ailleurs, et 8,5 m de vide sous les houppiers. Le point commun des deux n’est pas l’essence mais le fait qu’elles décrivent une <strong>structure</strong>.</p>
+</div>
+<div class="section level4">
+<h4 id="worldcover-ne-rattrape-rien-et-la-mesure-le-dit-0-27-0">WorldCover ne rattrape rien, et la mesure le dit<a class="anchor" aria-label="anchor" href="#worldcover-ne-rattrape-rien-et-la-mesure-le-dit-0-27-0"></a></h4>
+<p>Ajouter WorldCover à la BD Forêt ne change les six R² qu’à la troisième décimale. Elle classe 73 % des cellules du massif en « couvert arboré ».</p>
+<p>Sur les 637 cellules sans polygone BD Forêt, ses cinq étiquettes recouvrent une seule réalité mesurée : couvert de 0,00 à 0,21, charge de houppier de 0,08 à 0,17. Un « couvert arboré » à 0,06 de couvert mesuré n’est pas du couvert arboré. La BD Forêt a raison de ne rien mettre là.</p>
+<p>Ce qui manque au paquet n’est donc pas une étiquette plus fine, c’est une mesure — donc de la couverture LiDAR, pas une source catégorielle de plus.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.26.1" id="firexpovulnr-0261-2026-08-19">firexpovulnR 0.26.1 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0261-2026-08-19"></a></h2>
+<div class="section level4">
+<h4 id="un-tiers-de-fichier-passait-pour-un-téléchargement-réussi-0-26-1">Un tiers de fichier passait pour un téléchargement réussi<a class="anchor" aria-label="anchor" href="#un-tiers-de-fichier-passait-pour-un-t%C3%A9l%C3%A9chargement-r%C3%A9ussi-0-26-1"></a></h4>
+<p>Une dalle sur douze a échoué en campagne, sur <code>reading header.evlrs[0].reserved</code>. Le fichier local pesait <strong>122 Mo contre 290 Mo annoncés par le serveur</strong> : le téléchargement s’était arrêté au tiers, et le contrôle <code>taille &gt; 1 Mo</code> — pensé pour repérer un fichier vide, pas un fichier tronqué — l’avait accepté.</p>
+<p>L’échec n’était pas le pire. Avec <code>keep_las = TRUE</code>, le fichier tronqué restait en cache, et la reprise ne demande que <em>le fichier est-il là</em> : la dalle aurait rejoué le même échec <strong>à chaque relance, indéfiniment</strong>.</p>
+<ul><li>La taille annoncée par le serveur est lue et comparée, avant et après téléchargement. Un fichier court est un téléchargement raté, et le message le chiffre : <code>download truncated: 122 of 290 MB</code>.</li>
+<li>
+<strong>Un nuage qui ne se lit pas est supprimé du cache.</strong> <code>keep_las</code> épargne des re-téléchargements ; il ne conserve pas un fichier corrompu.</li>
+</ul><p>La lecture de l’en-tête est séparée de sa récupération pour être testable sans réseau. Trois tests, dont <code>Content-Length: 0</code> — qui ne doit pas être pris pour un fichier vide, sous peine de vider le cache entier sur un serveur qui rembourre ses en-têtes.</p>
+<p>Vérifié en reprise : la dalle rejouée s’est retéléchargée entière et a produit son raster sur 2,83 M de points.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.26.0" id="firexpovulnr-0260-2026-08-19">firexpovulnR 0.26.0 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0260-2026-08-19"></a></h2>
+<div class="section level4">
+<h4 id="treize-fenêtres-sur-vingt-quatre-tombaient-hors-de-la-zone-détude-0-26-0">Treize fenêtres sur vingt-quatre tombaient hors de la zone d’étude<a class="anchor" aria-label="anchor" href="#treize-fen%C3%AAtres-sur-vingt-quatre-tombaient-hors-de-la-zone-d%C3%A9tude-0-26-0"></a></h4>
+<p><code><a href="../reference/fev_lidarhd_available.html">fev_lidarhd_available()</a></code> retient toute dalle qui <strong>intersecte</strong> l’emprise, et <code>window</code> découpait ensuite un carré centré sur <strong>la dalle</strong>. Sur une dalle de bordure, ce carré part entièrement dans le hors-champ. Mesuré sur la campagne des Maures : <strong>13 des 24 premières fenêtres étaient hors de la zone d’étude</strong>, inversées au prix fort, indiscernables des onze autres dans le manifeste, et décrivant un terrain que personne n’avait demandé.</p>
+<p>Le défaut ne se voyait nulle part. Le manifeste disait <code>written</code>, les rasters étaient valides, les métriques plausibles — et fausses de sujet. Il n’est apparu qu’en croisant les sorties avec la BD Forêt : 46 % des cellules sans polygone, un « trou de couverture » qui n’existait pas. Ramené aux fenêtres légitimes, ce chiffre tombe à 17 %.</p>
+<p><code>fev_lidar_window_centres()</code> centre désormais le carré sur l’intersection dalle × emprise <strong>rétrécie d’une demi-fenêtre</strong>. Ce qui survit à ce rétrécissement est exactement l’ensemble des positions où le carré tient tout entier dans la zone — donc le même calcul place la fenêtre et décide si la dalle est exploitable. Une dalle sans centre est une dalle à écarter, pas une dalle à découper de travers : elle reçoit le statut <code>"outside"</code>, et leur nombre est annoncé. Sur les Maures, 43 dalles sur 505.</p>
+<p>La traversée du plus éloigné se fait maintenant sur les <strong>centres de fenêtre</strong> et non sur les centres de dalle : une fois le carré replacé dans l’emprise, ce sont eux que la répartition doit tenir écartés.</p>
+<p>Quatre tests s’ajoutent, dont un qui vérifie que le <strong>carré entier</strong> — pas seulement son centre — est contenu dans l’emprise. Les tests existants ne pouvaient rien voir : ils ne passent jamais d’emprise, seulement un index.</p>
+</div>
+<div class="section level4">
+<h4 id="la-vignette-des-maures-chiffre-enfin-ce-quelle-affirmait-0-26-0">La vignette des Maures chiffre enfin ce qu’elle affirmait<a class="anchor" aria-label="anchor" href="#la-vignette-des-maures-chiffre-enfin-ce-quelle-affirmait-0-26-0"></a></h4>
+<p>Une section nouvelle porte la démonstration de deux placettes à <strong>douze fenêtres réparties sur le massif, 1 176 cellules</strong>. Ce que la classe TFV explique :</p>
+<table class="table"><thead><tr><th></th>
+<th>BD Forêt v2</th>
+<th>WorldCover</th>
+<th>les deux</th>
+</tr></thead><tbody><tr><td>Couvert</td>
+<td>0,73</td>
+<td>0,05</td>
+<td>0,73</td>
+</tr><tr><td>CFL</td>
+<td>0,65</td>
+<td>0,04</td>
+<td>0,65</td>
+</tr><tr><td>FSG</td>
+<td>0,34</td>
+<td>0,02</td>
+<td>0,35</td>
+</tr><tr><td><strong>CBD max</strong></td>
+<td><strong>0,26</strong></td>
+<td>0,01</td>
+<td>0,27</td>
+</tr></tbody></table><p>Le gradient va dans le sens redouté : la nomenclature explique très bien le couvert, deux fois moins bien la structure verticale, et le moins la densité apparente de houppier — la variable dont dépend le passage en cime. Dans la seule classe des chênes sempervirents, 273 cellules, la charge de houppier va de 0,44 à 1,98 kg/m².</p>
+<p><strong>Ajouter WorldCover n’apporte rien</strong> : troisième colonne identique à la première. Sur ce massif elle classe 69 % des cellules en « couvert arboré », et ses quatre étiquettes sur les cellules hors BD Forêt recouvrent une seule réalité structurelle. Ce qui manque n’est pas une étiquette plus fine, c’est une mesure — donc de la couverture LiDAR, pas une source catégorielle de plus.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.25.1" id="firexpovulnr-0251-2026-08-18">firexpovulnR 0.25.1 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0251-2026-08-18"></a></h2>
+<div class="section level4">
+<h4 id="huit-dalles-inversées-puis-jetées-sur-une-extension-de-fichier-0-25-1">Huit dalles inversées puis jetées, sur une extension de fichier<a class="anchor" aria-label="anchor" href="#huit-dalles-invers%C3%A9es-puis-jet%C3%A9es-sur-une-extension-de-fichier-0-25-1"></a></h4>
+<p>Défaut trouvé en lançant la campagne, pas en la testant. <code><a href="../reference/fev_lidar_batch.html">fev_lidar_batch()</a></code> écrivait chaque raster sous un nom temporaire avant de le renommer — la précaution est bonne, une écriture interrompue ne doit jamais passer pour une dalle finie — mais le nom était construit ainsi :</p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">tmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">dest</span>, <span class="st">".part"</span><span class="op">)</span>   <span class="co"># ..._fuel.tif.part</span></span></code></pre></div>
+<p><code><a href="https://rspatial.github.io/terra/reference/writeRaster.html" class="external-link">terra::writeRaster()</a></code> déduit son pilote de l’extension, et sur <code>.part</code> il refuse net : <em>« cannot guess file type from filename »</em>. Chaque dalle était donc téléchargée, fenêtrée, inversée pendant deux minutes — <strong>puis jetée à la dernière ligne</strong>. Le pire endroit possible pour échouer : tout le coût payé, rien de gardé.</p>
+<p>Le suffixe passe <strong>avant</strong> l’extension : <code>_fuel.part.tif</code>. Le pilote redevient déductible, et la reprise ne peut pas s’y tromper puisqu’elle teste <code>_fuel.tif</code> au nom exact.</p>
+</div>
+<div class="section level4">
+<h4 id="pourquoi-ni-les-tests-ni-le-check-ne-pouvaient-le-voir-0-25-1">Pourquoi ni les tests ni le <code>check</code> ne pouvaient le voir<a class="anchor" aria-label="anchor" href="#pourquoi-ni-les-tests-ni-le-check-ne-pouvaient-le-voir-0-25-1"></a></h4>
+<p>Tout <code>test-lidar-batch.R</code> pointe vers <code>example.invalid</code>. Chaque dalle y échoue au téléchargement, donc <strong>aucun test n’atteignait l’écriture</strong> : la suite couvrait la reprise, le plan et la répartition, et laissait sans surveillance la seule ligne qui produit le résultat. Trois tests s’ajoutent, dont un qui écrit réellement un raster sous le nom temporaire — un test sur la seule forme de la chaîne aurait passé sur <code>.tif.part</code> aussi, s’il avait été écrit pour coller au code.</p>
+</div>
+<div class="section level4">
+<h4 id="le-manifeste-dit-maintenant-pourquoi-0-25-1">Le manifeste dit maintenant pourquoi<a class="anchor" aria-label="anchor" href="#le-manifeste-dit-maintenant-pourquoi-0-25-1"></a></h4>
+<p><code>failed</code> sans raison renvoie à un log qui peut ne plus exister, et la raison n’arrivait qu’à la toute fin : un <code>warning</code> différé s’accumule dans un <code>Rscript</code> et ne s’imprime qu’au retour de l’appel de haut niveau, pages après la dalle qui l’a levée. Une colonne <code>error</code>, remplie au moment de l’échec, et le message par dalle qui la porte.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.25.0" id="firexpovulnr-0250-2026-08-18">firexpovulnR 0.25.0 (2026-08-18)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0250-2026-08-18"></a></h2>
 <div class="section level4">
@@ -80,8 +177,8 @@
 <div class="section level4">
 <h4 id="un-script-prêt-à-lancer-0-24-0">Un script prêt à lancer<a class="anchor" aria-label="anchor" href="#un-script-pr%C3%AAt-%C3%A0-lancer-0-24-0"></a></h4>
 <p><code>inst/scripts/batch_lidar.R</code>, exécutable, avec <code>--dry-run</code> pour voir le plan avant d’engager quoi que ce soit :</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--dry-run</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--max</span><span class="op">=</span>8</span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--dry-run</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--max</span><span class="op">=</span>8</span></code></pre></div>
 <p>Relancer la même commande le lendemain reprend où l’on s’était arrêté.</p>
 </div>
 </div>
@@ -110,7 +207,7 @@
 <code>fev_exposure(trim = )</code> — le cadre blanc de 500 m disparaît<a class="anchor" aria-label="anchor" href="#fev_exposuretrim----le-cadre-blanc-de-m-dispara%C3%AEt-0-22-0"></a></h4>
 <p>L’anneau extérieur d’un résultat focal n’est pas une mesure : c’est la fenêtre qui déborde du bord de la donnée. Avec <code>na_rm = FALSE</code> il revient vide, et c’est le cadre blanc de toutes les cartes d’exposition publiées jusqu’ici.</p>
 <p>Le paquet donnait déjà la moitié du remède, dans le message <code>fev_extent_too_small</code> : calculer sur plus grand qu’on ne publie. <code>trim</code> fournit l’autre moitié.</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_source.html">fev_fuel_source</a></span><span class="op">(</span><span class="va">bdforet</span>, aoi <span class="op">=</span> <span class="fu">sf</span><span class="fu">::</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/geos_unary.html" class="external-link">st_buffer</a></span><span class="op">(</span><span class="va">study</span>, <span class="fl">500</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span>
 <span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">fuel</span>, radius <span class="op">=</span> <span class="fl">500</span>, trim <span class="op">=</span> <span class="va">study</span><span class="op">)</span></span></code></pre></div>
 <p>Mesuré sur l’emprise des Maures : <strong>9,3 % de cellules vides sans recadrage, 0,3 % avec</strong>. Le cadre est toujours calculé — il le faut, pour que l’intérieur soit juste — puis coupé au lieu d’être publié. Les valeurs conservées sont exactement celles qui avaient été calculées, un test le vérifie cellule par cellule.</p>
@@ -176,7 +273,7 @@
 <code>fev_fuel_attach()</code> garde les deux, au lieu d’en sacrifier une<a class="anchor" aria-label="anchor" href="#fev_fuel_attach-garde-les-deux-au-lieu-den-sacrifier-une-0-20-0"></a></h4>
 <p>Réponse à la conséquence livrée en 0.19.0 : WorldCover placé au-dessus prend <strong>tous</strong> les pixels, et l’essence et le taux de couvert de la BD Forêt disparaissent avec elle.</p>
 <p>La fonction accepte désormais une source <strong>catégorielle</strong> en second argument, et non plus seulement un registre continu. Ce qu’elle porte décide où elle atterrit — des métriques continues vont au registre continu, une couche de classes devient une couche nommée du registre catégoriel. Dans les deux cas elle <strong>n’arbitre aucun pixel</strong>, ce qui est toute la différence avec <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code>.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_merge.html">fev_fuel_merge</a></span><span class="op">(</span><span class="va">bdforet</span>, <span class="va">worldcover</span><span class="op">)</span>   <span class="co"># WorldCover décide `class`</span></span>
 <span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_attach.html">fev_fuel_attach</a></span><span class="op">(</span><span class="va">fuel</span>, <span class="va">bdforet</span><span class="op">)</span>        <span class="co"># l'essence survit à côté</span></span></code></pre></div>
 <p>Mesuré sur les Maures : <code>class</code> reste à WorldCover au 10 m, et la couche <code>bdforet_v2</code> attachée conserve <strong>27 classes TFV sur 81,1 % des cellules cartographiées</strong> — dont le chêne vert, <code>FF1G06-06</code>, sur 1 520 475 cellules, que la nomenclature WorldCover ne sait pas exprimer.</p>
