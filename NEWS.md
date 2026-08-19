@@ -41,9 +41,16 @@ atteint — ni la configuration du dépôt, inchangée entre le dernier run vert
 (5 min 53 s au total) et le premier run tué, deux heures plus tard.
 
 Un fichier `apt.conf.d` pose un délai de 30 s et cinq tentatives, **avant**
-`setup-r` — qui appelle `apt-get update` lui-même, et c'est là que les deux runs
-sont morts, avant même l'étape apt du workflow. Un miroir en panne fait
-désormais échouer vite et bruyamment au lieu de consommer le budget entier.
+`setup-r` — qui appelle `apt-get update` lui-même, et c'est là que les runs sont
+morts, avant même l'étape apt du workflow.
+
+Cela n'a pas suffi, et le troisième run l'a montré : les tentatives se voyaient
+bien dans le journal, avec leur repli exponentiel, mais le gel se produisait
+ensuite sur `archive.ubuntu.com`. Le délai d'apt couvre l'établissement de la
+connexion et l'attente du premier octet, **pas une connexion établie qui cesse
+de répondre** — la signature d'un trou noir IPv6. `Acquire::ForceIPv4` s'y
+ajoute, et le miroir Azure mort est retiré de la liste plutôt que d'être
+retenté une minute durant à chaque job.
 
 ### WorldCover ne rattrape rien, et la mesure le dit
 

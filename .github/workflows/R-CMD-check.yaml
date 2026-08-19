@@ -100,7 +100,15 @@ jobs:
           Acquire::http::Timeout "30";
           Acquire::https::Timeout "30";
           Acquire::ftp::Timeout "30";
+          Acquire::ForceIPv4 "true";
           CONF
+          # The runner's Azure mirror answers nothing and costs a minute of
+          # backoff before apt falls back. Point straight at the archive it
+          # falls back to.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            echo 'http://archive.ubuntu.com/ubuntu/' | \
+              sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
 
       - uses: r-lib/actions/setup-r@v2
         with:
@@ -186,7 +194,15 @@ jobs:
           Acquire::http::Timeout "30";
           Acquire::https::Timeout "30";
           Acquire::ftp::Timeout "30";
+          Acquire::ForceIPv4 "true";
           CONF
+          # The runner's Azure mirror answers nothing and costs a minute of
+          # backoff before apt falls back. Point straight at the archive it
+          # falls back to.
+          if [ -f /etc/apt/apt-mirrors.txt ]; then
+            echo 'http://archive.ubuntu.com/ubuntu/' | \
+              sudo tee /etc/apt/apt-mirrors.txt > /dev/null
+          fi
 
       - uses: r-lib/actions/setup-r@v2
         with:
