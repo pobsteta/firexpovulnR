@@ -264,3 +264,57 @@ test_that("the day of the Cannet-des-Maures fire is the season's worst", {
   expect_equal(as.Date(terra::time(d))[which.max(med)], as.Date("2021-08-16"))
   expect_gt(max(med), 50)  # EFFIS "extreme" begins at 50
 })
+
+# Phase 11 sources -----------------------------------------------------------
+#
+# Both tile grids were MEASURED from the products rather than read off a
+# datasheet -- the GHSL x-origin carries a -41 000 m offset no product sheet
+# states. That makes these two the tests that matter most in this file: they are
+# the only thing standing between a silent change of tiling upstream and a
+# package that computes tile names nobody publishes.
+
+test_that("GHS-POP comes back over the Maures test box", {
+  skip_unless_network()
+  pop <- suppressMessages(fev_fetch_ghsl(maures_aoi(), epoch = 2020))
+  r <- fev_data(pop)
+  expect_true(inherits(r, "SpatRaster"))
+  total <- as.numeric(terra::global(r, "sum", na.rm = TRUE)[1, 1])
+  # The test box is 5 km of wooded massif, not a town: 89 residents on
+  # 2026-08-19. The bounds are wide on purpose -- they exist to catch a tiling
+  # error handing back somebody else's square of the planet, not to pin a
+  # number that the epoch or the box can legitimately move.
+  expect_gt(total, 1)
+  expect_lt(total, 50000)
+  # The record lives in $source, not on the object: a SpatRaster is S4 and
+  # drops user attributes at the first arithmetic operation.
+  expect_equal(pop$source$dataset, "ghs_pop_2020")
+  expect_equal(pop$source$millesime, 2020L)
+})
+
+test_that("reprojecting the population conserves the headcount", {
+  skip_unless_network()
+  # The reason project(method = "sum") is used rather than bilinear: bilinear
+  # invented 5% of the Maures population over the study area, 35 039 becoming
+  # 36 783. A total that drifts at every reprojection is the kind of error that
+  # survives to publication because the number still looks right.
+  #
+  # Compared in the product's own projection against the working one, which is
+  # the only way to see the drift at all.
+  moll <- suppressMessages(fev_fetch_ghsl(maures_aoi(), epoch = 2020,
+                                          crs_work = NULL, quiet = TRUE))
+  lamb <- suppressMessages(fev_fetch_ghsl(maures_aoi(), epoch = 2020,
+                                          crs_work = 2154, quiet = TRUE))
+  a <- as.numeric(terra::global(fev_data(moll), "sum", na.rm = TRUE)[1, 1])
+  b <- as.numeric(terra::global(fev_data(lamb), "sum", na.rm = TRUE)[1, 1])
+  expect_lt(abs(b - a) / a, 0.01)
+})
+
+test_that("the Copernicus DEM covers the Maures with plausible relief", {
+  skip_unless_network()
+  dem <- suppressMessages(fev_fetch_dem(maures_aoi()))
+  rng <- as.numeric(terra::global(fev_data(dem), range, na.rm = TRUE)[1, ])
+  # The massif runs from sea level to about 780 m at Notre-Dame des Anges.
+  expect_gte(rng[1], -20)
+  expect_lt(rng[2], 1200)
+  expect_gt(rng[2] - rng[1], 50)
+})

@@ -1,3 +1,91 @@
+# firexpovulnR 0.28.0 (2026-08-19)
+
+Phase 11 : les quatre manques relevés en relisant les modules exposition et
+vulnérabilité. Spec dans `specs/brief-phase11-exposition-vulnerabilite.md`,
+écrite avant le code.
+
+### Le rayon d'exposition s'ajuste enfin sur les feux locaux
+
+`fev_exposure_calibrate()` balaie les rayons et note chacun à l'AUC contre les
+feux observés. Tout existait déjà — `fev_auc()`, `fev_fetch_burnt()`, le
+contrôle de biais temporel ; il manquait le câblage. Sur les Maures :
+
+| Rayon | 75 | 150 | 300 | **500** | 800 | 1200 | 2000 |
+|---|---|---|---|---|---|---|---|
+| AUC | **0,573** | 0,563 | 0,534 | **0,496** | 0,443 | 0,383 | 0,279 |
+
+**Le défaut canadien de 500 m fait exactement le hasard sur ce massif.** Le
+résultat est un *ajustement*, jamais une validation : rien n'est mis de côté, et
+la fonction le dit à chaque appel comme dans la provenance.
+
+Deux gardes trouvés en testant, pas en concevant :
+
+* **Une AUC de 0,500 issue d'un score constant est refusée.** Une source
+  couvrant les seules formations boisées vaut 1 dans ses polygones et `NA`
+  dehors, jamais 0 : tout anneau qui répond répond plein. L'AUC vaut alors
+  exactement 0,5, ce qui se lit « aucun pouvoir discriminant » et signifie
+  « aucune mesure » — et 0,5 est un nombre parfaitement publiable.
+* **Un optimum en bord de balayage est signalé comme tel.** Sur les Maures
+  l'AUC décroît jusqu'à 75 m, le plus petit rayon que la résolution autorise :
+  le meilleur rayon nommable est le plus petit essayé, et le vrai peut être
+  en dessous, hors de portée tant que la grille n'est pas plus fine.
+
+### Des enjeux, et l'interface habitat-forêt
+
+`fev_fetch_ghsl()` — GHS-POP, 100 m, mondial, sans compte. La vulnérabilité
+avait été le seul module sans acquisition depuis la phase 6.
+
+La grille de tuilage a été **mesurée sur deux tuiles**, pas lue : les tuiles font
+1 000 000 m de côté en Mollweide et l'origine en x porte un décalage constant de
+−41 000 m qu'aucune fiche produit n'énonce. Si le millésime change, le code
+échoue bruyamment au lieu de deviner.
+
+**Reprojeter un décompte en bilinéaire inventait 5 % d'habitants** : 35 039
+résidents des Maures devenaient 36 783. `method = "sum"` conserve le total à
+0,00 %. Une dérive de 5 % à chaque reprojection est le genre d'erreur qui
+survit jusqu'à la publication parce que le nombre reste plausible.
+
+`fev_wui()` calcule l'interface que le brief, la table WorldCover et `fev_risk()`
+désignaient tous les trois sans que rien ne la produise. Définition par
+**proximité**, pas par densité de logements — c'est ce que les entrées
+supportent réellement, et la documentation dit ce que cela coûte.
+
+### L'exposition devient anisotrope, sans cesser d'être vérifiable
+
+`fev_exposure_aniso()` découpe l'anneau en secteurs et les recombine avec des
+poids de vent et de pente. **L'invariant qui tient la construction : sans vent
+ni pente, on retrouve `fev_exposure()` à 5,5 × 10⁻¹⁶ près**, à 4, 8 et 16
+secteurs — testé. Les secteurs ne contiennent pas le même nombre de cellules,
+donc les pondérer également aurait produit en silence une autre métrique.
+
+Vérifié dans les deux sens : vent d'ouest 0,383 → 0,818, vent d'est → 0,045 ;
+pente descendant vers le combustible 0,383 → 0,750, l'inverse → 0,084. Le
+terrain plat ne reçoit aucune anisotropie quelle que soit la concentration,
+parce que le multiplicateur est `tan(pente)` — structurel, pas une règle
+ajoutée pour le cas plat.
+
+Ce n'est **pas la métrique publiée** : Beverly la définit isotrope, Khan l'a
+validée isotrope. Hors défaut, sans validation propre, et les deux
+concentrations sont des jugements d'analyse inscrits dans la provenance, comme
+les poids de `fev_vuln_stack()`.
+
+`fev_fetch_dem()` importe le Copernicus DEM GLO-30 pour l'alimenter — un modèle
+de **surface**, donc sous couvert fermé la pente est celle de la canopée.
+
+### Le combustible mesuré entre enfin dans l'exposition
+
+`fev_fuel_load_weight()` transforme une métrique continue du registre LiDAR en
+couche de disponibilité, consommée par le chemin gradué qui existait depuis la
+phase 6. Le plus petit ajout des quatre : les deux moitiés étaient là, rien ne
+les joignait.
+
+Ce qui le rend nécessaire est mesuré : dans la seule classe FF1G06-06, 520
+cellules, la charge de houppier va de 0,05 à 1,98 kg/m². Un masque binaire les
+compte à l'identique.
+
+`NA` reste `NA` : une campagne couvrant 2 km² des Maures ne doit pas étendre son
+autorité sur les 300 autres.
+
 # firexpovulnR 0.27.0 (2026-08-19)
 
 ### Trente-deux fenêtres, et l'écart se creuse au lieu de se combler
