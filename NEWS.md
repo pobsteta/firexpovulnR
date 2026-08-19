@@ -1,3 +1,45 @@
+# firexpovulnR 0.27.0 (2026-08-19)
+
+### Trente-deux fenêtres, et l'écart se creuse au lieu de se combler
+
+La section des Maures passe de douze fenêtres à **trente-deux**, de 1 176 à
+**3 110 cellules**. Les chiffres bougent, et pas dans le sens confortable :
+
+| | 12 fenêtres | 32 fenêtres |
+|---|---|---|
+| Couvert | 0,73 | **0,65** |
+| CFL | 0,65 | **0,55** |
+| CBD max | 0,26 | **0,20** |
+
+**Plus on regarde de massif, moins la classe suffit.** Un échantillon élargi
+aurait pu stabiliser les proportions ; il a fait baisser le pouvoir explicatif
+de la nomenclature sur les six métriques. La conclusion tient donc plus
+fermement qu'avant : la BD Forêt explique bien le couvert, deux à trois fois
+moins la structure verticale, et le moins la densité apparente de houppier — la
+variable dont dépend le passage en cime.
+
+Chez les chênes sempervirents, désormais 520 cellules d'un seul code, la charge
+de houppier va de **0,05 à 1,98 kg/m²** : un rapport de quarante dans une classe
+que la base traite comme homogène.
+
+`FF2-81-81` (pins autres que maritime) rejoint `FO2` comme seconde classe qui
+sépare réellement — 25 % de cellules continues contre 85 à 98 % ailleurs, et
+8,5 m de vide sous les houppiers. Le point commun des deux n'est pas l'essence
+mais le fait qu'elles décrivent une **structure**.
+
+### WorldCover ne rattrape rien, et la mesure le dit
+
+Ajouter WorldCover à la BD Forêt ne change les six R² qu'à la troisième
+décimale. Elle classe 73 % des cellules du massif en « couvert arboré ».
+
+Sur les 637 cellules sans polygone BD Forêt, ses cinq étiquettes recouvrent une
+seule réalité mesurée : couvert de 0,00 à 0,21, charge de houppier de 0,08 à
+0,17. Un « couvert arboré » à 0,06 de couvert mesuré n'est pas du couvert
+arboré. La BD Forêt a raison de ne rien mettre là.
+
+Ce qui manque au paquet n'est donc pas une étiquette plus fine, c'est une
+mesure — donc de la couverture LiDAR, pas une source catégorielle de plus.
+
 # firexpovulnR 0.26.1 (2026-08-19)
 
 ### Un tiers de fichier passait pour un téléchargement réussi
