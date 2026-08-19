@@ -1,3 +1,68 @@
+# firexpovulnR 0.29.0 (2026-08-19)
+
+### Le terme danger descend en échelle, et la mesure déplace la conclusion
+
+`fev_topo_zones()`, `fev_downscale_weather()` et `fev_fwi_zonal()` corrigent la
+météo par le relief avant que cffdrs ne tourne. C'est la contrainte qui décide
+toute la conception : FFMC, DMC et DC sont **cumulatifs et non linéaires**, donc
+corriger un FWI après coup corrige un nombre qui n'a jamais été calculé sur la
+météo corrigée.
+
+Ce qui est corrigé, et ce qui ne l'est délibérément pas :
+
+| | |
+|---|---|
+| température | oui — gradient adiabatique, la seule correction avec une constante de manuel |
+| humidité | oui — en découle à point de rosée constant, thermodynamique et non relation ajustée |
+| **vent** | **non** — l'exposition topographique est réelle et sans calibration défendable ici. ISI garde le signal grossier. |
+| **pluie** | **non** — l'effet orographique est réel et demande un gradient local que personne n'a. DMC et DC gardent le signal grossier. |
+
+### Regrouper par altitude seule aplatissait le champ
+
+Première version : bandes d'altitude uniquement. Sur les Maures, **8 valeurs
+distinctes contre 17 pour la chaîne grossière** — la descente d'échelle avait
+*réduit* la variation, en remplaçant la variation horizontale des 20 points
+ERA5 par la variation verticale des 8 bandes au lieu de les cumuler.
+
+Les zones croisent désormais les bandes avec le **territoire de chaque point** :
+77 zones sur les Maures, et le rapport d'échelle de `fev_align()` passe de
+141 000 cellules fines par maille grossière à **1,05**. Des zones construites
+sans points restent possibles et avertissent.
+
+### Ce n'était pas la résolution, c'était la normalisation
+
+Décomposition du composite sur 597 840 cellules, 16 août 2021 :
+
+| Chaîne | écart-type danger | cor(R, danger) | cor(R, vuln) |
+|---|---|---|---|
+| grossière + percentile | 0,032 | 0,542 | **0,995** |
+| descendue + percentile | 0,0006 | 0,380 | **1,000** |
+| grossière + FWI brut | 0,237 | 0,699 | 0,769 |
+| **descendue + FWI brut** | **0,265** | **0,807** | 0,808 |
+
+Les deux premières lignes disent que la descente d'échelle rend le composite
+**pire**. La cause n'est pas la descente d'échelle.
+
+`fev_fwi_percentile()` classe chaque cellule contre **sa propre** histoire :
+c'est une normalisation temporelle, qui supprime le contraste spatial par
+construction. Un endroit toujours chaud et un endroit toujours frais ressortent
+tous deux près de 1 un jour extrême. Le peu de variation spatiale qui y
+survivait dans la chaîne grossière était un **artefact** — des mailles ERA5
+d'histoires différentes de part et d'autre de leurs frontières — et donner à
+chaque zone une série cohérente le supprime aussi.
+
+Sur le FWI brut la descente d'échelle fait ce qu'on attendait : `cor(R, danger)`
+de 0,699 à **0,807**, et le composite cesse d'être sa propre couche
+d'exposition. L'interaction est documentée avec ce tableau et avertit une fois
+par session.
+
+**La vignette des Maures utilise `normalise = "percentile"`** : l'exemple publié
+produit donc une carte de risque qui est sa carte d'exposition. Le percentile
+n'est pas fautif — il répond à *« à quel point aujourd'hui est-il inhabituel
+ici »* — mais ce n'est pas *« où est-ce le pire aujourd'hui »*, et c'est la
+seconde question que le composite prétend cartographier. La vignette n'est pas
+modifiée ici : changer la normalisation change les résultats publiés.
+
 # firexpovulnR 0.28.0 (2026-08-19)
 
 Phase 11 : les quatre manques relevés en relisant les modules exposition et
