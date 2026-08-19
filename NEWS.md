@@ -1,3 +1,71 @@
+# firexpovulnR 0.31.0 (2026-08-19)
+
+### La sévérité, la couche que le paquet n'avait jamais eue
+
+`fev_fetch_severity()` calcule le dNBR Sentinel-2 avant/après sur un périmètre
+de feu. `fev_validate()` n'a jamais connu que brûlé contre non brûlé — un
+résultat de **l'aléa**, qui dit où le feu est allé et non avec quelle force.
+C'est pourquoi il peut valider le combustible, le danger et l'exposition, et
+rien de la moitié vulnérabilité.
+
+Sur le Cannet-des-Maures, deux tuiles mosaïquées, **663 000 cellules,
+couverture 100 %** :
+
+| | dNBR médian |
+|---|---|
+| dans le périmètre | **0,576** |
+| **hors périmètre** | **0,000** |
+
+Répartition : 4,9 % non brûlé — les îlots épargnés —, 12,9 % faible, 17,6 %
+modéré bas, 22,7 % modéré haut, **41,9 % sévère**.
+
+### Les portails français ne servent pas l'archive qu'ils annoncent
+
+Les deux catalogues STAC ont été énumérés le 2026-08-19. Sur les Maures, GEODES
+ne sert THEIA L2A que depuis **2025**, L3A depuis 2024, PEPS L1C depuis 2023 —
+alors que les collections **annoncent 2015 à 2026**. C'est l'étendue nominale du
+produit, pas ce qui est détenu. Rien n'atteint le feu de 2021.
+
+Le miroir Sentinel-2 L2A d'Element 84 sur AWS, lui, est complet depuis 2015,
+sans compte, et en COG — donc lisible par fenêtre. Aucune dépendance nouvelle :
+la recherche passe en GET et `yaml`, déjà importé, lit le JSON qui en est un
+sous-ensemble.
+
+### Trois façons d'obtenir une carte plausible et un chiffre faux
+
+Aucune des trois n'a provoqué d'erreur. Chacune rendait une carte de sévérité
+qu'un lecteur aurait acceptée.
+
+1. **Le feu brûle encore.** La marge comptée depuis le *début* a choisi une
+   image du 19 août 2021 — trois jours après l'allumage et, d'après EFFIS,
+   **deux heures avant la fin du sinistre**. La majeure partie du périmètre
+   n'avait pas brûlé. La marge se compte désormais depuis la fin, lue dans
+   `FIREDATE` et `FINALDATE` quand elles sont là.
+2. **La scène n'atteint pas la zone.** La candidate la moins nuageuse était un
+   bord de fauchée couvrant **1 % de l'emprise**, publiée à **0,0 % de
+   nuages**. La couverture nuageuse ne dit rien de la couverture spatiale.
+3. **Le contrôle de couverture mesurait la mauvaise chose.** Il évaluait la
+   fraction valide du raster *rendu* et non de l'emprise *demandée* — or `crop`
+   rétrécit le résultat. Une scène portant **46,6 %** du feu affichait 100 %.
+   Le Cannet-des-Maures chevauche la limite de la tuile 31TGH : chaque passe est
+   mosaïquée, chaque tuile projetée sur une grille construite d'avance, et la
+   couverture se mesure contre l'emprise.
+
+Le contrôle — hors du périmètre, la différence doit revenir à zéro — n'est plus
+un conseil dans la documentation mais le **critère de sélection** de la scène
+d'avant : chaque candidate est différenciée puis notée dessus.
+
+### Ce que la campagne LiDAR ne pourra pas tester
+
+5 fenêtres sur 32 recoupent les feux de 2021, soit 27,5 ha. Mais le LiDAR HD a
+été acquis le **1er mai 2025**, quatre ans après : prédire la sévérité de 2021 à
+partir d'une structure mesurée en 2025 serait prédire une cause par son effet.
+Le test CBH → sévérité attendra un feu postérieur à l'acquisition.
+
+Ces 440 cellules disent en revanche où en est le combustible quatre ans après :
+hauteur à 0,76 de la valeur hors feu, mais **hauteur des buissons à 0,07** et
+charge de houppier à **0,14**. Les tiges sont debout et ne portent presque rien.
+
 # firexpovulnR 0.30.0 (2026-08-19)
 
 ### La carte de risque publiée était celle du 31 décembre
