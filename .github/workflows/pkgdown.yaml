@@ -36,6 +36,26 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v2
 
+      # A stalled apt mirror must fail fast, not hang for the whole job.
+      #
+      # On 2026-08-18 and 19 two pushes were killed by the 45-minute limit
+      # without reaching a single line of R code. The runner's Azure Ubuntu
+      # mirror was unreachable, apt fell back to archive.ubuntu.com, and then
+      # sat there: 44 minutes between one InRelease line and the timeout, with
+      # no output. apt has no acquire timeout by default, so a connection that
+      # stops answering blocks forever.
+      #
+      # This must run BEFORE setup-r, which calls `apt-get update` itself --
+      # that is where both runs actually died, before our own apt step.
+      - name: Make apt fail fast on a stalled mirror
+        run: |
+          sudo tee /etc/apt/apt.conf.d/99-ci-timeouts > /dev/null <<'CONF'
+          Acquire::Retries "5";
+          Acquire::http::Timeout "30";
+          Acquire::https::Timeout "30";
+          Acquire::ftp::Timeout "30";
+          CONF
+
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true

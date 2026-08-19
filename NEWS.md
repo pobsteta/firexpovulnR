@@ -27,6 +27,24 @@ sépare réellement — 25 % de cellules continues contre 85 à 98 % ailleurs, e
 8,5 m de vide sous les houppiers. Le point commun des deux n'est pas l'essence
 mais le fait qu'elles décrivent une **structure**.
 
+### Deux poussées tuées avant la première ligne de R
+
+Les 18 et 19 août, deux poussées ont été tuées par la limite de 45 minutes sans
+atteindre le moindre code R. Le miroir Ubuntu d'Azure du runner était
+injoignable, apt a basculé sur `archive.ubuntu.com`, puis s'est **bloqué** : 44
+minutes entre une ligne `InRelease` et le délai de garde, sans une seule sortie.
+apt n'a pas de délai d'acquisition par défaut, donc une connexion qui cesse de
+répondre bloque indéfiniment.
+
+Ce n'était ni le cache des dépendances — qui prend 1 min 12 s et n'a jamais été
+atteint — ni la configuration du dépôt, inchangée entre le dernier run vert
+(5 min 53 s au total) et le premier run tué, deux heures plus tard.
+
+Un fichier `apt.conf.d` pose un délai de 30 s et cinq tentatives, **avant**
+`setup-r` — qui appelle `apt-get update` lui-même, et c'est là que les deux runs
+sont morts, avant même l'étape apt du workflow. Un miroir en panne fait
+désormais échouer vite et bruyamment au lieu de consommer le budget entier.
+
 ### WorldCover ne rattrape rien, et la mesure le dit
 
 Ajouter WorldCover à la BD Forêt ne change les six R² qu'à la troisième
