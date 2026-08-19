@@ -281,3 +281,31 @@ test_that("with no area of interest the tile centre is still used", {
   expect_false(anyNA(xy))
   expect_equal(nrow(xy), nrow(idx))
 })
+
+# The download, which "more than a megabyte" did not check -------------------
+#
+# A LiDAR HD tile weighs 120 to 290 MB. `file.size() > 1e6` accepts a download
+# that stopped a third of the way through: tile 0970_6244 arrived at 122 MB of
+# the 290 announced, passed the check, and LASlib failed on a truncated EVLR
+# header. The truncated file then stayed in the cache and failed identically on
+# every rerun, since resume only asks whether the file is there.
+
+test_that("the announced size is read from the last hop of a redirect chain", {
+  h <- c("HTTP/1.1 302 Found", "Content-Length: 0", "Location: elsewhere",
+         "HTTP/1.1 200 OK", "Content-Length: 289732046", "")
+  expect_equal(firexpovulnR:::fev_lidar_content_length(h), 289732046)
+})
+
+test_that("a server that will not say gives NA, not a guess", {
+  expect_true(is.na(firexpovulnR:::fev_lidar_content_length(NULL)))
+  expect_true(is.na(firexpovulnR:::fev_lidar_content_length(character())))
+  expect_true(is.na(firexpovulnR:::fev_lidar_content_length("HTTP/1.1 200 OK")))
+  # Zero is not a size: treat it as no answer rather than as an empty file,
+  # which would delete every cached tile on a server that pads its headers.
+  expect_true(is.na(firexpovulnR:::fev_lidar_content_length("Content-Length: 0")))
+})
+
+test_that("the header name is matched whatever its case", {
+  expect_equal(firexpovulnR:::fev_lidar_content_length("content-length: 42"), 42)
+  expect_equal(firexpovulnR:::fev_lidar_content_length("CONTENT-LENGTH: 42"), 42)
+})

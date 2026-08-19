@@ -261,6 +261,18 @@ fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
                              path = NA_character_, error = why)
   las_file <- file.path(las_dir, basename(url))
 
+  # What the server says the file weighs. A LiDAR HD tile is 120 to 290 MB, so
+  # "more than a megabyte" accepts a download that stopped a third of the way
+  # through -- which is exactly what happened to tile 0970_6244: 122 MB of the
+  # 290 announced, past the size check, and LASlib failing on a truncated EVLR
+  # header. Worse, the truncated file then sat in the cache and failed again on
+  # every rerun, since resume only asks whether the file is there.
+  expected <- fev_lidar_expected_size(url)
+  if (file.exists(las_file) && !is.na(expected) &&
+      file.size(las_file) != expected) {
+    unlink(las_file)
+  }
+
   if (!file.exists(las_file) || file.size(las_file) < 1e6) {
     ok <- tryCatch({
       # The default 60 s is far too short for 200 MB; without this every tile
@@ -269,16 +281,29 @@ fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
       old <- options(timeout = max(3600, getOption("timeout")))
       on.exit(options(old), add = TRUE)
       utils::download.file(url, las_file, quiet = TRUE, mode = "wb")
-      file.exists(las_file) && file.size(las_file) > 1e6
+      file.exists(las_file) && file.size(las_file) > 1e6 &&
+        (is.na(expected) || file.size(las_file) == expected)
     }, error = function(e) FALSE, warning = function(w) FALSE)
     if (!isTRUE(ok)) {
+      got <- if (file.exists(las_file)) file.size(las_file) else 0
       unlink(las_file)
-      return(fail("download failed"))
+      return(fail(if (is.na(expected)) {
+        "download failed"
+      } else {
+        sprintf("download truncated: %.0f of %.0f MB", got / 1e6, expected / 1e6)
+      }))
     }
   }
 
   out <- tryCatch({
-    las <- lidR::readLAS(las_file)
+    # A cloud that will not read is a cloud to fetch again, not one to keep:
+    # `keep_las` is there to spare re-downloads, not to preserve a corrupt file
+    # so it can fail identically on every future run.
+    las <- withCallingHandlers(
+      tryCatch(lidR::readLAS(las_file),
+               error = function(e) { unlink(las_file); stop(e) }),
+      warning = function(w) invokeRestart("muffleWarning")
+    )
     if (!is.null(window)) {
       las <- fev_lidar_centre_window(las, window, centre)
     }
@@ -320,6 +345,33 @@ fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
 #' @noRd
 fev_lidar_part_path <- function(dest) {
   sub("\\.tif$", ".part.tif", dest)
+}
+
+#' What the server says a file weighs, or `NA` if it will not say
+#'
+#' Split in two so the parsing can be tested without a network: the fetch is one
+#' line, the reading of it is the part that can be wrong.
+#'
+#' @noRd
+fev_lidar_expected_size <- function(url) {
+  h <- tryCatch(curlGetHeaders(url, redirect = TRUE), error = function(e) NULL)
+  fev_lidar_content_length(h)
+}
+
+#' @noRd
+fev_lidar_content_length <- function(headers) {
+  if (is.null(headers) || !length(headers)) {
+    return(NA_real_)
+  }
+  # A redirect chain carries one set of headers per hop; the last Content-Length
+  # is the one describing the file actually served.
+  hit <- grep("^content-length:", headers, ignore.case = TRUE, value = TRUE)
+  if (!length(hit)) {
+    return(NA_real_)
+  }
+  n <- suppressWarnings(as.numeric(sub("^[^:]*:[[:space:]]*", "",
+                                       trimws(hit[length(hit)]))))
+  if (is.na(n) || n <= 0) NA_real_ else n
 }
 
 #' The area of interest as one geometry, in whatever it was given as

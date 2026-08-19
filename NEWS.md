@@ -1,3 +1,30 @@
+# firexpovulnR 0.26.1 (2026-08-19)
+
+### Un tiers de fichier passait pour un téléchargement réussi
+
+Une dalle sur douze a échoué en campagne, sur `reading header.evlrs[0].reserved`.
+Le fichier local pesait **122 Mo contre 290 Mo annoncés par le serveur** : le
+téléchargement s'était arrêté au tiers, et le contrôle `taille > 1 Mo` — pensé
+pour repérer un fichier vide, pas un fichier tronqué — l'avait accepté.
+
+L'échec n'était pas le pire. Avec `keep_las = TRUE`, le fichier tronqué restait
+en cache, et la reprise ne demande que *le fichier est-il là* : la dalle aurait
+rejoué le même échec **à chaque relance, indéfiniment**.
+
+* La taille annoncée par le serveur est lue et comparée, avant et après
+  téléchargement. Un fichier court est un téléchargement raté, et le message le
+  chiffre : `download truncated: 122 of 290 MB`.
+* **Un nuage qui ne se lit pas est supprimé du cache.** `keep_las` épargne des
+  re-téléchargements ; il ne conserve pas un fichier corrompu.
+
+La lecture de l'en-tête est séparée de sa récupération pour être testable sans
+réseau. Trois tests, dont `Content-Length: 0` — qui ne doit pas être pris pour
+un fichier vide, sous peine de vider le cache entier sur un serveur qui rembourre
+ses en-têtes.
+
+Vérifié en reprise : la dalle rejouée s'est retéléchargée entière et a produit
+son raster sur 2,83 M de points.
+
 # firexpovulnR 0.26.0 (2026-08-19)
 
 ### Treize fenêtres sur vingt-quatre tombaient hors de la zone d'étude
