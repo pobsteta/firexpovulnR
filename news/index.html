@@ -59,6 +59,12 @@
 <p><code>FF2-81-81</code> (pins autres que maritime) rejoint <code>FO2</code> comme seconde classe qui sépare réellement — 25 % de cellules continues contre 85 à 98 % ailleurs, et 8,5 m de vide sous les houppiers. Le point commun des deux n’est pas l’essence mais le fait qu’elles décrivent une <strong>structure</strong>.</p>
 </div>
 <div class="section level4">
+<h4 id="deux-poussées-tuées-avant-la-première-ligne-de-r-0-27-0">Deux poussées tuées avant la première ligne de R<a class="anchor" aria-label="anchor" href="#deux-pouss%C3%A9es-tu%C3%A9es-avant-la-premi%C3%A8re-ligne-de-r-0-27-0"></a></h4>
+<p>Les 18 et 19 août, deux poussées ont été tuées par la limite de 45 minutes sans atteindre le moindre code R. Le miroir Ubuntu d’Azure du runner était injoignable, apt a basculé sur <code>archive.ubuntu.com</code>, puis s’est <strong>bloqué</strong> : 44 minutes entre une ligne <code>InRelease</code> et le délai de garde, sans une seule sortie. apt n’a pas de délai d’acquisition par défaut, donc une connexion qui cesse de répondre bloque indéfiniment.</p>
+<p>Ce n’était ni le cache des dépendances — qui prend 1 min 12 s et n’a jamais été atteint — ni la configuration du dépôt, inchangée entre le dernier run vert (5 min 53 s au total) et le premier run tué, deux heures plus tard.</p>
+<p>Un fichier <code>apt.conf.d</code> pose un délai de 30 s et cinq tentatives, <strong>avant</strong> <code>setup-r</code> — qui appelle <code>apt-get update</code> lui-même, et c’est là que les deux runs sont morts, avant même l’étape apt du workflow. Un miroir en panne fait désormais échouer vite et bruyamment au lieu de consommer le budget entier.</p>
+</div>
+<div class="section level4">
 <h4 id="worldcover-ne-rattrape-rien-et-la-mesure-le-dit-0-27-0">WorldCover ne rattrape rien, et la mesure le dit<a class="anchor" aria-label="anchor" href="#worldcover-ne-rattrape-rien-et-la-mesure-le-dit-0-27-0"></a></h4>
 <p>Ajouter WorldCover à la BD Forêt ne change les six R² qu’à la troisième décimale. Elle classe 73 % des cellules du massif en « couvert arboré ».</p>
 <p>Sur les 637 cellules sans polygone BD Forêt, ses cinq étiquettes recouvrent une seule réalité mesurée : couvert de 0,00 à 0,21, charge de houppier de 0,08 à 0,17. Un « couvert arboré » à 0,06 de couvert mesuré n’est pas du couvert arboré. La BD Forêt a raison de ne rien mettre là.</p>
