@@ -172,3 +172,130 @@ test_that("higher ground comes out less dangerous, all else equal", {
                         numeric(1))
   expect_lt(stats::cor(zt$elev_mean, fwi_by_zone), 0)
 })
+
+# Wind and rain, the two the first version passed through --------------------
+
+test_that("curvature is positive on a ridge and negative in a valley", {
+  g <- terra::rast(nrows = 40, ncols = 40, xmin = 0, xmax = 4000,
+                   ymin = 0, ymax = 4000, crs = "EPSG:2154")
+  x <- terra::init(g, "x")
+  ridge <- 300 - abs(x - 2000) / 10
+  cv <- fev_curvature(ridge, length_scale = 400, quiet = TRUE)
+  v <- terra::values(fev_data(cv))[, 1]
+  xs <- terra::values(x)[, 1]
+  # On the crest, convex; on the flanks, straight; the crest must win.
+  crest <- mean(v[abs(xs - 2000) < 150], na.rm = TRUE)
+  flank <- mean(v[abs(xs - 2000) > 800], na.rm = TRUE)
+  expect_gt(crest, flank)
+  expect_gt(crest, 0)
+  # And a valley is the same shape upside down.
+  cvv <- fev_curvature(-ridge, length_scale = 400, quiet = TRUE)
+  expect_lt(mean(terra::values(fev_data(cvv))[abs(xs - 2000) < 150],
+                 na.rm = TRUE), 0)
+})
+
+test_that("curvature stays on the published scale", {
+  cv <- fev_curvature(dem_ramp(top = 900), length_scale = 2000, quiet = TRUE)
+  v <- stats::na.omit(terra::values(fev_data(cv))[, 1])
+  expect_lte(max(abs(v)), 0.5 + 1e-9)
+})
+
+test_that("a length scale larger than the map is refused", {
+  expect_error(fev_curvature(dem_ramp(n = 20), length_scale = 1e5,
+                             quiet = TRUE),
+               "not curvature")
+})
+
+test_that("flat ground gives no curvature and no wind change", {
+  g <- terra::rast(nrows = 30, ncols = 30, xmin = 0, xmax = 3000,
+                   ymin = 0, ymax = 3000, crs = "EPSG:2154")
+  flat <- terra::setValues(g, 200)
+  cv <- fev_curvature(flat, length_scale = 500, quiet = TRUE)
+  v <- stats::na.omit(terra::values(fev_data(cv))[, 1])
+  expect_true(all(abs(v) < 1e-9))
+})
+
+test_that("the wind multiplier follows the curvature and its weight", {
+  d <- dem_ramp(top = 600)
+  w <- weather_at()
+  z <- fev_topo_zones(d, n_elev = 3, stations = w, quiet = TRUE)
+  cv <- fev_curvature(d, length_scale = 2000, quiet = TRUE)
+  a <- fev_downscale_weather(w, z, wind = "curvature", curvature = cv,
+                             curve_weight = 0.5, quiet = TRUE)
+  b <- fev_downscale_weather(w, z, wind = "curvature", curvature = cv,
+                             curve_weight = 1, quiet = TRUE)
+  base <- fev_downscale_weather(w, z, quiet = TRUE)
+  # Doubling the weight doubles the departure from the untouched wind.
+  da <- a$ws - base$ws
+  db <- b$ws - base$ws
+  expect_equal(db, 2 * da, tolerance = 1e-8)
+  # And the published bound holds: gamma_c = 0.5 over a curvature in
+  # [-0.5, 0.5] can never leave [0.75, 1.25].
+  expect_true(all(a$ws / base$ws >= 0.75 - 1e-9))
+  expect_true(all(a$ws / base$ws <= 1.25 + 1e-9))
+})
+
+test_that("asking for curvature wind without a curvature layer is an error", {
+  d <- dem_ramp()
+  w <- weather_at()
+  z <- fev_topo_zones(d, n_elev = 3, stations = w, quiet = TRUE)
+  expect_error(fev_downscale_weather(w, z, wind = "curvature", quiet = TRUE),
+               "needs a")
+})
+
+test_that("a rain gradient that is not there is refused, loudly", {
+  # The Maures case, which is the useful one: 20 points over 464 m give
+  # R2 = 0.087 and p = 0.21. The correction must not be applied, and the
+  # analysis must not be told it was.
+  set.seed(7)
+  w <- do.call(rbind, lapply(1:12, function(k) {
+    data.frame(id = letters[k], elev_m = k * 40,
+               prec = stats::rnorm(20, 2, 0.6))
+  }))
+  g <- fev_rain_gradient(w)
+  expect_false(g$usable)
+  expect_equal(g$n_points, 12L)
+})
+
+test_that("a rain gradient that is there is found", {
+  # Noise on purpose: an exactly linear fixture makes lm warn about a perfect
+  # fit, and it would also let a broken significance test pass.
+  set.seed(11)
+  w <- do.call(rbind, lapply(1:12, function(k) {
+    data.frame(id = letters[k], elev_m = k * 40,
+               prec = 1 + k * 0.1 + stats::rnorm(5, 0, 0.05))
+  }))
+  g <- fev_rain_gradient(w)
+  expect_true(g$usable)
+  expect_gt(g$slope, 0)
+  expect_gt(g$r_squared, 0.9)
+})
+
+test_that("rain is corrected only when the fit supports it", {
+  d <- dem_ramp(top = 900)
+  # Two stations at the same elevation: no gradient can exist.
+  w <- weather_at(elev = 100)
+  z <- fev_topo_zones(d, n_elev = 3, stations = w, quiet = TRUE)
+  expect_warning(
+    out <- fev_downscale_weather(w, z, rain = "fitted", quiet = TRUE),
+    class = "fev_no_rain_gradient"
+  )
+  expect_setequal(unique(out$prec), unique(w$prec))
+})
+
+test_that("a corrected rain never goes negative", {
+  # A gradient extrapolated down a valley can subtract more rain than fell, and
+  # cffdrs would accept the negative without complaint.
+  set.seed(12)
+  w <- do.call(rbind, lapply(1:10, function(k) {
+    data.frame(id = letters[k], lat = 43.3, long = 6.2,
+               yr = 2021L, mon = 7L, day = 1:20,
+               temp = 30, rh = 35, ws = 10,
+               prec = pmax(0.01, k * 0.4 + stats::rnorm(20, 0, 0.05)),
+               elev_m = 400 + k * 40)
+  }))
+  d <- dem_ramp(top = 900)
+  z <- fev_topo_zones(d, n_elev = 4, stations = w, quiet = TRUE)
+  out <- fev_downscale_weather(w, z, rain = "fitted", quiet = TRUE)
+  expect_true(all(out$prec >= 0))
+})

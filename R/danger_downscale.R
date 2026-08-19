@@ -268,35 +268,36 @@ fev_zone_table <- function(id, vals, lat) {
 #' DMC and DC keep the coarse rain signal, and it is the fine-fuel path — FFMC,
 #' and FWI through it — that gains structure.
 #'
-#' @section A percentile normalisation downstream will undo all of this:
-#' Measured on the Maures for 16 August 2021, over 597 840 cells, decomposing
-#' the composite risk into its two terms:
+#' @section It helps a raw-FWI chain and hurts a percentile one:
+#' Measured on the Maures for 16 August 2021 over 597 840 cells, decomposing the
+#' composite risk into its two terms:
 #'
 #' | chain | sd(danger) | cor(risk, danger) | cor(risk, vulnerability) |
 #' |---|---|---|---|
-#' | coarse, percentile | 0.032 | 0.542 | **0.995** |
-#' | downscaled, percentile | 0.0006 | 0.380 | **1.000** |
-#' | coarse, raw FWI | 0.237 | 0.699 | 0.769 |
-#' | downscaled, raw FWI | **0.265** | **0.807** | 0.808 |
+#' | coarse, percentile | 0.308 | **0.879** | 0.833 |
+#' | coarse, raw FWI + minmax | 0.237 | 0.699 | 0.769 |
+#' | downscaled, raw FWI + minmax | 0.249 | **0.801** | 0.827 |
+#' | downscaled, percentile | 0.003 | 0.479 | 1.000 |
 #'
-#' Read the first two rows: downscaling made the composite **worse**. And the
-#' reason is not the downscaling.
+#' Downscaling lifts a raw-FWI chain — 0.699 to 0.801 — and **wrecks a
+#' percentile one**, and the reason is structural rather than incidental.
 #'
-#' [fev_fwi_percentile()] ranks each cell against **its own** history. It is a
-#' temporal normalisation, so it removes spatial contrast by construction: a
-#' place that is always hot and a place that is always cool both come out near
-#' 1 on an extreme day. What little spatial variation survived it in the coarse
-#' chain was an artefact of reanalysis cells having different histories across
-#' their block boundaries — and downscaling, by giving every zone a coherent
-#' series of its own, removes that artefact too.
+#' A lapse rate is a **monotone** transform of a zone's whole series. Shifting a
+#' series by a near-constant offset barely changes where any one day ranks
+#' inside it. Every zone inherits a history that is a deterministic transform of
+#' its parent reanalysis cell's, so every zone ranks 16 August at nearly the
+#' same percentile and the spatial contrast collapses: the standard deviation
+#' falls to 0.003.
 #'
-#' So the percentile is doing its job, and its job is not compatible with
-#' wanting a danger term that varies in space on a given day. Downscale and
-#' normalise with `"minmax"`, or downscale and accept that the percentile map
-#' answers a different question — *how unusual is today here* rather than
-#' *where is it worst today*. Both are legitimate; they are not the same map,
-#' and the composite built from the second is the one that stops being its own
-#' exposure layer.
+#' What the coarse percentile chain has, and this destroys, is genuine: distinct
+#' reanalysis cells carry distinct climatologies, and ranking today against each
+#' one says where today is most exceptional. That is information about local
+#' climate, not an artefact of cell boundaries.
+#'
+#' So the two answer different questions and want different inputs. *Where is it
+#' worst today* wants a downscaled raw FWI with `normalise = "minmax"`. *Where is
+#' today most unusual* wants the percentile, and has no use for a monotone
+#' correction.
 #'
 #' @section The lapse rate is a constant and the atmosphere is not:
 #' 6.5 K/km is the ICAO standard mean. The real rate runs from about 9.8 K/km in
@@ -316,6 +317,18 @@ fev_zone_table <- function(id, vals, lat) {
 #' @param zones A `fev_layer` from [fev_topo_zones()].
 #' @param lapse_rate Kelvin per kilometre, positive for cooling with height.
 #'   Default 6.5.
+#' @param wind `"none"` (default) or `"curvature"`. The second applies the
+#'   MicroMet terrain weighting through [fev_curvature()], which needs
+#'   `curvature`. **Only the curvature half of the published scheme**: its slope
+#'   term needs a wind direction and this package fetches none.
+#' @param curvature A `fev_layer` from [fev_curvature()], on the zone grid.
+#'   Required when `wind = "curvature"`.
+#' @param curve_weight Weight on the curvature term, `gamma_c` in Liston and
+#'   Elder. Default 0.5, their default. A ridge then carries 1.25 times the
+#'   reanalysis wind and a hollow 0.75 times.
+#' @param rain `"none"` (default) or `"fitted"`. The second asks
+#'   [fev_rain_gradient()] whether these points show an orographic gradient and
+#'   **applies nothing if they do not** — saying so rather than fitting noise.
 #' @param quiet Suppress the report.
 #'
 #' @return A data frame in [fev_fwi_calc()]'s input shape, one `id` per zone,
@@ -333,7 +346,12 @@ fev_zone_table <- function(id, vals, lat) {
 #'
 #' @export
 fev_downscale_weather <- function(weather, zones, lapse_rate = 6.5,
+                                  wind = c("none", "curvature"),
+                                  curvature = NULL, curve_weight = 0.5,
+                                  rain = c("none", "fitted"),
                                   quiet = FALSE) {
+  wind <- match.arg(wind)
+  rain <- match.arg(rain)
   tab <- if (inherits(weather, "fev_source")) weather$data else weather
   if (!is.data.frame(tab)) {
     fev_abort("{.arg weather} must be a {.cls data.frame} or {.cls fev_source}.")
@@ -389,16 +407,25 @@ fev_downscale_weather <- function(weather, zones, lapse_rate = 6.5,
     src_id <- stations$id[fev_nearest_station(zxy, stations, terra::crs(zr))]
   }
 
+  wind_wt <- fev_zone_wind_weight(wind, curvature, zr, zt, curve_weight)
+  grad <- fev_zone_rain_gradient(rain, tab, quiet)
+
   out <- do.call(rbind, lapply(seq_len(nrow(zt)), function(i) {
     src <- tab[tab$id == src_id[i], , drop = FALSE]
-    dz <- (zt$elev_mean[i] - src$elev_m) / 1000
+    dz_m <- zt$elev_mean[i] - src$elev_m
+    dz <- dz_m / 1000
     t_new <- src$temp - lapse_rate * dz
     rh_new <- fev_rh_at_temperature(src$temp, src$rh, t_new)
+    # Never below zero: a gradient extrapolated down a valley can otherwise
+    # subtract more rain than fell, and a negative precipitation is not a dry
+    # day, it is a broken input cffdrs will happily accept.
+    p_new <- if (is.null(grad$slope)) src$prec else
+      pmax(src$prec + grad$slope * dz_m, 0)
     data.frame(
       id = paste0("zone", zt$zone[i]), zone = zt$zone[i],
       lat = zt$lat[i], long = src$long,
       yr = src$yr, mon = src$mon, day = src$day,
-      temp = t_new, rh = rh_new, ws = src$ws, prec = src$prec,
+      temp = t_new, rh = rh_new, ws = src$ws * wind_wt[i], prec = p_new,
       elev_m = zt$elev_mean[i], from_id = src$id,
       stringsAsFactors = FALSE
     )
@@ -412,16 +439,29 @@ fev_downscale_weather <- function(weather, zones, lapse_rate = 6.5,
     cli::cli_li("{nrow(zt)} zone{?s}, {round(span[1])} to {round(span[2])} m")
     cli::cli_li("Lapse rate {lapse_rate} K/km: \\
                 {signif(dt, 3)} K between lowest and highest zone")
-    cli::cli_alert_warning(
-      "Wind and rain pass through unchanged. ISI keeps the coarse wind \\
-       signal, DMC and DC the coarse rain signal: this corrects the \\
-       fine-fuel path only."
-    )
+    if (identical(wind, "none") && is.null(grad$slope)) {
+      cli::cli_alert_warning(
+        "Wind and rain pass through unchanged. ISI keeps the coarse wind \\
+         signal, DMC and DC the coarse rain signal: this corrects the \\
+         fine-fuel path only."
+      )
+    } else {
+      if (!identical(wind, "none")) {
+        cli::cli_li("Wind by curvature: multiplier \\
+                    {signif(min(wind_wt), 3)} to {signif(max(wind_wt), 3)}")
+      }
+      if (!is.null(grad$slope)) {
+        cli::cli_li("Rain by fitted gradient: \\
+                    {signif(100 * grad$relative, 3)}% per 1000 m \\
+                    (R2 {signif(grad$r_squared, 2)}, \\
+                    n {grad$n_points})")
+      }
+    }
     fev_once("downscale_percentile", cli::cli_alert_warning(
-      "A percentile normalisation downstream removes what this adds: it ranks \\
-       each place against its own history, which is a temporal question. Use \\
-       {.code normalise = \"minmax\"} in {.fn fev_danger_index} if you want a \\
-       danger term that varies in space. Shown once per session."
+      "This helps a raw-FWI chain and hurts a percentile one: a lapse rate is \\
+       a monotone transform, so it barely moves a day's rank inside its own \\
+       series. Pair it with {.code normalise = \"minmax\"}. Shown once per \\
+       session."
     ))
   }
 
@@ -430,12 +470,28 @@ fev_downscale_weather <- function(weather, zones, lapse_rate = 6.5,
     fun = "fev_downscale_weather",
     params = list(n_zones = nrow(zt), lapse_rate = lapse_rate,
                   elev_range_m = paste(round(range(zt$elev_mean)), collapse = "-"),
-                  corrected = "temp, rh", passed_through = "ws, prec",
+                  corrected = paste(c("temp", "rh",
+                                      if (!identical(wind, "none")) "ws",
+                                      if (!is.null(grad$slope)) "prec"),
+                                    collapse = ", "),
+                  passed_through = paste(c(
+                    if (identical(wind, "none")) "ws",
+                    if (is.null(grad$slope)) "prec"), collapse = ", "),
+                  wind = wind, curve_weight = curve_weight,
+                  rain = rain,
+                  rain_slope_mm_per_m = grad$slope %||% NA,
+                  rain_fit_r2 = grad$r_squared %||% NA,
                   station_choice = if ("station" %in% names(zt))
                     "zone crossing" else "nearest to centroid"),
     notes = paste0(
-      "temperature by lapse rate, humidity at constant dewpoint; wind and ",
-      "rain uncorrected, so ISI, DMC and DC keep the reanalysis structure"
+      "temperature by lapse rate, humidity at constant dewpoint",
+      if (!identical(wind, "none"))
+        "; wind by MicroMet curvature only, its slope term needs a direction \
+this package does not fetch" else "; wind uncorrected, ISI keeps the \
+reanalysis structure",
+      if (!is.null(grad$slope))
+        "; rain by a gradient fitted on these points themselves" else
+        "; rain uncorrected, DMC and DC keep the reanalysis structure"
     )
   )
   out

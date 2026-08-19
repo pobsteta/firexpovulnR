@@ -530,7 +530,12 @@ meteo <- fev_data(fev_fwi_from_weather(meteo_tab, index = "FWI",
                                        crs_work = 2154))
 danger_pct <- fev_fwi_percentile(meteo, ref_period = c(2019, 2021))
 
-dernier <- fev_data(danger_pct)[[terra::nlyr(fev_data(danger_pct))]]
+# Le jour de l'incendie, pas la dernière couche de la série. Cet article a
+# longtemps cartographié `nlyr(...)`, c'est-à-dire le 31 décembre 2021 : un jour
+# d'hiver à FWI médian 0,9, présenté sous une page qui raconte le 16 août à 84,3.
+jour_feu <- which(as.Date(terra::time(fev_data(danger_pct))) ==
+                    as.Date("2021-08-16"))
+dernier <- fev_data(danger_pct)[[jour_feu]]
 dispo <- fev_fuel_availability(fuel, weights = fev_fuel_weights(quiet = TRUE))
 pile <- fev_align(danger = dernier, disponibilite = fev_data(dispo),
                   exposition = fev_data(expo))
@@ -549,9 +554,18 @@ plot(st_geometry(carres), add = TRUE, border = "white", lwd = 2)
 ```
 
 Le jaune est le maquis continu, les taches sombres les trouées — le risque
-moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors, un facteur
-6,5. Les périmètres rouges sont les onze incendies, les deux carrés blancs les
-placettes LiDAR.
+moyen y vaut **0,68 sur combustible brûlable contre 0,05 en dehors, un facteur
+13,7**. Les périmètres rouges sont les onze incendies, les deux carrés blancs
+les placettes LiDAR.
+
+Ces chiffres étaient 0,32 et 6,5 dans les versions précédentes de cet article,
+et l'écart n'est pas une amélioration de méthode : **la carte publiée était
+celle du 31 décembre 2021**. `dernier` prenait la dernière couche de la série
+plutôt que le jour de l'incendie, et un jour d'hiver à FWI médian 0,9 produisait
+une carte qui paraissait plausible parce que la normalisation en percentile
+reclasse ce qu'on lui donne, si bas soit-il. Rien ne le signalait : ni la carte,
+ni la provenance, qui enregistrait fidèlement une date que personne ne
+regardait.
 
 **Il n'y a plus de cadre blanc**, et c'est l'argument `trim = study` de l'appel
 ci-dessus qui l'a supprimé. Le combustible ayant été construit sur l'emprise
@@ -565,6 +579,92 @@ chaque cellule de bord sur la portion d'anneau qui a des données, ce qui
 sous-estime l'exposition d'environ 30 % — mesuré ici 0,32 contre 0,46 — et le
 fait **invisiblement**. Un trou blanc valait mieux que ce chiffre-là ; une
 emprise tamponnée vaut mieux que les deux.
+
+### Lequel des deux termes fait la carte ?
+
+Un indice composite peut être dominé par une seule de ses composantes sans que
+rien ne le montre : la carte reste plausible, les couleurs restent contrastées.
+La question se tranche en corrélant le résultat à chacun de ses termes.
+
+```{r contrib}
+vals <- function(x) as.numeric(terra::values(fev_data(x))[, 1])
+D <- vals(danger); V <- vals(vuln); R <- vals(risque)
+ok <- stats::complete.cases(cbind(D, V, R))
+round(c(danger = stats::cor(R[ok], D[ok]),
+        vulnerabilite = stats::cor(R[ok], V[ok]),
+        sd_danger = stats::sd(D[ok])), 3)
+```
+
+Les deux termes pèsent, et le danger un peu plus. **Ce n'était pas le cas quand
+cet article cartographiait le 31 décembre** : le danger corrélait alors 0,542 et
+la vulnérabilité 0,995. Autrement dit la carte publiée était sa propre couche
+d'exposition, repeinte — et le diagnostic qui l'aurait montré tient en trois
+lignes de code.
+
+Quatre chaînes mesurées sur ce massif, toutes le 16 août 2021 :
+
+| Chaîne | écart-type danger | cor(R, danger) | cor(R, vuln) |
+|---|---|---|---|
+| **percentile, celle de cet article** | 0,308 | **0,879** | 0,833 |
+| FWI brut, `normalise = "minmax"` | 0,237 | 0,699 | 0,769 |
+| FWI descendu en échelle, `minmax` | 0,249 | 0,801 | 0,827 |
+| FWI descendu en échelle, percentile | 0,003 | 0,479 | 1,000 |
+
+Deux enseignements, et le second n'était pas attendu.
+
+**Le percentile n'aplatit pas le danger, il le structure.** Chaque maille de la
+réanalyse a sa propre climatologie ; classer aujourd'hui contre elle fait
+ressortir les endroits où ce jour-là est le plus exceptionnel, et cette variation
+est de l'information sur le climat local, pas un artefact.
+
+**Descendre le FWI en échelle par le relief dégrade la chaîne au percentile**, et
+la raison est structurelle : le gradient adiabatique est une transformation
+**monotone** de la série d'une zone. Décaler toute une série d'un même offset ne
+change presque pas le rang d'un jour à l'intérieur d'elle-même. Chaque zone
+héritant d'une histoire déterministe de sa maille parente, toutes classent le 16
+août au même rang, et le contraste spatial disparaît — l'écart-type tombe à
+0,003.
+
+La descente d'échelle sert donc la chaîne au FWI brut, où elle fait passer la
+corrélation au danger de 0,699 à 0,801, et dessert celle au percentile. Ce n'est
+pas un défaut de l'une ou de l'autre : ce sont deux questions différentes.
+*« Où est-ce le pire aujourd'hui »* veut un FWI brut descendu en échelle ; *« où
+aujourd'hui est-il le plus inhabituel »* veut un percentile, et n'a rien à faire
+d'une correction monotone.
+
+### Le relief, quand on veut la première question
+
+Non exécuté ici — le modèle de terrain se télécharge, et une vignette ne doit pas
+dépendre d'un service distant :
+
+```{r downscale-code, eval = FALSE}
+dem <- fev_fetch_dem(zone)
+cv <- fev_curvature(fev_data(dem), length_scale = 500)
+z <- fev_topo_zones(fev_data(dem), n_elev = 8, stations = meteo_tab)
+w <- fev_downscale_weather(meteo_tab, z, wind = "curvature", curvature = cv,
+                           rain = "fitted")
+danger_fin <- fev_fwi_zonal(w, z, dates = as.Date("2021-08-16"))
+```
+
+Mesuré sur ce massif le 2026-08-19 : 77 zones — 12 mailles de réanalyse croisées
+avec 8 bandes d'altitude —, le FWI passe de 17 à 77 valeurs distinctes, et le
+rapport d'échelle que signale `fev_align()` tombe de **141 000 cellules fines par
+maille grossière à 1,05**.
+
+Ce que la correction couvre, et ce qu'elle ne couvre pas :
+
+* **température** — gradient adiabatique, 3,3 K entre la zone la plus basse
+  (28 m) et la plus haute (538 m). Sur un massif culminant à 775 m, c'est la
+  mesure de ce qu'on peut espérer.
+* **humidité** — en découle à point de rosée constant, jusqu'à 18 points d'écart.
+* **vent** — pondération de courbure de MicroMet, multiplicateur 0,82 à 1,16.
+  Seule la moitié sans direction du schéma publié : son terme de pente exige une
+  direction de vent que ce paquet ne récupère pas.
+* **pluie** — `rain = "fitted"` a **refusé de corriger**. Sur 20 points couvrant
+  464 m de dénivelé, la régression donne R² = 0,087 et p = 0,21 : la réanalyse ne
+  résout aucun effet orographique à cette échelle, et un gradient ajusté
+  là-dessus aurait été du bruit voyageant dans la provenance sous les apparences
+  d'une mesure.
 
 ### Le jour de l'incendie sort premier de 1 096
 

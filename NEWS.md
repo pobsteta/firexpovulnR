@@ -1,3 +1,75 @@
+# firexpovulnR 0.30.0 (2026-08-19)
+
+### La carte de risque publiée était celle du 31 décembre
+
+Trouvé en voulant changer la normalisation de la vignette des Maures, et bien
+plus grave que ce que je cherchais. `dernier` prenait la **dernière couche** de
+la série :
+
+```r
+dernier <- fev_data(danger_pct)[[terra::nlyr(fev_data(danger_pct))]]
+```
+
+La carte publiée était donc celle du **31 décembre 2021**, FWI médian **0,9**,
+sous une page qui raconte l'incendie du 16 août 2021, FWI médian **84,3**.
+
+Rien ne pouvait le signaler. La normalisation en percentile reclasse ce qu'on
+lui donne, si bas soit-il, donc la carte restait contrastée et plausible ; et la
+provenance enregistrait fidèlement une date que personne ne regardait. Les
+chiffres de l'article passent de 0,32 et facteur 6,5 à **0,68 et facteur 13,7**.
+
+### Ce défaut invalidait le diagnostic de la 0.29.0
+
+La corrélation de 0,995 entre le composite et sa couche de vulnérabilité, qui a
+motivé toute la descente d'échelle, était mesurée sur ce jour d'hiver. Sur le
+16 août, les quatre chaînes donnent :
+
+| Chaîne | écart-type danger | cor(R, danger) | cor(R, vuln) |
+|---|---|---|---|
+| **grossière + percentile** | 0,308 | **0,879** | 0,833 |
+| grossière + FWI brut minmax | 0,237 | 0,699 | 0,769 |
+| descendue + FWI brut minmax | 0,249 | 0,801 | 0,827 |
+| descendue + percentile | 0,003 | 0,479 | 1,000 |
+
+**Le percentile n'aplatit pas le danger, il le structure**, et la vignette le
+garde. La 0.29.0 recommandait `minmax` sur la foi d'une mesure contaminée ; la
+documentation est corrigée.
+
+La raison pour laquelle la descente d'échelle dégrade la chaîne au percentile
+est structurelle : un gradient adiabatique est une transformation **monotone**,
+et décaler une série entière ne change presque pas le rang d'un jour à
+l'intérieur d'elle-même. Chaque zone héritant d'une histoire déterministe de sa
+maille parente, toutes classent le 16 août au même rang. Ce que la chaîne
+grossière possède — des climatologies réellement distinctes d'une maille à
+l'autre — est de l'information sur le climat local, et la 0.29.0 la qualifiait
+d'artefact à tort.
+
+Les deux chaînes répondent à deux questions : *« où est-ce le pire aujourd'hui »*
+veut un FWI brut descendu en échelle, *« où aujourd'hui est-il le plus
+inhabituel »* veut un percentile et n'a que faire d'une correction monotone.
+
+### Le vent et la pluie, les deux que la 0.29.0 laissait passer
+
+`fev_curvature()` implémente la pondération de terrain de MicroMet (Liston &
+Elder 2006). Formulation **vérifiée sur une implémentation indépendante** et non
+citée de mémoire, la page de l'éditeur étant payante. Seule la moitié sans
+direction est applicable : le terme de pente exige une direction de vent que ce
+paquet ne récupère pas. Sur les Maures, multiplicateur 0,82 à 1,16.
+
+`fev_rain_gradient()` ajuste le gradient orographique **sur les points de la
+réanalyse eux-mêmes** plutôt que d'importer les coefficients mensuels de
+MicroMet, dérivés de l'ouest américain. Sur les Maures, 20 points couvrant
+464 m : **R² = 0,087, p = 0,21**, et la correction est **refusée**. Ce n'est pas
+un échec mais le comportement voulu — un gradient ajusté sur ce bruit aurait
+voyagé dans la provenance sous les apparences d'une mesure.
+
+### La vignette dit maintenant quel terme fait la carte
+
+Trois lignes de code qui auraient montré le défaut ci-dessus dès sa première
+publication, et le tableau des quatre chaînes. Un indice composite peut être
+dominé par une seule de ses composantes sans que rien ne le montre : la carte
+reste plausible, les couleurs restent contrastées.
+
 # firexpovulnR 0.29.0 (2026-08-19)
 
 ### Le terme danger descend en échelle, et la mesure déplace la conclusion

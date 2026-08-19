@@ -4,7 +4,16 @@
 \alias{fev_downscale_weather}
 \title{Correct weather to the elevation of each topographic zone}
 \usage{
-fev_downscale_weather(weather, zones, lapse_rate = 6.5, quiet = FALSE)
+fev_downscale_weather(
+  weather,
+  zones,
+  lapse_rate = 6.5,
+  wind = c("none", "curvature"),
+  curvature = NULL,
+  curve_weight = 0.5,
+  rain = c("none", "fitted"),
+  quiet = FALSE
+)
 }
 \arguments{
 \item{weather}{A weather table as \code{\link[=fev_fetch_weather]{fev_fetch_weather()}} returns, or a
@@ -16,6 +25,22 @@ thinks each point sits at, without which there is nothing to correct
 
 \item{lapse_rate}{Kelvin per kilometre, positive for cooling with height.
 Default 6.5.}
+
+\item{wind}{\code{"none"} (default) or \code{"curvature"}. The second applies the
+MicroMet terrain weighting through \code{\link[=fev_curvature]{fev_curvature()}}, which needs
+\code{curvature}. \strong{Only the curvature half of the published scheme}: its slope
+term needs a wind direction and this package fetches none.}
+
+\item{curvature}{A \code{fev_layer} from \code{\link[=fev_curvature]{fev_curvature()}}, on the zone grid.
+Required when \code{wind = "curvature"}.}
+
+\item{curve_weight}{Weight on the curvature term, \code{gamma_c} in Liston and
+Elder. Default 0.5, their default. A ridge then carries 1.25 times the
+reanalysis wind and a hollow 0.75 times.}
+
+\item{rain}{\code{"none"} (default) or \code{"fitted"}. The second asks
+\code{\link[=fev_rain_gradient]{fev_rain_gradient()}} whether these points show an orographic gradient and
+\strong{applies nothing if they do not} — saying so rather than fitting noise.}
 
 \item{quiet}{Suppress the report.}
 }
@@ -45,36 +70,37 @@ DMC and DC keep the coarse rain signal, and it is the fine-fuel path — FFMC,
 and FWI through it — that gains structure.
 }
 
-\section{A percentile normalisation downstream will undo all of this}{
+\section{It helps a raw-FWI chain and hurts a percentile one}{
 
-Measured on the Maures for 16 August 2021, over 597 840 cells, decomposing
-the composite risk into its two terms:\tabular{llll}{
+Measured on the Maures for 16 August 2021 over 597 840 cells, decomposing the
+composite risk into its two terms:\tabular{llll}{
    chain \tab sd(danger) \tab cor(risk, danger) \tab cor(risk, vulnerability) \cr
-   coarse, percentile \tab 0.032 \tab 0.542 \tab \strong{0.995} \cr
-   downscaled, percentile \tab 0.0006 \tab 0.380 \tab \strong{1.000} \cr
-   coarse, raw FWI \tab 0.237 \tab 0.699 \tab 0.769 \cr
-   downscaled, raw FWI \tab \strong{0.265} \tab \strong{0.807} \tab 0.808 \cr
+   coarse, percentile \tab 0.308 \tab \strong{0.879} \tab 0.833 \cr
+   coarse, raw FWI + minmax \tab 0.237 \tab 0.699 \tab 0.769 \cr
+   downscaled, raw FWI + minmax \tab 0.249 \tab \strong{0.801} \tab 0.827 \cr
+   downscaled, percentile \tab 0.003 \tab 0.479 \tab 1.000 \cr
 }
 
 
-Read the first two rows: downscaling made the composite \strong{worse}. And the
-reason is not the downscaling.
+Downscaling lifts a raw-FWI chain — 0.699 to 0.801 — and \strong{wrecks a
+percentile one}, and the reason is structural rather than incidental.
 
-\code{\link[=fev_fwi_percentile]{fev_fwi_percentile()}} ranks each cell against \strong{its own} history. It is a
-temporal normalisation, so it removes spatial contrast by construction: a
-place that is always hot and a place that is always cool both come out near
-1 on an extreme day. What little spatial variation survived it in the coarse
-chain was an artefact of reanalysis cells having different histories across
-their block boundaries — and downscaling, by giving every zone a coherent
-series of its own, removes that artefact too.
+A lapse rate is a \strong{monotone} transform of a zone's whole series. Shifting a
+series by a near-constant offset barely changes where any one day ranks
+inside it. Every zone inherits a history that is a deterministic transform of
+its parent reanalysis cell's, so every zone ranks 16 August at nearly the
+same percentile and the spatial contrast collapses: the standard deviation
+falls to 0.003.
 
-So the percentile is doing its job, and its job is not compatible with
-wanting a danger term that varies in space on a given day. Downscale and
-normalise with \code{"minmax"}, or downscale and accept that the percentile map
-answers a different question — \emph{how unusual is today here} rather than
-\emph{where is it worst today}. Both are legitimate; they are not the same map,
-and the composite built from the second is the one that stops being its own
-exposure layer.
+What the coarse percentile chain has, and this destroys, is genuine: distinct
+reanalysis cells carry distinct climatologies, and ranking today against each
+one says where today is most exceptional. That is information about local
+climate, not an artefact of cell boundaries.
+
+So the two answer different questions and want different inputs. \emph{Where is it
+worst today} wants a downscaled raw FWI with \code{normalise = "minmax"}. \emph{Where is
+today most unusual} wants the percentile, and has no use for a monotone
+correction.
 }
 
 \section{The lapse rate is a constant and the atmosphere is not}{
