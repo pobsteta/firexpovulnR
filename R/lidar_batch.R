@@ -120,6 +120,13 @@ fev_lidar_batch <- function(aoi,
     fev_abort("{.arg window} must be a positive number of metres, or NULL.")
   }
 
+  # The AOI, kept rather than consumed. `window` cuts a square centred on the
+  # TILE, and the index holds every tile that *intersects* the area -- so on any
+  # edge tile that square lands outside the study area entirely. Measured on the
+  # Maures: 13 of the first 24 windows, more than half the campaign, inverted
+  # ground that was never in the area under study.
+  aoi_geom <- if (inherits(aoi, "fev_lidarhd_index")) NULL else fev_lidar_aoi(aoi)
+
   idx <- if (inherits(aoi, "fev_lidarhd_index")) {
     aoi
   } else if (isTRUE(quiet)) {
@@ -144,8 +151,13 @@ fev_lidar_batch <- function(aoi,
   dest <- file.path(out_dir, paste0(tiles, "_fuel.tif"))
   done <- file.exists(dest)
 
+  # Where to cut, and whether a cut is possible at all inside the area.
+  centres <- fev_lidar_window_centres(idx, aoi_geom, window)
+  outside <- !done & !stats::complete.cases(centres)
+
   plan <- data.frame(
-    tile = tiles, status = ifelse(done, "done", "todo"),
+    tile = tiles,
+    status = ifelse(done, "done", ifelse(outside, "outside", "todo")),
     points = NA_real_, seconds = NA_real_,
     path = ifelse(done, dest, NA_character_),
     # A manifest that says "failed" without saying why sends you back to a log
@@ -164,8 +176,12 @@ fev_lidar_batch <- function(aoi,
   # The order is deterministic, and that matters for resume: run two must
   # continue the spread rather than re-draw it, or the union of several nights
   # is no better spread than one.
-  order_all <- if (isTRUE(spread)) fev_lidar_spread_order(idx) else seq_len(nrow(plan))
-  todo <- order_all[!done[order_all]]
+  order_all <- if (isTRUE(spread)) {
+    fev_lidar_spread_order(idx, xy = centres)
+  } else {
+    seq_len(nrow(plan))
+  }
+  todo <- order_all[!done[order_all] & !outside[order_all]]
   if (!is.null(max_tiles) && length(todo) > max_tiles) {
     todo <- todo[seq_len(max_tiles)]
   }
@@ -176,10 +192,18 @@ fev_lidar_batch <- function(aoi,
   plan$status[todo] <- "next"
   plan$rank <- match(seq_len(nrow(plan)), todo)
 
+  if (!quiet && any(outside)) {
+    fev_inform(c(
+      "{sum(outside)} tile{?s} dropped: no {window} m window fits inside the \\
+       area of interest.",
+      i = "They touch the area only at the edge. Processing them would invert \\
+           ground outside the study area."
+    ), .envir = environment())
+  }
   if (!quiet) {
     fev_inform(c(
       "{nrow(plan)} tile{?s}: {sum(done)} already done, \\
-       {length(todo)} to process now.",
+       {sum(outside)} outside, {length(todo)} to process now.",
       i = if (!is.null(window)) {
         paste0("Processing a centred {window} m square of each, not the whole ",
                "tile.")
@@ -196,7 +220,7 @@ fev_lidar_batch <- function(aoi,
   for (i in todo) {
     t0 <- proc.time()[["elapsed"]]
     row <- fev_lidar_batch_one(urls[i], tiles[i], dest[i], las_dir, res,
-                               window, keep_las, quiet)
+                               window, centres[i, ], keep_las, quiet)
     plan$status[i] <- row$status
     plan$points[i] <- row$points
     plan$seconds[i] <- round(proc.time()[["elapsed"]] - t0, 1)
@@ -232,7 +256,7 @@ fev_lidar_batch <- function(aoi,
 #'
 #' @noRd
 fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
-                                keep_las, quiet) {
+                                centre, keep_las, quiet) {
   fail <- function(why) list(status = "failed", points = NA_real_,
                              path = NA_character_, error = why)
   las_file <- file.path(las_dir, basename(url))
@@ -256,7 +280,7 @@ fev_lidar_batch_one <- function(url, tile, dest, las_dir, res, window,
   out <- tryCatch({
     las <- lidR::readLAS(las_file)
     if (!is.null(window)) {
-      las <- fev_lidar_centre_window(las, window)
+      las <- fev_lidar_centre_window(las, window, centre)
     }
     n <- lidR::npoints(las)
     r <- suppressMessages(fev_fuel_lidar(las, res = res))
@@ -298,12 +322,74 @@ fev_lidar_part_path <- function(dest) {
   sub("\\.tif$", ".part.tif", dest)
 }
 
+#' The area of interest as one geometry, in whatever it was given as
+#' @noRd
+fev_lidar_aoi <- function(aoi) {
+  g <- tryCatch(sf::st_geometry(sf::st_as_sf(aoi)), error = function(e) NULL)
+  if (is.null(g) || !length(g)) {
+    return(NULL)
+  }
+  sf::st_union(sf::st_make_valid(g))
+}
+
+#' Where to cut each tile so the square lands inside the area of interest
+#'
+#' The tile centre is the wrong point on an edge tile: the index holds every
+#' tile that *intersects* the area, so a square centred on the tile can sit
+#' wholly outside it. Thirteen of the first twenty-four Maures windows did, and
+#' the metrics computed there described ground nobody had asked about -- while
+#' looking, in the manifest, exactly like the eleven that were legitimate.
+#'
+#' The centre used instead is a point on the intersection shrunk by half the
+#' window, which is empty exactly when no window of that size fits inside the
+#' area. So the same computation both places the square and decides whether the
+#' tile is workable at all: a tile with no centre is a tile to drop, not a tile
+#' to cut badly.
+#'
+#' With no area of interest -- an index passed directly -- the tile centre is
+#' all there is, and it is used.
+#'
+#' @return A two-column matrix of coordinates, one row per tile, `NA` where no
+#'   window fits.
+#' @noRd
+fev_lidar_window_centres <- function(idx, aoi_geom, window) {
+  n <- nrow(idx)
+  xy <- suppressWarnings(
+    sf::st_coordinates(sf::st_centroid(sf::st_geometry(idx)))[, 1:2, drop = FALSE]
+  )
+  if (is.null(aoi_geom) || is.null(window)) {
+    return(xy)
+  }
+
+  aoi <- sf::st_transform(aoi_geom, sf::st_crs(idx))
+  out <- matrix(NA_real_, nrow = n, ncol = 2L,
+                dimnames = list(NULL, c("X", "Y")))
+  parts <- suppressWarnings(sf::st_intersection(
+    sf::st_sf(.i = seq_len(n), geometry = sf::st_geometry(idx)), aoi
+  ))
+  if (!nrow(parts)) {
+    return(out)
+  }
+  # Shrink by half the window: what survives is where a centre can go with the
+  # whole square still inside.
+  core <- suppressWarnings(sf::st_buffer(sf::st_geometry(parts), -window / 2))
+  keep <- !sf::st_is_empty(core)
+  if (any(keep)) {
+    pts <- suppressWarnings(sf::st_point_on_surface(core[keep]))
+    out[parts$.i[keep], ] <- sf::st_coordinates(pts)[, 1:2, drop = FALSE]
+  }
+  out
+}
+
 #' A centred square of a tile
 #' @noRd
-fev_lidar_centre_window <- function(las, window) {
-  h <- las@header@PHB
-  cx <- (h$`Min X` + h$`Max X`) / 2
-  cy <- (h$`Min Y` + h$`Max Y`) / 2
+fev_lidar_centre_window <- function(las, window, centre = NULL) {
+  if (is.null(centre) || anyNA(centre)) {
+    h <- las@header@PHB
+    centre <- c((h$`Min X` + h$`Max X`) / 2, (h$`Min Y` + h$`Max Y`) / 2)
+  }
+  cx <- centre[[1]]
+  cy <- centre[[2]]
   lidR::clip_rectangle(las, cx - window / 2, cy - window / 2,
                        cx + window / 2, cy + window / 2)
 }
@@ -317,12 +403,24 @@ fev_lidar_centre_window <- function(las, window) {
 #' spread instead of starting a new one.
 #'
 #' @noRd
-fev_lidar_spread_order <- function(idx) {
+fev_lidar_spread_order <- function(idx, xy = NULL) {
   n <- nrow(idx)
   if (n < 3L) {
     return(seq_len(n))
   }
-  xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(idx)))
+  # Spread on the points actually cut, not on the tile centres: once the window
+  # is placed inside the area of interest, those are what the traversal must
+  # keep apart. Tiles with no usable centre fall back to their own so the
+  # traversal stays defined -- they are excluded from the batch elsewhere.
+  fallback <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(idx)))[, 1:2,
+                                                                       drop = FALSE]
+  if (is.null(xy)) {
+    xy <- fallback
+  } else {
+    xy <- xy[, 1:2, drop = FALSE]
+    gap <- !stats::complete.cases(xy)
+    xy[gap, ] <- fallback[gap, ]
+  }
   centre <- colMeans(xy)
   first <- which.min(colSums((t(xy) - centre)^2))
 

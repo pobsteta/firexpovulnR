@@ -1,3 +1,60 @@
+# firexpovulnR 0.26.0 (2026-08-19)
+
+### Treize fenêtres sur vingt-quatre tombaient hors de la zone d'étude
+
+`fev_lidarhd_available()` retient toute dalle qui **intersecte** l'emprise, et
+`window` découpait ensuite un carré centré sur **la dalle**. Sur une dalle de
+bordure, ce carré part entièrement dans le hors-champ. Mesuré sur la campagne
+des Maures : **13 des 24 premières fenêtres étaient hors de la zone d'étude**,
+inversées au prix fort, indiscernables des onze autres dans le manifeste, et
+décrivant un terrain que personne n'avait demandé.
+
+Le défaut ne se voyait nulle part. Le manifeste disait `written`, les rasters
+étaient valides, les métriques plausibles — et fausses de sujet. Il n'est apparu
+qu'en croisant les sorties avec la BD Forêt : 46 % des cellules sans polygone,
+un « trou de couverture » qui n'existait pas. Ramené aux fenêtres légitimes, ce
+chiffre tombe à 17 %.
+
+`fev_lidar_window_centres()` centre désormais le carré sur l'intersection
+dalle × emprise **rétrécie d'une demi-fenêtre**. Ce qui survit à ce
+rétrécissement est exactement l'ensemble des positions où le carré tient tout
+entier dans la zone — donc le même calcul place la fenêtre et décide si la dalle
+est exploitable. Une dalle sans centre est une dalle à écarter, pas une dalle à
+découper de travers : elle reçoit le statut `"outside"`, et leur nombre est
+annoncé. Sur les Maures, 43 dalles sur 505.
+
+La traversée du plus éloigné se fait maintenant sur les **centres de fenêtre**
+et non sur les centres de dalle : une fois le carré replacé dans l'emprise, ce
+sont eux que la répartition doit tenir écartés.
+
+Quatre tests s'ajoutent, dont un qui vérifie que le **carré entier** — pas
+seulement son centre — est contenu dans l'emprise. Les tests existants ne
+pouvaient rien voir : ils ne passent jamais d'emprise, seulement un index.
+
+### La vignette des Maures chiffre enfin ce qu'elle affirmait
+
+Une section nouvelle porte la démonstration de deux placettes à **douze fenêtres
+réparties sur le massif, 1 176 cellules**. Ce que la classe TFV explique :
+
+| | BD Forêt v2 | WorldCover | les deux |
+|---|---|---|---|
+| Couvert | 0,73 | 0,05 | 0,73 |
+| CFL | 0,65 | 0,04 | 0,65 |
+| FSG | 0,34 | 0,02 | 0,35 |
+| **CBD max** | **0,26** | 0,01 | 0,27 |
+
+Le gradient va dans le sens redouté : la nomenclature explique très bien le
+couvert, deux fois moins bien la structure verticale, et le moins la densité
+apparente de houppier — la variable dont dépend le passage en cime. Dans la
+seule classe des chênes sempervirents, 273 cellules, la charge de houppier va de
+0,44 à 1,98 kg/m².
+
+**Ajouter WorldCover n'apporte rien** : troisième colonne identique à la
+première. Sur ce massif elle classe 69 % des cellules en « couvert arboré », et
+ses quatre étiquettes sur les cellules hors BD Forêt recouvrent une seule
+réalité structurelle. Ce qui manque n'est pas une étiquette plus fine, c'est une
+mesure — donc de la couverture LiDAR, pas une source catégorielle de plus.
+
 # firexpovulnR 0.25.1 (2026-08-18)
 
 ### Huit dalles inversées puis jetées, sur une extension de fichier

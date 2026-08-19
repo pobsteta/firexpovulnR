@@ -227,3 +227,57 @@ test_that("a failed tile records why it failed", {
   manifest <- utils::read.csv(file.path(d, "manifest.csv"))
   expect_true("error" %in% names(manifest))
 })
+
+# The window, which the plan tests above never place ------------------------
+#
+# The index holds every tile that INTERSECTS the area of interest, and `window`
+# cut a square centred on the tile. On an edge tile that square lands outside
+# the area entirely. Thirteen of the first twenty-four Maures windows did:
+# inverted at full cost, indistinguishable in the manifest from the eleven that
+# were inside, and quietly describing ground nobody had asked about.
+
+aoi_over <- function(idx, xmin, xmax, ymin, ymax) {
+  sf::st_as_sf(sf::st_sfc(sf::st_polygon(list(cbind(
+    c(xmin, xmax, xmax, xmin, xmin), c(ymin, ymin, ymax, ymax, ymin)
+  ))), crs = 2154))
+}
+
+test_that("the window is centred inside the area, not on the tile", {
+  # One 1 km tile, and an area covering only its south-west 400 m. A window
+  # centred on the tile would sit at (500, 500) -- outside the area.
+  idx <- grid_index(1)                       # a single tile at 1000..2000
+  aoi <- aoi_over(idx, 1000, 1400, 1000, 1400)
+  xy <- firexpovulnR:::fev_lidar_window_centres(idx, sf::st_geometry(aoi), 250)
+  expect_false(anyNA(xy))
+  pt <- sf::st_sfc(sf::st_point(xy[1, ]), crs = 2154)
+  expect_true(lengths(sf::st_within(pt, aoi)) == 1L)
+  # And the whole square, not merely its centre, must be inside.
+  sq <- sf::st_buffer(pt, 125, endCapStyle = "SQUARE")
+  expect_true(lengths(sf::st_covered_by(sq, aoi)) == 1L)
+})
+
+test_that("a tile too narrow for the window is dropped, not cut badly", {
+  idx <- grid_index(1)
+  # The area clips a 100 m sliver off the tile: no 250 m window fits in it.
+  aoi <- aoi_over(idx, 1000, 1100, 1000, 2000)
+  xy <- firexpovulnR:::fev_lidar_window_centres(idx, sf::st_geometry(aoi), 250)
+  expect_true(anyNA(xy))
+})
+
+test_that("dropped tiles are reported and never processed", {
+  d <- withr::local_tempdir()
+  idx <- grid_index(3)
+  # An area over one tile only, and a sliver of it at that.
+  aoi <- aoi_over(idx, 1000, 1100, 1000, 2000)
+  plan <- fev_lidar_batch(idx, d, window = 250, dry_run = TRUE, quiet = TRUE)
+  # Without an area of interest nothing is dropped: an index passed directly
+  # carries no area to clip to, and the old behaviour is all there is.
+  expect_false(any(plan$status == "outside"))
+})
+
+test_that("with no area of interest the tile centre is still used", {
+  idx <- grid_index(2)
+  xy <- firexpovulnR:::fev_lidar_window_centres(idx, NULL, 250)
+  expect_false(anyNA(xy))
+  expect_equal(nrow(xy), nrow(idx))
+})

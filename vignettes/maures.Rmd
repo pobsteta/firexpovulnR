@@ -324,6 +324,137 @@ Deux placettes d'un seul massif, 566 cellules, et des nomenclatures à 6, 3 et 5
 classes — un compte de classes plus élevé explique mécaniquement un peu plus de
 variance. Six contre cinq ne rend pas compte d'un facteur quatre.
 
+## Douze fenêtres à travers le massif, et ce qu'elles disent des sources
+
+Tout ce qui précède repose sur **deux placettes**. Deux, c'est assez pour montrer
+qu'un écart existe ; ce n'est pas assez pour dire ce qu'il vaut ailleurs. La
+campagne décrite ici porte la même question sur douze fenêtres réparties sur tout
+le massif, et elle change une des conclusions qu'on aurait tirées de deux.
+
+### Comment les fenêtres ont été choisies
+
+`fev_lidar_batch()` inverse les dalles une à une, avec reprise, et découpe dans
+chacune un carré centré de 250 m — une dalle entière prend des heures, huit
+fenêtres échantillonnent huit contextes pour une fraction du coût.
+
+```{r batch-code, eval = FALSE}
+fev_lidar_batch(zone, "out/lidar", window = 250, max_tiles = 8)
+```
+
+Deux précautions décident de ce que vaut l'échantillon, et aucune n'est
+cosmétique.
+
+**L'ordre.** L'index des dalles est en ordre spatial. Prendre les huit premières
+donne huit voisines dans un coin du massif : un seul contexte échantillonné huit
+fois. Le défaut `spread = TRUE` parcourt les dalles par traversée du plus
+éloigné — chaque dalle retenue est la plus lointaine de toutes les précédentes.
+Sur les Maures, l'écart minimal entre huit dalles passe de 1,0 à 10,0 km. La
+traversée est déterministe, donc une reprise poursuit la répartition : huit ce
+soir et huit demain donnent seize dalles réparties, pas deux grappes.
+
+**L'emprise.** L'index retient toute dalle qui *intersecte* la zone d'étude. Un
+carré centré sur une telle dalle peut donc tomber entièrement en dehors. C'est
+arrivé, et massivement : sur les vingt-quatre premières fenêtres d'une campagne
+sur les Maures, **treize étaient hors de la zone d'étude** — inversées au prix
+fort, indiscernables des autres dans le manifeste, et décrivant un terrain que
+personne n'avait demandé. La fonction centre désormais le carré sur
+l'intersection dalle × emprise, rétrécie d'une demi-fenêtre : ce qui survit à ce
+rétrécissement est exactement l'endroit où un carré tient tout entier dans la
+zone. Sur les Maures, 43 dalles des 505 sont écartées pour cette raison, et
+elles sont annoncées, jamais retirées en silence.
+
+### La confrontation, cellule par cellule
+
+Chaque cellule de 25 m reçoit sa classe BD Forêt par son centre — la règle
+utilisée partout ailleurs dans le paquet — puis on compare, dans chaque classe,
+ce que le LiDAR a mesuré. Douze fenêtres, **1 176 cellules**.
+
+```{r confront-code, eval = FALSE}
+cl <- terra::rasterize(terra::vect(bdforet), fuel_lidar[[1]], field = "code_tfv")
+cells <- as.data.frame(c(fuel_lidar, cl), na.rm = TRUE)
+```
+
+Les classes présentes sur au moins 40 cellules, médianes par classe :
+
+| Code TFV | Essence | n | Hauteur | CBH | FSG | Couvert | CFL | % continu |
+|---|---|---|---|---|---|---|---|---|
+| FF1G06-06 | Chênes sempervirents | 273 | 12,5 | 0,0 | 0,0 | 0,91 | 1,11 | **99** |
+| FF1-00-00 | Feuillus | 270 | 15,5 | 0,0 | 0,0 | 0,88 | 1,08 | 83 |
+| *hors BD Forêt* | — | 197 | 7,5 | 0,0 | 0,0 | 0,04 | 0,10 | 62 |
+| FO2 | Conifères (ouvert) | 86 | 9,5 | 6,5 | **6,0** | 0,14 | 0,06 | **37** |
+| FO1 | Feuillus (ouvert) | 73 | 6,5 | 0,0 | 0,0 | 0,04 | 0,06 | 97 |
+| LA4 | Lande | 67 | 4,5 | 0,0 | 0,0 | 0,02 | 0,04 | 93 |
+| FF2-51-51 | Pin maritime | 59 | 13,5 | 0,0 | 0,0 | 0,93 | 1,04 | 97 |
+| FO3 | Mixte (ouvert) | 50 | 9,0 | 0,0 | 0,0 | 0,28 | 0,40 | 88 |
+| FF1-10-10 | Châtaignier | 43 | 17,5 | 0,0 | 0,0 | 0,97 | 1,58 | 100 |
+
+« % continu » est la part de cellules à FSG < 0,5 m : le sous-étage rejoint les
+houppiers, rien n'arrête un feu de surface en route vers la cime.
+
+**Une seule classe sépare vraiment : `FO2`**, forêt ouverte de conifères, avec
+6 m de vide sous les houppiers et 37 % de cellules continues contre 83 à 100 %
+partout ailleurs. Là où la nomenclature parle d'ouverture, elle porte de
+l'information verticale. Partout où elle parle de composition, elle n'en porte
+presque pas.
+
+### Ce que la classe explique, et ce qu'elle n'explique pas
+
+Part de variance des métriques LiDAR expliquée par la classe seule, sur les mêmes
+1 176 cellules :
+
+| Métrique | BD Forêt v2 | ESA WorldCover | les deux ensemble |
+|---|---|---|---|
+| Couvert | **0,73** | 0,05 | 0,73 |
+| CFL — charge de houppier | **0,65** | 0,04 | 0,65 |
+| Hauteur | 0,45 | 0,05 | 0,45 |
+| FSG — discontinuité verticale | 0,34 | 0,02 | 0,35 |
+| CBH — base des houppiers | 0,31 | 0,02 | 0,31 |
+| **CBD max — densité apparente** | **0,26** | 0,01 | 0,27 |
+
+Il y a un **gradient**, et il va dans le sens qu'on redoutait. La BD Forêt
+explique très bien ce qu'elle décrit — le couvert, la charge de houppier qui en
+découle. Elle explique deux fois moins bien la structure verticale. Et elle
+explique le moins **la densité apparente de houppier**, qui est précisément la
+variable dont dépend le passage en cime.
+
+L'écart ne se comble pas dans la classe. Chez les chênes sempervirents, 273
+cellules d'un seul et même code, la charge de houppier va de **0,44 à
+1,98 kg/m²** — un facteur 4,5 à l'intérieur d'une classe que la base considère
+comme homogène.
+
+### Faut-il aller chercher ailleurs ?
+
+La question mérite d'être posée franchement, et la troisième colonne du tableau y
+répond : **ajouter WorldCover à la BD Forêt ne fait rien gagner**, 0,73 contre
+0,73 sur le couvert, 0,27 contre 0,26 sur la densité apparente. Sur ce massif
+WorldCover classe 69 % des cellules en « couvert arboré » : une nomenclature
+presque constante n'explique presque rien.
+
+Elle ne rattrape pas non plus ce que la BD Forêt ne couvre pas. Les 197 cellules
+sans polygone — 17 %, et non un trou béant — sont vues par WorldCover comme
+*Tree cover* (75), *Shrubland* (50), *Grassland* (46) ou *Cropland* (24). Mais le
+LiDAR mesure la même chose dans les quatre : couvert médian de 0,01 à 0,10,
+CFL de 0,08 à 0,14. **Ses quatre étiquettes recouvrent une seule réalité
+structurelle.** La BD Forêt a raison de ne rien y mettre : ce n'est pas de la
+forêt.
+
+La conclusion est donc l'inverse d'un appel à plus de sources catégorielles.
+Aucune n'apportera ce qui manque, parce que ce qui manque n'est pas une étiquette
+plus fine — c'est une **mesure**. Une classe, quelle que soit sa nomenclature,
+dit ce qu'il y a ; elle ne dit pas combien il y en a ni à quelle hauteur. Les
+deux sources continues du paquet répondent chacune à une moitié de la question :
+FORMS donne la hauteur de canopée partout en France, sans atteindre le
+sous-étage ; le LiDAR HD donne le sous-étage, là où il a volé. Élargir la
+couverture LiDAR est le seul geste qui déplace le chiffre de 0,26.
+
+### Ce qu'il faut retenir de la portée
+
+Douze fenêtres de 250 m font 0,75 km² sur un seul massif, une seule campagne
+LiDAR (2025), et l'attribution de classe se fait au centre de cellule. C'est une
+illustration chiffrée de la limite annoncée en tête d'article, pas une
+validation. Les proportions ci-dessus valent pour les Maures et n'ont pas été
+vérifiées ailleurs.
+
 ## Greffe sur le registre catégoriel
 
 ```{r attach}
