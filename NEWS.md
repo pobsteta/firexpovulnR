@@ -1,3 +1,64 @@
+# firexpovulnR 0.32.0 (2026-08-20)
+
+### SUFOSAT : une date de perturbation par pixel, enfin
+
+`fev_fetch_sufosat()` lit la carte nationale des coupes rases produite par
+radar Sentinel-1, à 10 m, et la décode en année et jour de détection. C'est ce
+qui manquait au combustible depuis la phase 2 : la BD Forêt v2 a été bâtie entre
+2007 et 2018 et ne sait rien de ce qui a été coupé ensuite. `fev_validate()`
+pouvait chiffrer ce décalage, jamais le corriger.
+
+Accès libre malgré les apparences. Le produit est catalogué sur le STAC de
+THEIA, où **ses assets répondent 403** ; la même donnée est déposée sur Zenodo
+sous **CC-BY 4.0**, 336 Mo, sans compte. Et la version supersédée était
+CC-BY-NC quand la courante ne l'est pas : même fichier, trois réponses
+différentes sur le droit de le lire selon l'endroit où on le demande.
+
+### Il ne distingue pas un incendie d'une coupe, et c'est mesuré
+
+Le radar voit la végétation disparaître, pas ce qui l'a fait disparaître. Sur
+l'emprise des Maures :
+
+| Année | Détecté | Dans un périmètre d'incendie |
+|---|---|---|
+| 2018-2020 | 10 à 46 ha | 24 à 29 % |
+| **2021** | **2 626 ha** | **97 %** |
+| **2022** | **669 ha** | **90 %** |
+| 2024 | 140 ha | 1 % |
+
+Jour médian de détection en 2021 dans le périmètre : le **246e, 3 septembre**,
+quinze jours après la fin du sinistre — le délai de revisite et de confirmation
+de la méthode.
+
+`fires` n'est donc pas un raffinement optionnel : sans lui, une correction de
+combustible enregistrerait un incendie comme une exploitation. Or les deux ne
+laissent pas le même combustible — une coupe emporte le peuplement, un feu
+sévère le laisse mort et debout. L'appel sans périmètres n'échoue pas mais
+**avertit**, la carte brute restant une chose légitime à vouloir.
+
+Sur les Maures : 3 314 ha retirés, 258 ha conservés, soit 1 à 73 ha par an — ce
+qui ressemble enfin à de la sylviculture.
+
+### Ce que la même propriété fait gagner
+
+Les **599 ha détectés dans le périmètre de 2021 au cours de 2022** sont, eux, de
+vraies coupes : la récupération sanitaire après incendie. C'est un changement de
+combustible daté que rien d'autre dans ce paquet ne peut voir, et il touche
+directement la question de la valeur perdue — le bois brûlé qui part en
+exploitation n'est plus du combustible et n'est plus une perte sèche.
+
+`fires` masque toutes les années, donc il faut ne passer que celles qu'on veut
+retirer si l'on tient à garder cette coupe-là. C'est documenté plutôt que
+deviné.
+
+### Deux réserves reprises à chaque appel
+
+Le **rappel est de 80,9 %** : une coupe sur cinq est manquée, donc une absence
+de détection n'est pas une preuve d'absence de coupe. Et Zenodo ignorant les
+requêtes par plage — vérifié —, le fichier national se télécharge entier, une
+fois, avec le contrôle de taille et la purge d'un fichier tronqué introduits en
+0.26.1.
+
 # firexpovulnR 0.31.0 (2026-08-19)
 
 ### La sévérité, la couche que le paquet n'avait jamais eue
