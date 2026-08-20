@@ -55,6 +55,23 @@ Le contrôle — hors du périmètre, la différence doit revenir à zéro — n
 un conseil dans la documentation mais le **critère de sélection** de la scène
 d'avant : chaque candidate est différenciée puis notée dessus.
 
+### Une note consigne ce qui a été essayé et n'a pas marché
+
+`specs/note-sources-2026-08-20.md`. Une demi-journée d'essais qui ne laissent
+aucune trace dans le code, et que quelqu'un referait sans elle :
+
+* les **quatre produits forêt de THEIA** — SUFOSAT, FORMS-T, FORMSpoT, GeoGEDI —
+  sont catalogués publiquement en STAC et leurs assets répondent **403** sur
+  trois buckets distincts. Les clés S3 essayées donnent `InvalidAccessKeyId`,
+  vérifié hors GDAL avec une signature SigV4 écrite à la main ;
+* **GEODES et THEIA sont des archives glissantes** : rien avant 2023-2025 sur
+  les Maures, quand les collections annoncent 2015. L'étendue temporelle d'une
+  collection STAC est celle du produit, pas du stock ;
+* la **requête bornée sur COPC distant fonctionne et n'apporte rien** — pas plus
+  rapide que le téléchargement complet, et non déterministe à neuf points près.
+  Le gain annoncé d'un facteur cinquante portait sur les octets, qui n'ont
+  jamais été la contrainte : l'inversion l'est.
+
 ### Ce que la campagne LiDAR ne pourra pas tester
 
 5 fenêtres sur 32 recoupent les feux de 2021, soit 27,5 ha. Mais le LiDAR HD a
