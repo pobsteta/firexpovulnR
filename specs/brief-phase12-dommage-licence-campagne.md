@@ -29,9 +29,14 @@ provider = "ESA WorldCover (public bucket, CC-BY 4.0)"
 Deux constats de cette semaine rendent cela intenable.
 
 **FORMS-T** est annoncé CC-BY-NC sur la page THEIA et `cc-by-4.0` dans les
-métadonnées structurées de Zenodo. Une licence non commerciale se propage aux
-œuvres dérivées : une carte de risque calculée à partir d'une telle source l'est
-aussi, et rien dans le paquet ne le dirait.
+métadonnées structurées de Zenodo. Le régime retenu pour ce jeu est **CC-BY-NC**,
+sur décision de l'auteur du paquet et non par application de la règle ci-dessous :
+la contradiction n'a pas été levée auprès du producteur, et tant qu'elle ne l'est
+pas, le champ doit porter ce choix **et sa raison**.
+
+C'est précisément ce qu'un champ de premier rang permet et qu'une chaîne de
+caractères dans `provider` ne permet pas : distinguer une licence lue d'une
+licence décidée.
 
 **SUFOSAT** est pire, ou plus instructif : la **même donnée** porte trois
 réponses selon l'endroit où on la demande — 403 sur le bucket que le catalogue
@@ -40,20 +45,59 @@ version courante. Une licence n'est donc pas un attribut du jeu de données mais
 du **chemin d'acquisition**, ce qui est exactement ce qu'une provenance doit
 enregistrer.
 
+### La règle : la plus ouverte
+
+Quand un même jeu est diffusé sous plusieurs licences, **retenir la plus
+ouverte**, et enregistrer par quel canal elle a été obtenue.
+
+Ce n'est pas de l'optimisme, c'est la logique de la licence : un producteur qui
+diffuse son travail sous CC-BY sur Zenodo l'offre à ces conditions, et rien
+n'oblige un utilisateur à s'imposer les conditions d'un autre canal. Retenir la
+plus restrictive « par prudence » reviendrait à s'interdire un usage que le
+producteur autorise, et à inscrire dans la provenance une contrainte que
+personne ne demande.
+
+SUFOSAT en est le cas d'école : la version **courante** est CC-BY 4.0, c'est
+celle que `fev_fetch_sufosat()` télécharge, et c'est donc CC-BY 4.0 qui doit
+être enregistré — pas le CC-BY-NC d'une version supersédée, ni le refus d'un
+bucket fermé.
+
+Trois précisions pour que la règle ne dérape pas :
+
+- **La licence retenue est celle du canal réellement utilisé**, et la version
+  compte. Un CC-BY sur la v3.0.1 ne dit rien de la v2.
+- **Les autres réponses sont consignées**, pas effacées. Un lecteur qui trouve
+  CC-BY-NC ailleurs doit pouvoir comprendre pourquoi le paquet a retenu autre
+  chose.
+- **Une décision humaine prime et se signale comme telle.** Quand la
+  contradiction n'est pas levée auprès du producteur — le cas de FORMS-T —
+  l'analyste tranche, et le champ dit que c'est une décision, pas une lecture.
+- **La règle vaut pour un jeu, pas pour une combinaison.** Voir plus bas : ce
+  sont deux questions différentes et la seconde ne se choisit pas.
+
 ### Ce qu'il faut écrire
 
 - Un champ `licence` explicite dans l'enregistrement de source, à côté de
   `dataset`, `provider`, `millesime`. Les sources existantes se remplissent au
   passage, en reprenant ce qui est déjà écrit dans leur `provider` et leur
   `@source`.
-- Un accesseur qui répond à la question réelle, du genre `fev_licences(x)` :
-  lister chaque licence rencontrée dans une pile et **désigner la plus
-  restrictive**. Une analyse combinant BD Forêt, WorldCover, GHS-POP, LiDAR HD,
-  Sentinel-2 et SUFOSAT produit un résultat dont le régime est celui de la plus
-  contraignante, et personne ne peut le savoir aujourd'hui sans relire six
-  fiches produit.
-- Quand deux canaux se contredisent, **enregistrer la contradiction** plutôt que
-  de trancher en silence, et retenir la plus restrictive par défaut.
+- Un accesseur du genre `fev_licences(x)` : lister chaque licence rencontrée
+  dans une pile, avec le canal dont elle vient. Personne ne peut le savoir
+  aujourd'hui sans relire six fiches produit.
+- Quand deux canaux se contredisent pour **un même jeu**, enregistrer la
+  contradiction et retenir **la plus ouverte**, selon la règle ci-dessus.
+
+### La combinaison ne se choisit pas
+
+Pour un jeu, la licence la plus ouverte se choisit. Pour un **résultat dérivé de
+plusieurs sources**, non : il doit satisfaire les termes de chacune, donc la
+contrainte effective est l'union de leurs restrictions. Si une seule entrée est
+non commerciale, le résultat l'est.
+
+Ce n'est pas une politique du paquet mais une conséquence, et l'accesseur doit
+le présenter comme telle : **il rapporte, il ne décide pas**. Rapporter la
+licence de chaque entrée et signaler la contrainte qui en découle est utile ;
+prétendre trancher l'usage autorisé ne l'est pas.
 
 ### Ce qu'il ne faut pas faire
 
