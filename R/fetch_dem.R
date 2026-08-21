@@ -103,6 +103,8 @@ fev_fetch_dem <- function(aoi, crs_work = 2154, quiet = FALSE) {
     r,
     dataset   = "copernicus_dem_glo30",
     provider  = "ESA Copernicus DEM (public bucket)",
+    licence   = "Copernicus",
+    licence_from = "licence Copernicus, annoncee par le producteur, lue 2026-08-19",
     endpoint  = .FEV_DEM_BUCKET,
     query     = list(tiles = tiles, res_arcsec = 1,
                      read = "/vsicurl/ window, no tile downloaded"),

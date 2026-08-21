@@ -178,6 +178,8 @@ fev_burnt_from_effis <- function(aoi, layer, cache) {
   src <- list(
     dataset       = "effis_burnt_areas",
     provider      = "EFFIS / Copernicus EMS",
+    licence       = NA_character_,
+    licence_from  = "non etablie : la politique de donnees EFFIS n'a pas ete lue par le paquet",
     endpoint      = url,
     layer         = layer,
     query         = query,

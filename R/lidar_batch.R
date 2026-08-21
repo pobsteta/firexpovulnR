@@ -75,6 +75,9 @@
 #'   departmental run would fill a disk.
 #' @param dry_run Report what would be done and return the plan without
 #'   downloading anything.
+#' @param fires Fire perimeters, as [fev_fetch_burnt()] returns them, or `NULL`.
+#'   When given, the run reports which finished windows fall in a burn and —
+#'   the point of it — whether any fire **postdates the LiDAR acquisition**.
 #' @param quiet Suppress progress reporting.
 #'
 #' @return A data frame, one row per tile: `tile`, `status`, `points`,
@@ -111,6 +114,7 @@ fev_lidar_batch <- function(aoi,
                             spread = TRUE,
                             keep_las = FALSE,
                             dry_run = FALSE,
+                            fires = NULL,
                             quiet = FALSE) {
   fev_require("lidR", "read a point cloud")
   if (!is.character(out_dir) || length(out_dir) != 1L) {
@@ -213,6 +217,12 @@ fev_lidar_batch <- function(aoi,
       i = "Resume is by output presence: stop this whenever you like."
     ), .envir = environment())
   }
+  # Avant la sortie de l'essai a blanc : c'est la qu'on consulte l'etat, et un
+  # controle qui ne s'affiche qu'apres une session de calcul serait vu trop tard.
+  if (!is.null(fires) && !quiet) {
+    fev_lidar_fire_check(plan, dest, idx, fires)
+  }
+
   if (dry_run) {
     return(plan)
   }
@@ -382,6 +392,76 @@ fev_lidar_aoi <- function(aoi) {
     return(NULL)
   }
   sf::st_union(sf::st_make_valid(g))
+}
+
+#' Which finished windows fall in a burn, and whether any burn is USABLE
+#'
+#' The question this answers is narrow and easy to forget: a LiDAR acquisition
+#' can only predict the severity of a fire that came AFTER it. The Maures
+#' campaign is the cautionary case — five windows intersect the 2021 fires, 27.5
+#' ha of them, and every one is worthless for that purpose because the point
+#' clouds were flown in May 2025, four years later. What they measure is what
+#' grew back.
+#'
+#' So the check reports two different things and does not confuse them: windows
+#' in a burn, which is a fuel-recovery sample, and windows in a burn that
+#' postdates the flight, which is the only case that supports a
+#' structure-predicts-severity test. Left to a yearly review, that second case
+#' would be found a year late.
+#'
+#' @noRd
+fev_lidar_fire_check <- function(plan, dest, idx, fires) {
+  done <- plan$status %in% c("done", "written")
+  if (!any(done)) {
+    return(invisible(NULL))
+  }
+  f <- if (inherits(fires, "fev_source")) fires$data else fires
+  if (inherits(f, "SpatVector")) {
+    f <- sf::st_as_sf(f)
+  }
+  if (!inherits(f, "sf") || !nrow(f)) {
+    return(invisible(NULL))
+  }
+  f <- sf::st_transform(f, sf::st_crs(idx))
+
+  wins <- do.call(rbind, lapply(which(done), function(i) {
+    r <- terra::rast(dest[i])
+    sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(
+      c(xmin = terra::xmin(r), xmax = terra::xmax(r),
+        ymin = terra::ymin(r), ymax = terra::ymax(r)),
+      crs = sf::st_crs(idx))))
+  }))
+  hits <- sf::st_intersects(wins, sf::st_geometry(f))
+  n_win <- sum(lengths(hits) > 0)
+  if (!n_win) {
+    cli::cli_li("No finished window falls in a burn.")
+    return(invisible(NULL))
+  }
+
+  # The acquisition date the index carries, against the fire years.
+  flown <- suppressWarnings(max(as.Date(substr(as.character(idx$timestamp), 1, 10)),
+                                na.rm = TRUE))
+  years <- if ("fire_year" %in% names(f)) f$fire_year else NA_integer_
+  after <- vapply(hits, function(k) {
+    if (!length(k) || all(is.na(years[k]))) FALSE else
+      any(years[k] > as.integer(format(flown, "%Y")), na.rm = TRUE)
+  }, logical(1))
+
+  cli::cli_li("{n_win} finished window{?s} fall{?s/} in a burn.")
+  if (any(after)) {
+    cli::cli_alert_success(
+      "{sum(after)} of them burnt AFTER the {format(flown, '%Y-%m')} flight: \
+       the structure was measured before the fire, so a \
+       CBH-predicts-severity test is possible on {?it/them}."
+    )
+  } else {
+    cli::cli_alert_info(
+      "All of them burnt before the {format(flown, '%Y-%m')} flight, so they \
+       measure what grew back, not what burnt. Good for fuel recovery, useless \
+       for predicting severity."
+    )
+  }
+  invisible(NULL)
 }
 
 #' Where to cut each tile so the square lands inside the area of interest

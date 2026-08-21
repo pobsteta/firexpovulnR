@@ -13,6 +13,7 @@ fev_lidar_batch(
   spread = TRUE,
   keep_las = FALSE,
   dry_run = FALSE,
+  fires = NULL,
   quiet = FALSE
 )
 }
@@ -42,6 +43,10 @@ departmental run would fill a disk.}
 
 \item{dry_run}{Report what would be done and return the plan without
 downloading anything.}
+
+\item{fires}{Fire perimeters, as \code{\link[=fev_fetch_burnt]{fev_fetch_burnt()}} returns them, or \code{NULL}.
+When given, the run reports which finished windows fall in a burn and —
+the point of it — whether any fire \strong{postdates the LiDAR acquisition}.}
 
 \item{quiet}{Suppress progress reporting.}
 }

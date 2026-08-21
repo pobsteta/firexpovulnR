@@ -99,6 +99,11 @@ fev_prov_scalarise <- function(x, .depth = 0L) {
 #'   never guessed.
 #' @param version Product version, when the provider publishes one.
 #' @param crs_native CRS as delivered by the provider, before any transform.
+#' @param licence Licence identifier, or `NA` when it has not been established.
+#'   Not a guess: an unverified licence must stay `NA`.
+#' @param licence_from Where that identifier was read, or the fact that it was
+#'   decided rather than read. This is the field that separates a licence lu
+#'   from a licence supposee, and it is why the licence is not a bare string.
 #' @param ... Further named fields.
 #' @return The provenance record, with one more source.
 #' @noRd
@@ -110,6 +115,8 @@ fev_prov_add_source <- function(prov,
                                 millesime = NA,
                                 version = NA_character_,
                                 crs_native = NA_character_,
+                                licence = NA_character_,
+                                licence_from = NA_character_,
                                 ...) {
   rec <- list(
     dataset       = dataset,
@@ -119,6 +126,8 @@ fev_prov_add_source <- function(prov,
     endpoint      = endpoint,
     query         = fev_prov_scalarise(query),
     crs_native    = crs_native,
+    licence       = licence,
+    licence_from  = licence_from,
     downloaded_at = fev_now()
   )
   extra <- lapply(list(...), fev_prov_scalarise)

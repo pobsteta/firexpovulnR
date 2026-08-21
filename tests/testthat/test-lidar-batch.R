@@ -309,3 +309,64 @@ test_that("the header name is matched whatever its case", {
   expect_equal(firexpovulnR:::fev_lidar_content_length("content-length: 42"), 42)
   expect_equal(firexpovulnR:::fev_lidar_content_length("CONTENT-LENGTH: 42"), 42)
 })
+
+# The fire check, whose whole point is a date comparison ---------------------
+#
+# A LiDAR acquisition can only predict the severity of a fire that came AFTER
+# it. The Maures campaign is the cautionary case: six finished windows fall in a
+# burn and every one is useless for that purpose, because the clouds were flown
+# in May 2025 and the fires are from 2021 and 2024. What they measure is what
+# grew back. Reported at every run so the opposite case is not found a year late.
+
+fire_at <- function(year, xmin, ymin, xmax, ymax) {
+  sf::st_sf(fire_year = year,
+            geometry = sf::st_sfc(sf::st_polygon(list(cbind(
+              c(xmin, xmax, xmax, xmin, xmin),
+              c(ymin, ymin, ymax, ymax, ymin)))), crs = 2154))
+}
+
+test_that("a fire predating the flight is reported as unusable", {
+  d <- withr::local_tempdir()
+  idx <- grid_index(2)
+  idx$timestamp <- "2025-05-01"
+  # One finished window, overlapping a 2021 fire.
+  r <- terra::rast(nrows = 4, ncols = 4, xmin = 1000, xmax = 1100,
+                   ymin = 1000, ymax = 1100, crs = "EPSG:2154")
+  terra::writeRaster(terra::setValues(r, 1),
+                     file.path(d, paste0(idx$name[1], "_fuel.tif")))
+  expect_message(
+    fev_lidar_batch(idx, d, window = 250, dry_run = TRUE,
+                    fires = fire_at(2021, 900, 900, 1200, 1200)),
+    "grew back"
+  )
+})
+
+test_that("a fire postdating the flight is reported as the opportunity", {
+  d <- withr::local_tempdir()
+  idx <- grid_index(2)
+  idx$timestamp <- "2025-05-01"
+  r <- terra::rast(nrows = 4, ncols = 4, xmin = 1000, xmax = 1100,
+                   ymin = 1000, ymax = 1100, crs = "EPSG:2154")
+  terra::writeRaster(terra::setValues(r, 1),
+                     file.path(d, paste0(idx$name[1], "_fuel.tif")))
+  expect_message(
+    fev_lidar_batch(idx, d, window = 250, dry_run = TRUE,
+                    fires = fire_at(2026, 900, 900, 1200, 1200)),
+    "burnt AFTER"
+  )
+})
+
+test_that("no overlap at all is said plainly", {
+  d <- withr::local_tempdir()
+  idx <- grid_index(2)
+  idx$timestamp <- "2025-05-01"
+  r <- terra::rast(nrows = 4, ncols = 4, xmin = 1000, xmax = 1100,
+                   ymin = 1000, ymax = 1100, crs = "EPSG:2154")
+  terra::writeRaster(terra::setValues(r, 1),
+                     file.path(d, paste0(idx$name[1], "_fuel.tif")))
+  expect_message(
+    fev_lidar_batch(idx, d, window = 250, dry_run = TRUE,
+                    fires = fire_at(2026, 50000, 50000, 51000, 51000)),
+    "No finished window"
+  )
+})

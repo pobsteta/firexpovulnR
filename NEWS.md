@@ -1,3 +1,95 @@
+# firexpovulnR 0.33.0 (2026-08-21)
+
+Phase 12, pour ce qui pouvait l'être. Le brief en annonçait quatre points : deux
+sont clos, un est avancé jusqu'à la limite de ce qu'un bureau permet, et le
+quatrième reste bloqué par le calendrier — c'est écrit plutôt que masqué.
+
+### Un champ `licence`, et surtout un champ `licence_from`
+
+La licence vivait en texte libre dans `provider`. Deux constats de la semaine y
+ont mis fin : FORMS-T est annoncé CC-BY-NC sur THEIA et `cc-by-4.0` dans les
+métadonnées Zenodo ; **SUFOSAT porte trois réponses pour la même donnée** selon
+l'endroit où on la demande — 403 sur le bucket du catalogue STAC, CC-BY-NC sur
+la version supersédée, CC-BY 4.0 sur la courante. Une licence n'est pas un
+attribut du jeu mais du **chemin d'acquisition**.
+
+Le champ en porte donc deux : `licence`, et `licence_from` qui dit **où elle a
+été lue** — ou qu'elle a été décidée. C'est la distinction entre une licence lue
+et une licence supposée, et une chaîne de caractères ne la permettait pas.
+
+Sur les douze sources : **six portent une licence vérifiée chez le producteur,
+six portent `NA`**. Rien n'a été deviné — la page produit de l'IGN est une
+application JavaScript illisible automatiquement, la politique de données EFFIS
+n'a pas été ouverte. Un trou visible vaut mieux qu'une supposition invisible.
+
+`fev_licences()` liste, et applique deux règles qui n'en sont pas une seule :
+
+* **un jeu offert sous plusieurs licences** → retenir la plus **ouverte** ;
+* **plusieurs jeux combinés** → le résultat doit satisfaire les termes de
+  chacun, donc une seule entrée non commerciale suffit à le rendre tel.
+
+La première est un choix que le paquet fait, la seconde une conséquence qu'il
+**rapporte**. Ce n'est pas un conseil juridique et la fonction le dit.
+
+### Byram et Van Wagner : le pont qui manquait depuis la phase 6
+
+`fev_risk()` sort un nombre entre 0 et 1, et **aucune courbe de dommage publiée
+ne prend un indice sans dimension** — elles prennent des kW/m. C'est pourquoi
+rien ne pouvait se brancher dessus.
+
+`fev_byram_intensity()` fournit l'intensité à partir d'une charge de combustible
+et d'une vitesse de propagation. La charge, `fev_fuel_lidar()` la mesure en
+kg/m² depuis la phase 8.
+
+`fev_crown_fire()` applique les deux critères de Van Wagner, qui consomment
+exactement ce que la campagne mesure : le **CBH** décide si un feu de surface
+monte, la **CBD** s'il s'y maintient.
+
+Formulations lues dans le PDF de Scott et Reinhardt (2001, RMRS-RP-29), pas dans
+un résumé — et vérifiées par **les exemples chiffrés du papier**, ce qui vaut
+mieux qu'une relecture d'équation :
+
+| Exemple du papier | Attendu | Obtenu |
+|---|---|---|
+| CBH 3 m, FMC 100 % | 875 kW/m | **875,2** |
+| CBD 0,2 kg/m³ | 15,0 m/min | **15,0** |
+
+C'est ce qui a départagé les deux écritures de l'équation 11 qui circulent,
+différant par la place de l'exposant 1,5 : une seule rend 875. Relevé au
+passage, une incohérence dans la source elle-même — la légende de sa figure 5
+donne le flux massique critique en `kg m-2 min-1` là où son texte dit `sec-1`,
+et c'est le texte qui est juste.
+
+Appliqué aux mesures des Maures, l'écart est l'argument même de la campagne :
+
+| CBH | CBD | Passage en cime | Cime active |
+|---|---|---|---|
+| 0,00 m | 0,07 | **0 kW/m** | 42,9 m/min |
+| 2,33 m | 0,18 | 599 kW/m | 16,7 m/min |
+| 8,50 m | 0,21 | 4 174 kW/m | 14,3 m/min |
+
+Une cellule à CBH nul passe en cime à n'importe quelle intensité.
+
+### Le contrôle qui évite de manquer l'occasion
+
+`fev_lidar_batch(fires = ...)` répond à la seule question qui décide du test
+structure → sévérité : les fenêtres terminées tombent-elles dans un feu, et ce
+feu est-il **postérieur au vol** ? Sur les Maures, six fenêtres dans un feu et
+aucune exploitable — le LiDAR date de mai 2025, les feux de 2021 et 2024, donc
+elles mesurent ce qui a repoussé. Affiché aussi en essai à blanc.
+
+### Ce qui n'est pas fait, et pourquoi
+
+**La fonction de dommage.** Un seuil dit si un feu de cime est possible, pas ce
+qu'il détruit. Le calage demande des placettes de mortalité, et le brief refuse
+d'importer une courbe nord-américaine pour l'appliquer au chêne-liège — dont la
+particularité est que l'arbre survit quand le liège est détruit.
+
+**La campagne**, 430 dalles restantes : de l'exécution, pas du développement.
+
+**Le test CBH → sévérité** attend un feu postérieur à mai 2025. Aucune quantité
+de code ne lève une contrainte de calendrier.
+
 # firexpovulnR 0.32.0 (2026-08-20)
 
 ### SUFOSAT : une date de perturbation par pixel, enfin
