@@ -6,9 +6,9 @@
 # since phase 6. Nothing joined them, so an exposure computed after a LiDAR
 # campaign was still a proportion of a binary mask.
 #
-# The measurement that makes this worth doing: on 32 windows across the Maures,
-# within the SINGLE class FF1G06-06 (holm oak, 520 cells), crown fuel load runs
-# from 0.05 to 1.98 kg/m2. A binary mask counts those cells identically.
+# The measurement that makes this worth doing: on 48 windows across the Maures,
+# within the SINGLE class FF1G06-06 (holm oak, 1 083 cells), crown fuel load runs
+# from 0 to 2.08 kg/m2. A binary mask counts those cells identically.
 
 #' Turn a measured fuel metric into a graded availability
 #'

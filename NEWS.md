@@ -1,3 +1,61 @@
+# firexpovulnR 0.34.0 (2026-08-21)
+
+### Les R² publiés étaient des artefacts de méthode
+
+L'article des Maures annonçait 0,34 pour le FSG et 0,26 pour la densité
+apparente. **Ces chiffres étaient faux**, et pas par imprécision : par une faute
+de construction du test.
+
+Deux erreurs se cumulaient. Les trois points de mesure — 12, 32 puis 40 fenêtres
+— **n'appliquaient pas le même seuil d'inclusion** des classes, or un facteur qui
+gagne des niveaux explique mécaniquement plus de variance. Et *hors BD Forêt*
+était comptée **comme une classe**, alors qu'elle est l'absence de classe : elle
+sépare forêt et non-forêt, ce qui est facile, et gonflait tous les R².
+
+Refait à jeu de classes constant sur **48 fenêtres, 4 645 cellules**, en
+contrastant deux classes à la fois :
+
+| Contraste d'essence | CBH | FSG | CBD |
+|---|---|---|---|
+| Feuillus vs Chênes sempervirents | **0,015** | 0,016 | 0,004 |
+| Feuillus vs Châtaignier | 0,003 | 0,008 | 0,013 |
+| Pin maritime vs Chênes sempervirents | 0,003 | 0,008 | 0,000 |
+
+**Zéro, pas « peu ».** L'écart-type du CBH à l'intérieur d'une classe égale
+l'écart-type total, et **84 % des cellules forestières ont un CBH exactement
+nul**.
+
+### Et la lecture proposée à 32 fenêtres ne survit pas non plus
+
+La 0.27.0 concluait que la nomenclature porte la structure quand elle décrit une
+forme et pas quand elle décrit une essence. Deux résultats l'interdisent :
+*chêne sempervirent fermé* contre *feuillu ouvert* donne **0,005**, et le **pin
+maritime, résineux, a un CBH médian nul** comme les feuillus, avec 95 % de
+cellules continues.
+
+Ce qui sépare n'est ni l'essence ni l'ouverture mais **deux codes particuliers**
+— `FF2-81-81` (pin autre) et `FO2` (conifères ouvert) —, les seuls dont les
+arbres s'élaguent naturellement par le bas. Neuf classes sur onze ont un CBH
+médian de zéro, et le R² global de 0,163 est porté presque entièrement par ces
+deux codes.
+
+### Sept chunks perdus, et un test qui ne pouvait pas le voir
+
+En réécrivant la section, le remplacement a été borné entre deux titres qui ne se
+suivaient pas dans le document, emportant tout ce qui séparait les deux : la
+section « Greffe sur le registre catégoriel », les chunks `risk`, `plot-risk` et
+`contrib`, et toute la chaîne du risque composite. **Sept chunks sur
+trente-quatre.**
+
+Le contrôle n'a rien vu parce que `knitr::knit()` **évalue dans l'environnement
+appelant**, et que la session portait déjà `meteo`, `danger` et `risque`,
+hérités d'essais antérieurs. La vignette compilait en s'appuyant sur des objets
+que le document ne définissait plus. C'est le `R CMD check` qui l'a trouvé, dans
+une session vierge.
+
+Vérifié désormais avec `Rscript --vanilla` et `envir = new.env()`, ce qui
+reproduit les conditions du check plutôt que celles du développeur.
+
 # firexpovulnR 0.33.1 (2026-08-21)
 
 ### Le contrôle d'intersection est exposé dans le script de campagne

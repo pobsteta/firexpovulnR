@@ -7,7 +7,7 @@
 # fev_risk() outputs a number between 0 and 1, and no published damage curve
 # takes a dimensionless index. Curves take an INTENSITY, in kW/m. Byram gives
 # one from a fuel load and a spread rate -- and fev_fuel_lidar() has measured
-# the load in kg/m2 across 32 windows of the Maures.
+# the load in kg/m2 across 48 windows of the Maures.
 #
 # Van Wagner's two criteria then consume exactly what the same campaign
 # measures: crown base height decides whether a surface fire climbs, canopy bulk
@@ -101,18 +101,21 @@ fev_byram_intensity <- function(fuel_load, spread_rate, heat_yield = 18000) {
 #' fifteen for a factor of six in height.
 #'
 #' This is why the FSG and CBH the LiDAR campaign measures matter more than the
-#' species. Of 32 windows on the Maures, 14 had FSG below 0.5 m: the understorey
-#' reaches the crowns, and the clearance that would stop a surface fire is not
-#' there.
+#' species. Measured over 48 windows on the Maures, **84% of forested cells have
+#' a crown base height of exactly zero**: the crowns reach the ground, and the
+#' clearance that would stop a surface fire is not there. Nine of the eleven
+#' classes present have a median CBH of zero, so the class does not tell you
+#' which cells those are.
 #'
 #' @section Propagation, decided by canopy bulk density:
 #' Once in the canopy, active spread needs a mass flow of fuel into the flaming
 #' zone, so the fire must move at least `3.0 / CBD` m/min. A dense canopy
 #' sustains crowning at a slower spread rate; a sparse one needs the fire to run.
 #'
-#' The Maures measurements put CBD_max between 0.05 and 0.32 kg/m³, which is a
-#' critical spread rate between 60 and 9 m/min — a range wide enough that the
-#' answer genuinely depends on the stand.
+#' The Maures measurements put class median CBD_max between 0.041 and
+#' 0.244 kg/m³, which is a critical spread rate between 73 and 12 m/min — a
+#' range wide enough that the answer genuinely depends on the stand. Cell by
+#' cell the spread is wider still, 0.02 to 0.99.
 #'
 #' @section What this is not:
 #' A threshold, not a damage function. It says whether a crown fire is possible,
