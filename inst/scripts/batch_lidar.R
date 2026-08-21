@@ -29,6 +29,10 @@
 #                  spatial, donc les huit premieres sont huit voisines dans un
 #                  coin, et vous echantillonnez un seul contexte huit fois.
 #   --keep-las     garder les nuages telecharges    (defaut : supprimes)
+#   --fires=NOM    couche de perimetres d'incendie du gpkg. Le compte rendu dit
+#                  alors si une fenetre terminee a brule APRES le vol LiDAR --
+#                  le seul cas ou la structure mesuree precede le feu, donc le
+#                  seul qui autorise un test structure -> severite.
 #   --dry-run      afficher le plan et s'arreter
 #
 # Ce que ca produit dans <dossier_sortie>
@@ -68,6 +72,17 @@ get <- function(name, default = NULL) {
 }
 flag <- function(name) any(opt == paste0("--", name))
 
+lire_couche <- function(gpkg, nom) {
+  if (is.null(nom)) return(NULL)
+  dispo <- sf::st_layers(gpkg)$name
+  if (!nom %in% dispo) {
+    cat("couche", nom, "absente du gpkg. Disponibles :",
+        paste(dispo, collapse = ", "), "\n")
+    quit(status = 1)
+  }
+  sf::st_read(gpkg, nom, quiet = TRUE)
+}
+
 gpkg <- pos[1]
 out_dir <- pos[2]
 layer <- get("layer", "study_area")
@@ -94,7 +109,8 @@ plan <- fev_lidar_batch(
   max_tiles = max_tiles,
   spread    = !flag("no-spread"),
   keep_las  = flag("keep-las"),
-  dry_run   = flag("dry-run")
+  dry_run   = flag("dry-run"),
+  fires     = lire_couche(gpkg, get("fires"))
 )
 
 if (flag("dry-run")) {

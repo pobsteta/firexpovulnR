@@ -1,3 +1,24 @@
+# firexpovulnR 0.33.1 (2026-08-21)
+
+### Le contrôle d'intersection est exposé dans le script de campagne
+
+`fev_lidar_batch(fires = ...)` existait depuis la 0.33.0 mais restait
+inaccessible depuis `inst/scripts/batch_lidar.R`, c'est-à-dire depuis la seule
+voie par laquelle la campagne tourne réellement. Une option `--fires=NOM` la
+branche sur une couche du gpkg.
+
+Le brief de phase 12 demandait de vérifier l'intersection **après chaque
+session**, pour ne pas découvrir un an plus tard qu'un feu postérieur au vol
+recoupait une fenêtre. Une fonction que le script n'appelle pas ne le fait pas.
+
+Sur les Maures, le compte rendu dit désormais à chaque lancement :
+
+```
+6 finished windows fall in a burn.
+i All of them burnt before the 2025-05 flight, so they measure what grew
+  back, not what burnt.
+```
+
 # firexpovulnR 0.33.0 (2026-08-21)
 
 Phase 12, pour ce qui pouvait l'être. Le brief en annonçait quatre points : deux
