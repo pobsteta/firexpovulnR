@@ -1,3 +1,108 @@
+# firexpovulnR 0.35.0 (2026-08-31)
+
+### Le terme d'allumage, que la chaîne n'avait jamais eu
+
+L'aléa a deux termes : la probabilité qu'un feu **se déclenche** et qu'il **se
+propage**. Le paquet modélisait le second avec soin — combustible, exposition
+focale, FWI percentilé, relief — et n'avait rien du tout pour le premier.
+`fev_danger_index()` combinait trois composantes de propagation et zéro
+composante d'allumage. Ce n'était pas un manque de donnée, c'était un trou dans
+la méthode.
+
+`fev_fetch_bdiff()` lit la **Base de Données sur les Incendies de Forêts en
+France** : un enregistrement par feu déclaré depuis 2006, avec la commune de
+départ, la date, la surface parcourue ventilée par type de végétation et la
+cause quand elle est connue. Prométhée y a été fusionnée début 2023, il n'y a
+donc plus qu'une base.
+
+Deux propriétés justifient un connecteur plutôt qu'une note de vignette.
+
+**Aucun seuil de surface.** Une fiche est saisie quelle que soit la taille du
+feu. EFFIS, qui est de la télédétection, voit à partir d'une trentaine
+d'hectares. Sur un territoire à risque émergent — la Bourgogne-Franche-Comté est
+le cas d'école — `fev_fetch_burnt()` rend une poignée d'événements et l'AUC
+calculée dessus ne veut rien dire, là où la BDIFF en rend des centaines. C'est
+la différence entre une validation impossible et une validation faisable.
+
+**Les surfaces sont ventilées par type de végétation.** Rien d'autre dans le
+paquet ne distingue un feu agricole d'un feu de forêt, et ce ne sont pas le même
+phénomène.
+
+### Ce que la source ne sait pas, dit à chaque appel
+
+La saisie est **déclarative** et la BDIFF indique elle-même que l'exhaustivité
+n'est pas garantie. Le biais est très probablement **structuré dans l'espace** :
+les départements ne saisissent pas tous aussi complètement. Pour une carte
+d'occurrence c'est pire qu'un bruit, parce que ça ressemble à du signal. **Une
+commune sans feu enregistré n'est pas une commune sans feu.** Averti une fois
+par session, inscrit dans la provenance à chaque appel.
+
+La géolocalisation est la **commune de départ**, pas un contour. Avec
+`communes`, le résultat est un `sf` dont la géométrie est un polygone communal :
+un feu de 3 ha porte la forme des 40 km² de sa commune. On en tire une densité
+communale d'occurrence ; on n'en tire pas un raster d'occurrence à 50 m, et tout
+ce qui y ressemblerait serait un artefact de la jointure.
+
+Enfin la consolidation a un an de retard — les fiches de l'année Y sont validées
+de décembre Y à avril Y+1 — donc l'année en cours est provisoire. La fonction
+compare ce qu'on lui demande à ce qui peut être consolidé aujourd'hui et le dit
+avec les années.
+
+### Une seule des deux voies d'accès est vérifiée
+
+`file` lit un export CSV de l'interface BDIFF. C'est la voie testée.
+
+Sans `file`, la fonction résout le jeu sur **data.gouv.fr** via son API
+publique. La BDIFF ne publie aucune API : son interface de recherche prend des
+paramètres d'URL et serait donc scriptable, mais scraper un formulaire n'est pas
+un contrat — ça casse à la première refonte et rien ne permettrait de distinguer
+une mise en page changée d'un résultat vide.
+
+**Cette voie distante n'a jamais été exercée contre le service réel.** Tous les
+points d'accès de `fev_sources()` ont été confirmés par un appel le 2026-08-15 ;
+celui-ci ne l'a pas été, faute de sortie réseau vers data.gouv.fr depuis
+l'environnement où il a été écrit. Il est nommé dans `fev_sources()$unverified`,
+tout résultat qui en vient porte `endpoint_verified = FALSE`, et la fonction
+avertit une fois par session. Le taire aurait vidé de son sens le registre
+entier.
+
+### Les en-têtes sont une table, pas une constante
+
+`fev_bdiff_columns()` porte la correspondance entre les en-têtes publiés et les
+colonnes rendues, avec des candidats documentés et intégralement surchargeables
+— comme toute table importée dans ce paquet. Quand une colonne requise ne peut
+pas être appariée, l'erreur **liste les en-têtes réellement présents** : la
+correction tient dans un argument, sans ouvrir le fichier.
+
+### Trois pièges mesurés en écrivant ce connecteur
+
+Aucun des trois n'échoue bruyamment, ce qui est la raison de les nommer.
+
+`read.csv(fileEncoding = "UTF-8")` sous locale C **ne lève pas d'erreur** sur un
+octet accentué : il abandonne le reste de la connexion et rend un tableau avec
+un en-tête et **zéro ligne**. Les octets sont donc convertis explicitement ici,
+et l'encodage retenu part dans la provenance.
+
+`formatC(x, width = 5, flag = "0")` sur une entrée **caractère** ignore le
+drapeau zéro et complète avec des **espaces** : `"1004"` devenait `" 1004"`. Ça
+n'apparie rien, et ça n'apparie rien des deux côtés de la jointure communale à
+la fois — c'est ainsi qu'un tel bug survit à un essai rapide.
+
+Le repli habituel pour comparer des en-têtes accentués est piégé trois fois :
+`iconv(to = "ASCII//TRANSLIT")` rend `premi?re`, `chartr()` traite l'UTF-8 comme
+des octets et échoue, et une table nommée `c("\u00e8" = "e")` est pire que les
+deux parce qu'elle a l'air de marcher — sous locale non-UTF-8, R transforme
+l'échappement en le texte `<U+00E8>` **à l'analyse syntaxique**, et la table
+n'apparie plus rien. La correspondance est donc indexée par point de code
+entier, ce qui garde aussi le fichier en ASCII pur.
+
+### Correction
+
+`fev_cache_info()` ne listait que les entrées `gpkg` et `tif`. Les sources
+tabulaires — Open-Meteo, et maintenant la BDIFF — se mettent en cache en `rds` :
+elles étaient donc invisibles à l'inventaire, et par conséquent hors d'atteinte
+de `fev_cache_clear()`, qui travaille sur cette table.
+
 # firexpovulnR 0.34.0 (2026-08-21)
 
 ### Les R² publiés étaient des artefacts de méthode

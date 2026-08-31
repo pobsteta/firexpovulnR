@@ -152,7 +152,10 @@ fev_cache_info <- function() {
   rows <- lapply(provs, function(pf) {
     key <- sub("\\.prov\\.rds$", "", basename(pf))
     rec <- tryCatch(readRDS(pf), error = function(e) NULL)
-    data_file <- list.files(dir, pattern = paste0("^", key, "\\.(gpkg|tif)$"),
+    # rds belongs here with the other two: tabular sources (Open-Meteo, BDIFF)
+    # cache that way, and an entry the listing cannot see is an entry
+    # fev_cache_clear() cannot remove -- it works off this table.
+    data_file <- list.files(dir, pattern = paste0("^", key, "\\.(gpkg|tif|rds)$"),
                             full.names = TRUE)
     if (!length(data_file)) {
       return(NULL)
