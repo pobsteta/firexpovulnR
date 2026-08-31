@@ -1,5 +1,746 @@
 # Changelog
 
+## firexpovulnR 0.35.0 (2026-08-31)
+
+#### Le terme d’allumage, que la chaîne n’avait jamais eu
+
+L’aléa a deux termes : la probabilité qu’un feu **se déclenche** et
+qu’il **se propage**. Le paquet modélisait le second avec soin —
+combustible, exposition focale, FWI percentilé, relief — et n’avait rien
+du tout pour le premier.
+[`fev_danger_index()`](https://pobsteta.github.io/firexpovulnR/reference/fev_danger_index.md)
+combinait trois composantes de propagation et zéro composante
+d’allumage. Ce n’était pas un manque de donnée, c’était un trou dans la
+méthode.
+
+[`fev_fetch_bdiff()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_bdiff.md)
+lit la **Base de Données sur les Incendies de Forêts en France** : un
+enregistrement par feu déclaré depuis 2006, avec la commune de départ,
+la date, la surface parcourue ventilée par type de végétation et la
+cause quand elle est connue. Prométhée y a été fusionnée début 2023, il
+n’y a donc plus qu’une base.
+
+Deux propriétés justifient un connecteur plutôt qu’une note de vignette.
+
+**Aucun seuil de surface.** Une fiche est saisie quelle que soit la
+taille du feu. EFFIS, qui est de la télédétection, voit à partir d’une
+trentaine d’hectares. Sur un territoire à risque émergent — la
+Bourgogne-Franche-Comté est le cas d’école —
+[`fev_fetch_burnt()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.md)
+rend une poignée d’événements et l’AUC calculée dessus ne veut rien
+dire, là où la BDIFF en rend des centaines. C’est la différence entre
+une validation impossible et une validation faisable.
+
+**Les surfaces sont ventilées par type de végétation.** Rien d’autre
+dans le paquet ne distingue un feu agricole d’un feu de forêt, et ce ne
+sont pas le même phénomène.
+
+#### Ce que la source ne sait pas, dit à chaque appel
+
+La saisie est **déclarative** et la BDIFF indique elle-même que
+l’exhaustivité n’est pas garantie. Le biais est très probablement
+**structuré dans l’espace** : les départements ne saisissent pas tous
+aussi complètement. Pour une carte d’occurrence c’est pire qu’un bruit,
+parce que ça ressemble à du signal. **Une commune sans feu enregistré
+n’est pas une commune sans feu.** Averti une fois par session, inscrit
+dans la provenance à chaque appel.
+
+La géolocalisation est la **commune de départ**, pas un contour. Avec
+`communes`, le résultat est un `sf` dont la géométrie est un polygone
+communal : un feu de 3 ha porte la forme des 40 km² de sa commune. On en
+tire une densité communale d’occurrence ; on n’en tire pas un raster
+d’occurrence à 50 m, et tout ce qui y ressemblerait serait un artefact
+de la jointure.
+
+Enfin la consolidation a un an de retard — les fiches de l’année Y sont
+validées de décembre Y à avril Y+1 — donc l’année en cours est
+provisoire. La fonction compare ce qu’on lui demande à ce qui peut être
+consolidé aujourd’hui et le dit avec les années.
+
+#### Une seule des deux voies d’accès est vérifiée
+
+`file` lit un export CSV de l’interface BDIFF. C’est la voie testée.
+
+Sans `file`, la fonction résout le jeu sur **data.gouv.fr** via son API
+publique. La BDIFF ne publie aucune API : son interface de recherche
+prend des paramètres d’URL et serait donc scriptable, mais scraper un
+formulaire n’est pas un contrat — ça casse à la première refonte et rien
+ne permettrait de distinguer une mise en page changée d’un résultat
+vide.
+
+**Cette voie distante n’a jamais été exercée contre le service réel.**
+Tous les points d’accès de
+[`fev_sources()`](https://pobsteta.github.io/firexpovulnR/reference/fev_sources.md)
+ont été confirmés par un appel le 2026-08-15 ; celui-ci ne l’a pas été,
+faute de sortie réseau vers data.gouv.fr depuis l’environnement où il a
+été écrit. Il est nommé dans `fev_sources()$unverified`, tout résultat
+qui en vient porte `endpoint_verified = FALSE`, et la fonction avertit
+une fois par session. Le taire aurait vidé de son sens le registre
+entier.
+
+#### Les en-têtes sont une table, pas une constante
+
+[`fev_bdiff_columns()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdiff_columns.md)
+porte la correspondance entre les en-têtes publiés et les colonnes
+rendues, avec des candidats documentés et intégralement surchargeables —
+comme toute table importée dans ce paquet. Quand une colonne requise ne
+peut pas être appariée, l’erreur **liste les en-têtes réellement
+présents** : la correction tient dans un argument, sans ouvrir le
+fichier.
+
+#### Trois pièges mesurés en écrivant ce connecteur
+
+Aucun des trois n’échoue bruyamment, ce qui est la raison de les nommer.
+
+`read.csv(fileEncoding = "UTF-8")` sous locale C **ne lève pas
+d’erreur** sur un octet accentué : il abandonne le reste de la connexion
+et rend un tableau avec un en-tête et **zéro ligne**. Les octets sont
+donc convertis explicitement ici, et l’encodage retenu part dans la
+provenance.
+
+`formatC(x, width = 5, flag = "0")` sur une entrée **caractère** ignore
+le drapeau zéro et complète avec des **espaces** : `"1004"` devenait
+`" 1004"`. Ça n’apparie rien, et ça n’apparie rien des deux côtés de la
+jointure communale à la fois — c’est ainsi qu’un tel bug survit à un
+essai rapide.
+
+Le repli habituel pour comparer des en-têtes accentués est piégé trois
+fois : `iconv(to = "ASCII//TRANSLIT")` rend `premi?re`,
+[`chartr()`](https://rdrr.io/r/base/chartr.html) traite l’UTF-8 comme
+des octets et échoue, et une table nommée `c("\u00e8" = "e")` est pire
+que les deux parce qu’elle a l’air de marcher — sous locale non-UTF-8, R
+transforme l’échappement en le texte `<U+00E8>` **à l’analyse
+syntaxique**, et la table n’apparie plus rien. La correspondance est
+donc indexée par point de code entier, ce qui garde aussi le fichier en
+ASCII pur.
+
+#### Corrections
+
+Le site de référence ne se construisait plus depuis le 19 août :
+`pkgdown` refuse un `_pkgdown.yml` dont l’index omet un topic exporté,
+et seize manquaient — `fev_wui`, `fev_licences`, `fev_crown_fire`, les
+quatre `fev_fetch_*` de la phase 11, tout le bloc de descente d’échelle.
+Chacun est rangé selon son fichier source, pas au hasard. Les quatre
+exports qui ne figuraient pas non plus dans l’index —
+`fev_fuel_categorical`, `fev_fuel_continuous`, `fev_source_info`,
+`fev_stack_read` — n’avaient rien à y faire : ce sont des alias de
+topics déjà listés, et c’est ce qui explique l’écart entre vingt exports
+et seize topics.
+
+[`fev_cache_info()`](https://pobsteta.github.io/firexpovulnR/reference/fev_cache_info.md)
+ne listait que les entrées `gpkg` et `tif`. Les sources tabulaires —
+Open-Meteo, et maintenant la BDIFF — se mettent en cache en `rds` :
+elles étaient donc invisibles à l’inventaire, et par conséquent hors
+d’atteinte de
+[`fev_cache_clear()`](https://pobsteta.github.io/firexpovulnR/reference/fev_cache_clear.md),
+qui travaille sur cette table.
+
+## firexpovulnR 0.34.0 (2026-08-21)
+
+#### Les R² publiés étaient des artefacts de méthode
+
+L’article des Maures annonçait 0,34 pour le FSG et 0,26 pour la densité
+apparente. **Ces chiffres étaient faux**, et pas par imprécision : par
+une faute de construction du test.
+
+Deux erreurs se cumulaient. Les trois points de mesure — 12, 32 puis 40
+fenêtres — **n’appliquaient pas le même seuil d’inclusion** des classes,
+or un facteur qui gagne des niveaux explique mécaniquement plus de
+variance. Et *hors BD Forêt* était comptée **comme une classe**, alors
+qu’elle est l’absence de classe : elle sépare forêt et non-forêt, ce qui
+est facile, et gonflait tous les R².
+
+Refait à jeu de classes constant sur **48 fenêtres, 4 645 cellules**, en
+contrastant deux classes à la fois :
+
+| Contraste d’essence                  | CBH       | FSG   | CBD   |
+|--------------------------------------|-----------|-------|-------|
+| Feuillus vs Chênes sempervirents     | **0,015** | 0,016 | 0,004 |
+| Feuillus vs Châtaignier              | 0,003     | 0,008 | 0,013 |
+| Pin maritime vs Chênes sempervirents | 0,003     | 0,008 | 0,000 |
+
+**Zéro, pas « peu ».** L’écart-type du CBH à l’intérieur d’une classe
+égale l’écart-type total, et **84 % des cellules forestières ont un CBH
+exactement nul**.
+
+#### Et la lecture proposée à 32 fenêtres ne survit pas non plus
+
+La 0.27.0 concluait que la nomenclature porte la structure quand elle
+décrit une forme et pas quand elle décrit une essence. Deux résultats
+l’interdisent : *chêne sempervirent fermé* contre *feuillu ouvert* donne
+**0,005**, et le **pin maritime, résineux, a un CBH médian nul** comme
+les feuillus, avec 95 % de cellules continues.
+
+Ce qui sépare n’est ni l’essence ni l’ouverture mais **deux codes
+particuliers** — `FF2-81-81` (pin autre) et `FO2` (conifères ouvert) —,
+les seuls dont les arbres s’élaguent naturellement par le bas. Neuf
+classes sur onze ont un CBH médian de zéro, et le R² global de 0,163 est
+porté presque entièrement par ces deux codes.
+
+#### Sept chunks perdus, et un test qui ne pouvait pas le voir
+
+En réécrivant la section, le remplacement a été borné entre deux titres
+qui ne se suivaient pas dans le document, emportant tout ce qui séparait
+les deux : la section « Greffe sur le registre catégoriel », les chunks
+`risk`, `plot-risk` et `contrib`, et toute la chaîne du risque
+composite. **Sept chunks sur trente-quatre.**
+
+Le contrôle n’a rien vu parce que
+[`knitr::knit()`](https://rdrr.io/pkg/knitr/man/knit.html) **évalue dans
+l’environnement appelant**, et que la session portait déjà `meteo`,
+`danger` et `risque`, hérités d’essais antérieurs. La vignette compilait
+en s’appuyant sur des objets que le document ne définissait plus. C’est
+le `R CMD check` qui l’a trouvé, dans une session vierge.
+
+Vérifié désormais avec `Rscript --vanilla` et `envir = new.env()`, ce
+qui reproduit les conditions du check plutôt que celles du développeur.
+
+## firexpovulnR 0.33.1 (2026-08-21)
+
+#### Le contrôle d’intersection est exposé dans le script de campagne
+
+`fev_lidar_batch(fires = ...)` existait depuis la 0.33.0 mais restait
+inaccessible depuis `inst/scripts/batch_lidar.R`, c’est-à-dire depuis la
+seule voie par laquelle la campagne tourne réellement. Une option
+`--fires=NOM` la branche sur une couche du gpkg.
+
+Le brief de phase 12 demandait de vérifier l’intersection **après chaque
+session**, pour ne pas découvrir un an plus tard qu’un feu postérieur au
+vol recoupait une fenêtre. Une fonction que le script n’appelle pas ne
+le fait pas.
+
+Sur les Maures, le compte rendu dit désormais à chaque lancement :
+
+    6 finished windows fall in a burn.
+    i All of them burnt before the 2025-05 flight, so they measure what grew
+      back, not what burnt.
+
+## firexpovulnR 0.33.0 (2026-08-21)
+
+Phase 12, pour ce qui pouvait l’être. Le brief en annonçait quatre
+points : deux sont clos, un est avancé jusqu’à la limite de ce qu’un
+bureau permet, et le quatrième reste bloqué par le calendrier — c’est
+écrit plutôt que masqué.
+
+#### Un champ `licence`, et surtout un champ `licence_from`
+
+La licence vivait en texte libre dans `provider`. Deux constats de la
+semaine y ont mis fin : FORMS-T est annoncé CC-BY-NC sur THEIA et
+`cc-by-4.0` dans les métadonnées Zenodo ; **SUFOSAT porte trois réponses
+pour la même donnée** selon l’endroit où on la demande — 403 sur le
+bucket du catalogue STAC, CC-BY-NC sur la version supersédée, CC-BY 4.0
+sur la courante. Une licence n’est pas un attribut du jeu mais du
+**chemin d’acquisition**.
+
+Le champ en porte donc deux : `licence`, et `licence_from` qui dit **où
+elle a été lue** — ou qu’elle a été décidée. C’est la distinction entre
+une licence lue et une licence supposée, et une chaîne de caractères ne
+la permettait pas.
+
+Sur les douze sources : **six portent une licence vérifiée chez le
+producteur, six portent `NA`**. Rien n’a été deviné — la page produit de
+l’IGN est une application JavaScript illisible automatiquement, la
+politique de données EFFIS n’a pas été ouverte. Un trou visible vaut
+mieux qu’une supposition invisible.
+
+[`fev_licences()`](https://pobsteta.github.io/firexpovulnR/reference/fev_licences.md)
+liste, et applique deux règles qui n’en sont pas une seule :
+
+- **un jeu offert sous plusieurs licences** → retenir la plus
+  **ouverte** ;
+- **plusieurs jeux combinés** → le résultat doit satisfaire les termes
+  de chacun, donc une seule entrée non commerciale suffit à le rendre
+  tel.
+
+La première est un choix que le paquet fait, la seconde une conséquence
+qu’il **rapporte**. Ce n’est pas un conseil juridique et la fonction le
+dit.
+
+#### Byram et Van Wagner : le pont qui manquait depuis la phase 6
+
+[`fev_risk()`](https://pobsteta.github.io/firexpovulnR/reference/fev_risk.md)
+sort un nombre entre 0 et 1, et **aucune courbe de dommage publiée ne
+prend un indice sans dimension** — elles prennent des kW/m. C’est
+pourquoi rien ne pouvait se brancher dessus.
+
+[`fev_byram_intensity()`](https://pobsteta.github.io/firexpovulnR/reference/fev_byram_intensity.md)
+fournit l’intensité à partir d’une charge de combustible et d’une
+vitesse de propagation. La charge,
+[`fev_fuel_lidar()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_lidar.md)
+la mesure en kg/m² depuis la phase 8.
+
+[`fev_crown_fire()`](https://pobsteta.github.io/firexpovulnR/reference/fev_crown_fire.md)
+applique les deux critères de Van Wagner, qui consomment exactement ce
+que la campagne mesure : le **CBH** décide si un feu de surface monte,
+la **CBD** s’il s’y maintient.
+
+Formulations lues dans le PDF de Scott et Reinhardt (2001, RMRS-RP-29),
+pas dans un résumé — et vérifiées par **les exemples chiffrés du
+papier**, ce qui vaut mieux qu’une relecture d’équation :
+
+| Exemple du papier  | Attendu    | Obtenu    |
+|--------------------|------------|-----------|
+| CBH 3 m, FMC 100 % | 875 kW/m   | **875,2** |
+| CBD 0,2 kg/m³      | 15,0 m/min | **15,0**  |
+
+C’est ce qui a départagé les deux écritures de l’équation 11 qui
+circulent, différant par la place de l’exposant 1,5 : une seule rend
+875. Relevé au passage, une incohérence dans la source elle-même — la
+légende de sa figure 5 donne le flux massique critique en `kg m-2 min-1`
+là où son texte dit `sec-1`, et c’est le texte qui est juste.
+
+Appliqué aux mesures des Maures, l’écart est l’argument même de la
+campagne :
+
+| CBH    | CBD  | Passage en cime | Cime active |
+|--------|------|-----------------|-------------|
+| 0,00 m | 0,07 | **0 kW/m**      | 42,9 m/min  |
+| 2,33 m | 0,18 | 599 kW/m        | 16,7 m/min  |
+| 8,50 m | 0,21 | 4 174 kW/m      | 14,3 m/min  |
+
+Une cellule à CBH nul passe en cime à n’importe quelle intensité.
+
+#### Le contrôle qui évite de manquer l’occasion
+
+`fev_lidar_batch(fires = ...)` répond à la seule question qui décide du
+test structure → sévérité : les fenêtres terminées tombent-elles dans un
+feu, et ce feu est-il **postérieur au vol** ? Sur les Maures, six
+fenêtres dans un feu et aucune exploitable — le LiDAR date de mai 2025,
+les feux de 2021 et 2024, donc elles mesurent ce qui a repoussé. Affiché
+aussi en essai à blanc.
+
+#### Ce qui n’est pas fait, et pourquoi
+
+**La fonction de dommage.** Un seuil dit si un feu de cime est possible,
+pas ce qu’il détruit. Le calage demande des placettes de mortalité, et
+le brief refuse d’importer une courbe nord-américaine pour l’appliquer
+au chêne-liège — dont la particularité est que l’arbre survit quand le
+liège est détruit.
+
+**La campagne**, 430 dalles restantes : de l’exécution, pas du
+développement.
+
+**Le test CBH → sévérité** attend un feu postérieur à mai 2025. Aucune
+quantité de code ne lève une contrainte de calendrier.
+
+## firexpovulnR 0.32.0 (2026-08-20)
+
+#### SUFOSAT : une date de perturbation par pixel, enfin
+
+[`fev_fetch_sufosat()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_sufosat.md)
+lit la carte nationale des coupes rases produite par radar Sentinel-1, à
+10 m, et la décode en année et jour de détection. C’est ce qui manquait
+au combustible depuis la phase 2 : la BD Forêt v2 a été bâtie entre 2007
+et 2018 et ne sait rien de ce qui a été coupé ensuite.
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+pouvait chiffrer ce décalage, jamais le corriger.
+
+Accès libre malgré les apparences. Le produit est catalogué sur le STAC
+de THEIA, où **ses assets répondent 403** ; la même donnée est déposée
+sur Zenodo sous **CC-BY 4.0**, 336 Mo, sans compte. Et la version
+supersédée était CC-BY-NC quand la courante ne l’est pas : même fichier,
+trois réponses différentes sur le droit de le lire selon l’endroit où on
+le demande.
+
+#### Il ne distingue pas un incendie d’une coupe, et c’est mesuré
+
+Le radar voit la végétation disparaître, pas ce qui l’a fait
+disparaître. Sur l’emprise des Maures :
+
+| Année     | Détecté      | Dans un périmètre d’incendie |
+|-----------|--------------|------------------------------|
+| 2018-2020 | 10 à 46 ha   | 24 à 29 %                    |
+| **2021**  | **2 626 ha** | **97 %**                     |
+| **2022**  | **669 ha**   | **90 %**                     |
+| 2024      | 140 ha       | 1 %                          |
+
+Jour médian de détection en 2021 dans le périmètre : le **246e, 3
+septembre**, quinze jours après la fin du sinistre — le délai de
+revisite et de confirmation de la méthode.
+
+`fires` n’est donc pas un raffinement optionnel : sans lui, une
+correction de combustible enregistrerait un incendie comme une
+exploitation. Or les deux ne laissent pas le même combustible — une
+coupe emporte le peuplement, un feu sévère le laisse mort et debout.
+L’appel sans périmètres n’échoue pas mais **avertit**, la carte brute
+restant une chose légitime à vouloir.
+
+Sur les Maures : 3 314 ha retirés, 258 ha conservés, soit 1 à 73 ha par
+an — ce qui ressemble enfin à de la sylviculture.
+
+#### Ce que la même propriété fait gagner
+
+Les **599 ha détectés dans le périmètre de 2021 au cours de 2022** sont,
+eux, de vraies coupes : la récupération sanitaire après incendie. C’est
+un changement de combustible daté que rien d’autre dans ce paquet ne
+peut voir, et il touche directement la question de la valeur perdue — le
+bois brûlé qui part en exploitation n’est plus du combustible et n’est
+plus une perte sèche.
+
+`fires` masque toutes les années, donc il faut ne passer que celles
+qu’on veut retirer si l’on tient à garder cette coupe-là. C’est
+documenté plutôt que deviné.
+
+#### Deux réserves reprises à chaque appel
+
+Le **rappel est de 80,9 %** : une coupe sur cinq est manquée, donc une
+absence de détection n’est pas une preuve d’absence de coupe. Et Zenodo
+ignorant les requêtes par plage — vérifié —, le fichier national se
+télécharge entier, une fois, avec le contrôle de taille et la purge d’un
+fichier tronqué introduits en 0.26.1.
+
+## firexpovulnR 0.31.0 (2026-08-19)
+
+#### La sévérité, la couche que le paquet n’avait jamais eue
+
+[`fev_fetch_severity()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_severity.md)
+calcule le dNBR Sentinel-2 avant/après sur un périmètre de feu.
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+n’a jamais connu que brûlé contre non brûlé — un résultat de **l’aléa**,
+qui dit où le feu est allé et non avec quelle force. C’est pourquoi il
+peut valider le combustible, le danger et l’exposition, et rien de la
+moitié vulnérabilité.
+
+Sur le Cannet-des-Maures, deux tuiles mosaïquées, **663 000 cellules,
+couverture 100 %** :
+
+|                    | dNBR médian |
+|--------------------|-------------|
+| dans le périmètre  | **0,576**   |
+| **hors périmètre** | **0,000**   |
+
+Répartition : 4,9 % non brûlé — les îlots épargnés —, 12,9 % faible,
+17,6 % modéré bas, 22,7 % modéré haut, **41,9 % sévère**.
+
+#### Les portails français ne servent pas l’archive qu’ils annoncent
+
+Les deux catalogues STAC ont été énumérés le 2026-08-19. Sur les Maures,
+GEODES ne sert THEIA L2A que depuis **2025**, L3A depuis 2024, PEPS L1C
+depuis 2023 — alors que les collections **annoncent 2015 à 2026**. C’est
+l’étendue nominale du produit, pas ce qui est détenu. Rien n’atteint le
+feu de 2021.
+
+Le miroir Sentinel-2 L2A d’Element 84 sur AWS, lui, est complet depuis
+2015, sans compte, et en COG — donc lisible par fenêtre. Aucune
+dépendance nouvelle : la recherche passe en GET et `yaml`, déjà importé,
+lit le JSON qui en est un sous-ensemble.
+
+#### Trois façons d’obtenir une carte plausible et un chiffre faux
+
+Aucune des trois n’a provoqué d’erreur. Chacune rendait une carte de
+sévérité qu’un lecteur aurait acceptée.
+
+1.  **Le feu brûle encore.** La marge comptée depuis le *début* a choisi
+    une image du 19 août 2021 — trois jours après l’allumage et, d’après
+    EFFIS, **deux heures avant la fin du sinistre**. La majeure partie
+    du périmètre n’avait pas brûlé. La marge se compte désormais depuis
+    la fin, lue dans `FIREDATE` et `FINALDATE` quand elles sont là.
+2.  **La scène n’atteint pas la zone.** La candidate la moins nuageuse
+    était un bord de fauchée couvrant **1 % de l’emprise**, publiée à
+    **0,0 % de nuages**. La couverture nuageuse ne dit rien de la
+    couverture spatiale.
+3.  **Le contrôle de couverture mesurait la mauvaise chose.** Il
+    évaluait la fraction valide du raster *rendu* et non de l’emprise
+    *demandée* — or `crop` rétrécit le résultat. Une scène portant
+    **46,6 %** du feu affichait 100 %. Le Cannet-des-Maures chevauche la
+    limite de la tuile 31TGH : chaque passe est mosaïquée, chaque tuile
+    projetée sur une grille construite d’avance, et la couverture se
+    mesure contre l’emprise.
+
+Le contrôle — hors du périmètre, la différence doit revenir à zéro —
+n’est plus un conseil dans la documentation mais le **critère de
+sélection** de la scène d’avant : chaque candidate est différenciée puis
+notée dessus.
+
+#### Une note consigne ce qui a été essayé et n’a pas marché
+
+`specs/note-sources-2026-08-20.md`. Une demi-journée d’essais qui ne
+laissent aucune trace dans le code, et que quelqu’un referait sans elle
+:
+
+- les **quatre produits forêt de THEIA** — SUFOSAT, FORMS-T, FORMSpoT,
+  GeoGEDI — sont catalogués publiquement en STAC et leurs assets
+  répondent **403** sur trois buckets distincts. Les clés S3 essayées
+  donnent `InvalidAccessKeyId`, vérifié hors GDAL avec une signature
+  SigV4 écrite à la main ;
+- **GEODES et THEIA sont des archives glissantes** : rien avant
+  2023-2025 sur les Maures, quand les collections annoncent 2015.
+  L’étendue temporelle d’une collection STAC est celle du produit, pas
+  du stock ;
+- la **requête bornée sur COPC distant fonctionne et n’apporte rien** —
+  pas plus rapide que le téléchargement complet, et non déterministe à
+  neuf points près. Le gain annoncé d’un facteur cinquante portait sur
+  les octets, qui n’ont jamais été la contrainte : l’inversion l’est.
+
+#### Ce que la campagne LiDAR ne pourra pas tester
+
+5 fenêtres sur 32 recoupent les feux de 2021, soit 27,5 ha. Mais le
+LiDAR HD a été acquis le **1er mai 2025**, quatre ans après : prédire la
+sévérité de 2021 à partir d’une structure mesurée en 2025 serait prédire
+une cause par son effet. Le test CBH → sévérité attendra un feu
+postérieur à l’acquisition.
+
+Ces 440 cellules disent en revanche où en est le combustible quatre ans
+après : hauteur à 0,76 de la valeur hors feu, mais **hauteur des
+buissons à 0,07** et charge de houppier à **0,14**. Les tiges sont
+debout et ne portent presque rien.
+
+## firexpovulnR 0.30.0 (2026-08-19)
+
+#### La carte de risque publiée était celle du 31 décembre
+
+Trouvé en voulant changer la normalisation de la vignette des Maures, et
+bien plus grave que ce que je cherchais. `dernier` prenait la **dernière
+couche** de la série :
+
+``` r
+
+dernier <- fev_data(danger_pct)[[terra::nlyr(fev_data(danger_pct))]]
+```
+
+La carte publiée était donc celle du **31 décembre 2021**, FWI médian
+**0,9**, sous une page qui raconte l’incendie du 16 août 2021, FWI
+médian **84,3**.
+
+Rien ne pouvait le signaler. La normalisation en percentile reclasse ce
+qu’on lui donne, si bas soit-il, donc la carte restait contrastée et
+plausible ; et la provenance enregistrait fidèlement une date que
+personne ne regardait. Les chiffres de l’article passent de 0,32 et
+facteur 6,5 à **0,68 et facteur 13,7**.
+
+#### Ce défaut invalidait le diagnostic de la 0.29.0
+
+La corrélation de 0,995 entre le composite et sa couche de
+vulnérabilité, qui a motivé toute la descente d’échelle, était mesurée
+sur ce jour d’hiver. Sur le 16 août, les quatre chaînes donnent :
+
+| Chaîne                      | écart-type danger | cor(R, danger) | cor(R, vuln) |
+|-----------------------------|-------------------|----------------|--------------|
+| **grossière + percentile**  | 0,308             | **0,879**      | 0,833        |
+| grossière + FWI brut minmax | 0,237             | 0,699          | 0,769        |
+| descendue + FWI brut minmax | 0,249             | 0,801          | 0,827        |
+| descendue + percentile      | 0,003             | 0,479          | 1,000        |
+
+**Le percentile n’aplatit pas le danger, il le structure**, et la
+vignette le garde. La 0.29.0 recommandait `minmax` sur la foi d’une
+mesure contaminée ; la documentation est corrigée.
+
+La raison pour laquelle la descente d’échelle dégrade la chaîne au
+percentile est structurelle : un gradient adiabatique est une
+transformation **monotone**, et décaler une série entière ne change
+presque pas le rang d’un jour à l’intérieur d’elle-même. Chaque zone
+héritant d’une histoire déterministe de sa maille parente, toutes
+classent le 16 août au même rang. Ce que la chaîne grossière possède —
+des climatologies réellement distinctes d’une maille à l’autre — est de
+l’information sur le climat local, et la 0.29.0 la qualifiait d’artefact
+à tort.
+
+Les deux chaînes répondent à deux questions : *« où est-ce le pire
+aujourd’hui »* veut un FWI brut descendu en échelle, *« où aujourd’hui
+est-il le plus inhabituel »* veut un percentile et n’a que faire d’une
+correction monotone.
+
+#### Le vent et la pluie, les deux que la 0.29.0 laissait passer
+
+[`fev_curvature()`](https://pobsteta.github.io/firexpovulnR/reference/fev_curvature.md)
+implémente la pondération de terrain de MicroMet (Liston & Elder 2006).
+Formulation **vérifiée sur une implémentation indépendante** et non
+citée de mémoire, la page de l’éditeur étant payante. Seule la moitié
+sans direction est applicable : le terme de pente exige une direction de
+vent que ce paquet ne récupère pas. Sur les Maures, multiplicateur 0,82
+à 1,16.
+
+[`fev_rain_gradient()`](https://pobsteta.github.io/firexpovulnR/reference/fev_rain_gradient.md)
+ajuste le gradient orographique **sur les points de la réanalyse
+eux-mêmes** plutôt que d’importer les coefficients mensuels de MicroMet,
+dérivés de l’ouest américain. Sur les Maures, 20 points couvrant 464 m :
+**R² = 0,087, p = 0,21**, et la correction est **refusée**. Ce n’est pas
+un échec mais le comportement voulu — un gradient ajusté sur ce bruit
+aurait voyagé dans la provenance sous les apparences d’une mesure.
+
+#### La vignette dit maintenant quel terme fait la carte
+
+Trois lignes de code qui auraient montré le défaut ci-dessus dès sa
+première publication, et le tableau des quatre chaînes. Un indice
+composite peut être dominé par une seule de ses composantes sans que
+rien ne le montre : la carte reste plausible, les couleurs restent
+contrastées.
+
+## firexpovulnR 0.29.0 (2026-08-19)
+
+#### Le terme danger descend en échelle, et la mesure déplace la conclusion
+
+[`fev_topo_zones()`](https://pobsteta.github.io/firexpovulnR/reference/fev_topo_zones.md),
+[`fev_downscale_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_downscale_weather.md)
+et
+[`fev_fwi_zonal()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_zonal.md)
+corrigent la météo par le relief avant que cffdrs ne tourne. C’est la
+contrainte qui décide toute la conception : FFMC, DMC et DC sont
+**cumulatifs et non linéaires**, donc corriger un FWI après coup corrige
+un nombre qui n’a jamais été calculé sur la météo corrigée.
+
+Ce qui est corrigé, et ce qui ne l’est délibérément pas :
+
+|  |  |
+|----|----|
+| température | oui — gradient adiabatique, la seule correction avec une constante de manuel |
+| humidité | oui — en découle à point de rosée constant, thermodynamique et non relation ajustée |
+| **vent** | **non** — l’exposition topographique est réelle et sans calibration défendable ici. ISI garde le signal grossier. |
+| **pluie** | **non** — l’effet orographique est réel et demande un gradient local que personne n’a. DMC et DC gardent le signal grossier. |
+
+#### Regrouper par altitude seule aplatissait le champ
+
+Première version : bandes d’altitude uniquement. Sur les Maures, **8
+valeurs distinctes contre 17 pour la chaîne grossière** — la descente
+d’échelle avait *réduit* la variation, en remplaçant la variation
+horizontale des 20 points ERA5 par la variation verticale des 8 bandes
+au lieu de les cumuler.
+
+Les zones croisent désormais les bandes avec le **territoire de chaque
+point** : 77 zones sur les Maures, et le rapport d’échelle de
+[`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
+passe de 141 000 cellules fines par maille grossière à **1,05**. Des
+zones construites sans points restent possibles et avertissent.
+
+#### Ce n’était pas la résolution, c’était la normalisation
+
+Décomposition du composite sur 597 840 cellules, 16 août 2021 :
+
+| Chaîne                   | écart-type danger | cor(R, danger) | cor(R, vuln) |
+|--------------------------|-------------------|----------------|--------------|
+| grossière + percentile   | 0,032             | 0,542          | **0,995**    |
+| descendue + percentile   | 0,0006            | 0,380          | **1,000**    |
+| grossière + FWI brut     | 0,237             | 0,699          | 0,769        |
+| **descendue + FWI brut** | **0,265**         | **0,807**      | 0,808        |
+
+Les deux premières lignes disent que la descente d’échelle rend le
+composite **pire**. La cause n’est pas la descente d’échelle.
+
+[`fev_fwi_percentile()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_percentile.md)
+classe chaque cellule contre **sa propre** histoire : c’est une
+normalisation temporelle, qui supprime le contraste spatial par
+construction. Un endroit toujours chaud et un endroit toujours frais
+ressortent tous deux près de 1 un jour extrême. Le peu de variation
+spatiale qui y survivait dans la chaîne grossière était un **artefact**
+— des mailles ERA5 d’histoires différentes de part et d’autre de leurs
+frontières — et donner à chaque zone une série cohérente le supprime
+aussi.
+
+Sur le FWI brut la descente d’échelle fait ce qu’on attendait :
+`cor(R, danger)` de 0,699 à **0,807**, et le composite cesse d’être sa
+propre couche d’exposition. L’interaction est documentée avec ce tableau
+et avertit une fois par session.
+
+**La vignette des Maures utilise `normalise = "percentile"`** :
+l’exemple publié produit donc une carte de risque qui est sa carte
+d’exposition. Le percentile n’est pas fautif — il répond à *« à quel
+point aujourd’hui est-il inhabituel ici »* — mais ce n’est pas *« où
+est-ce le pire aujourd’hui »*, et c’est la seconde question que le
+composite prétend cartographier. La vignette n’est pas modifiée ici :
+changer la normalisation change les résultats publiés.
+
+## firexpovulnR 0.28.0 (2026-08-19)
+
+Phase 11 : les quatre manques relevés en relisant les modules exposition
+et vulnérabilité. Spec dans
+`specs/brief-phase11-exposition-vulnerabilite.md`, écrite avant le code.
+
+#### Le rayon d’exposition s’ajuste enfin sur les feux locaux
+
+[`fev_exposure_calibrate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_calibrate.md)
+balaie les rayons et note chacun à l’AUC contre les feux observés. Tout
+existait déjà — `fev_auc()`,
+[`fev_fetch_burnt()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.md),
+le contrôle de biais temporel ; il manquait le câblage. Sur les Maures :
+
+| Rayon | 75        | 150   | 300   | **500**   | 800   | 1200  | 2000  |
+|-------|-----------|-------|-------|-----------|-------|-------|-------|
+| AUC   | **0,573** | 0,563 | 0,534 | **0,496** | 0,443 | 0,383 | 0,279 |
+
+**Le défaut canadien de 500 m fait exactement le hasard sur ce massif.**
+Le résultat est un *ajustement*, jamais une validation : rien n’est mis
+de côté, et la fonction le dit à chaque appel comme dans la provenance.
+
+Deux gardes trouvés en testant, pas en concevant :
+
+- **Une AUC de 0,500 issue d’un score constant est refusée.** Une source
+  couvrant les seules formations boisées vaut 1 dans ses polygones et
+  `NA` dehors, jamais 0 : tout anneau qui répond répond plein. L’AUC
+  vaut alors exactement 0,5, ce qui se lit « aucun pouvoir discriminant
+  » et signifie « aucune mesure » — et 0,5 est un nombre parfaitement
+  publiable.
+- **Un optimum en bord de balayage est signalé comme tel.** Sur les
+  Maures l’AUC décroît jusqu’à 75 m, le plus petit rayon que la
+  résolution autorise : le meilleur rayon nommable est le plus petit
+  essayé, et le vrai peut être en dessous, hors de portée tant que la
+  grille n’est pas plus fine.
+
+#### Des enjeux, et l’interface habitat-forêt
+
+[`fev_fetch_ghsl()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_ghsl.md)
+— GHS-POP, 100 m, mondial, sans compte. La vulnérabilité avait été le
+seul module sans acquisition depuis la phase 6.
+
+La grille de tuilage a été **mesurée sur deux tuiles**, pas lue : les
+tuiles font 1 000 000 m de côté en Mollweide et l’origine en x porte un
+décalage constant de −41 000 m qu’aucune fiche produit n’énonce. Si le
+millésime change, le code échoue bruyamment au lieu de deviner.
+
+**Reprojeter un décompte en bilinéaire inventait 5 % d’habitants** : 35
+039 résidents des Maures devenaient 36 783. `method = "sum"` conserve le
+total à 0,00 %. Une dérive de 5 % à chaque reprojection est le genre
+d’erreur qui survit jusqu’à la publication parce que le nombre reste
+plausible.
+
+[`fev_wui()`](https://pobsteta.github.io/firexpovulnR/reference/fev_wui.md)
+calcule l’interface que le brief, la table WorldCover et
+[`fev_risk()`](https://pobsteta.github.io/firexpovulnR/reference/fev_risk.md)
+désignaient tous les trois sans que rien ne la produise. Définition par
+**proximité**, pas par densité de logements — c’est ce que les entrées
+supportent réellement, et la documentation dit ce que cela coûte.
+
+#### L’exposition devient anisotrope, sans cesser d’être vérifiable
+
+[`fev_exposure_aniso()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_aniso.md)
+découpe l’anneau en secteurs et les recombine avec des poids de vent et
+de pente. **L’invariant qui tient la construction : sans vent ni pente,
+on retrouve
+[`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md)
+à 5,5 × 10⁻¹⁶ près**, à 4, 8 et 16 secteurs — testé. Les secteurs ne
+contiennent pas le même nombre de cellules, donc les pondérer également
+aurait produit en silence une autre métrique.
+
+Vérifié dans les deux sens : vent d’ouest 0,383 → 0,818, vent d’est →
+0,045 ; pente descendant vers le combustible 0,383 → 0,750, l’inverse →
+0,084. Le terrain plat ne reçoit aucune anisotropie quelle que soit la
+concentration, parce que le multiplicateur est `tan(pente)` —
+structurel, pas une règle ajoutée pour le cas plat.
+
+Ce n’est **pas la métrique publiée** : Beverly la définit isotrope, Khan
+l’a validée isotrope. Hors défaut, sans validation propre, et les deux
+concentrations sont des jugements d’analyse inscrits dans la provenance,
+comme les poids de
+[`fev_vuln_stack()`](https://pobsteta.github.io/firexpovulnR/reference/fev_vuln_stack.md).
+
+[`fev_fetch_dem()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_dem.md)
+importe le Copernicus DEM GLO-30 pour l’alimenter — un modèle de
+**surface**, donc sous couvert fermé la pente est celle de la canopée.
+
+#### Le combustible mesuré entre enfin dans l’exposition
+
+[`fev_fuel_load_weight()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_load_weight.md)
+transforme une métrique continue du registre LiDAR en couche de
+disponibilité, consommée par le chemin gradué qui existait depuis la
+phase 6. Le plus petit ajout des quatre : les deux moitiés étaient là,
+rien ne les joignait.
+
+Ce qui le rend nécessaire est mesuré : dans la seule classe FF1G06-06,
+520 cellules, la charge de houppier va de 0,05 à 1,98 kg/m². Un masque
+binaire les compte à l’identique.
+
+`NA` reste `NA` : une campagne couvrant 2 km² des Maures ne doit pas
+étendre son autorité sur les 300 autres.
+
 ## firexpovulnR 0.27.0 (2026-08-19)
 
 #### Trente-deux fenêtres, et l’écart se creuse au lieu de se combler

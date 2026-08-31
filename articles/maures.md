@@ -407,13 +407,13 @@ Deux placettes d’un seul massif, 566 cellules, et des nomenclatures à 6,
 un peu plus de variance. Six contre cinq ne rend pas compte d’un facteur
 quatre.
 
-## Trente-deux fenêtres à travers le massif, et ce qu’elles disent des sources
+## Quarante-huit fenêtres à travers le massif, et ce qu’elles disent des sources
 
 Tout ce qui précède repose sur **deux placettes**. Deux, c’est assez
 pour montrer qu’un écart existe ; ce n’est pas assez pour dire ce qu’il
 vaut ailleurs. La campagne décrite ici porte la même question sur
-trente-deux fenêtres réparties sur tout le massif, et elle change une
-des conclusions qu’on aurait tirées de deux.
+quarante-huit fenêtres réparties sur tout le massif — et la réponse
+n’est pas celle que les premières versions de cet article annonçaient.
 
 ### Comment les fenêtres ont été choisies
 
@@ -424,7 +424,7 @@ fenêtres échantillonnent huit contextes pour une fraction du coût.
 
 ``` r
 
-fev_lidar_batch(zone, "out/lidar", window = 250, max_tiles = 8)
+fev_lidar_batch(zone, "out/lidar", window = 250, max_tiles = 8, fires = feux)
 ```
 
 Deux précautions décident de ce que vaut l’échantillon, et aucune n’est
@@ -433,31 +433,24 @@ cosmétique.
 **L’ordre.** L’index des dalles est en ordre spatial. Prendre les huit
 premières donne huit voisines dans un coin du massif : un seul contexte
 échantillonné huit fois. Le défaut `spread = TRUE` parcourt les dalles
-par traversée du plus éloigné — chaque dalle retenue est la plus
-lointaine de toutes les précédentes. Sur les Maures, l’écart minimal
-entre huit dalles passe de 1,0 à 10,0 km. La traversée est déterministe,
-donc une reprise poursuit la répartition : huit ce soir et huit demain
-donnent seize dalles réparties, pas deux grappes.
+par traversée du plus éloigné. Sur les Maures, l’écart minimal entre
+huit dalles passe de 1,0 à 10,0 km. La traversée est déterministe, donc
+une reprise poursuit la répartition.
 
 **L’emprise.** L’index retient toute dalle qui *intersecte* la zone
 d’étude. Un carré centré sur une telle dalle peut donc tomber
 entièrement en dehors. C’est arrivé, et massivement : sur les
-vingt-quatre premières fenêtres d’une campagne sur les Maures, **treize
-étaient hors de la zone d’étude** — inversées au prix fort,
-indiscernables des autres dans le manifeste, et décrivant un terrain que
-personne n’avait demandé. La fonction centre désormais le carré sur
-l’intersection dalle × emprise, rétrécie d’une demi-fenêtre : ce qui
-survit à ce rétrécissement est exactement l’endroit où un carré tient
-tout entier dans la zone. Sur les Maures, 43 dalles des 505 sont
-écartées pour cette raison, et elles sont annoncées, jamais retirées en
-silence.
+vingt-quatre premières fenêtres, **treize étaient hors de la zone
+d’étude** — inversées au prix fort, indiscernables des autres dans le
+manifeste. La fonction centre désormais le carré sur l’intersection
+dalle × emprise rétrécie d’une demi-fenêtre, et 43 dalles des 505 sont
+écartées pour cette raison, annoncées et non retirées en silence.
 
 ### La confrontation, cellule par cellule
 
-Chaque cellule de 25 m reçoit sa classe BD Forêt par son centre — la
-règle utilisée partout ailleurs dans le paquet — puis on compare, dans
-chaque classe, ce que le LiDAR a mesuré. Trente-deux fenêtres, **3 110
-cellules**.
+Chaque cellule de 25 m reçoit sa classe BD Forêt par son centre, puis on
+compare dans chaque classe ce que le LiDAR a mesuré. Quarante-huit
+fenêtres, **4 645 cellules**, dont 21 % sans polygone BD Forêt.
 
 ``` r
 
@@ -465,109 +458,129 @@ cl <- terra::rasterize(terra::vect(bdforet), fuel_lidar[[1]], field = "code_tfv"
 cells <- as.data.frame(c(fuel_lidar, cl), na.rm = TRUE)
 ```
 
-Les classes présentes sur au moins 100 cellules, médianes par classe :
+Les onze classes présentes sur au moins 100 cellules, triées par la
+hauteur de base des houppiers qu’elles portent :
 
-| Code TFV | Essence | n | Hauteur | CBH | FSG | Couvert | CFL | % continu |
-|----|----|----|----|----|----|----|----|----|
-| FF1-00-00 | Feuillus | 646 | 16,5 | 0,0 | 0,0 | 0,90 | 1,19 | 89 |
-| *hors BD Forêt* | — | 637 | 7,5 | 0,0 | 0,0 | 0,05 | 0,09 | 75 |
-| FF1G06-06 | Chênes sempervirents | 520 | 10,5 | 0,0 | 0,0 | 0,77 | 0,92 | 92 |
-| LA4 | Lande | 348 | 6,5 | 0,0 | 0,0 | 0,12 | 0,17 | 85 |
-| FF1-10-10 | Châtaignier | 153 | 16,5 | 0,0 | 0,0 | 0,94 | 1,56 | 98 |
-| FO1 | Feuillus (ouvert) | 136 | 7,5 | 0,0 | 0,0 | 0,20 | 0,30 | 93 |
-| FO2 | Conifères (ouvert) | 114 | 9,5 | 6,5 | **4,0** | 0,14 | 0,07 | **46** |
-| FF2-51-51 | Pin maritime | 111 | 17,5 | 0,0 | 0,0 | 0,94 | 1,11 | 95 |
-| FF32 | Mixte | 111 | 13,5 | 0,0 | 0,0 | 0,61 | 0,72 | 91 |
-| FF2-81-81 | Pin autre | 109 | 13,5 | 8,5 | **3,0** | 0,71 | 0,45 | **25** |
+| Code TFV | Essence | n | CBH méd. | FSG méd. | CBH 90ᵉ c. | % continu |
+|----|----|----|----|----|----|----|
+| FF2-81-81 | Pin autre | 123 | **7,5** | **3,0** | 10,5 | **26** |
+| FO2 | Conifères (ouvert) | 114 | **6,5** | **4,0** | 9,2 | **46** |
+| FF1G06-06 | Chênes sempervirents | 1083 | 0,0 | 0,0 | 5,3 | 86 |
+| FO1 | Feuillus (ouvert) | 283 | 0,0 | 0,0 | 3,5 | 86 |
+| *hors BD Forêt* | — | 955 | 0,0 | 0,0 | 3,5 | 77 |
+| LA4 | Lande | 438 | 0,0 | 0,0 | 3,5 | 84 |
+| FF1-00-00 | Feuillus | 908 | 0,0 | 0,0 | 0,0 | 92 |
+| FF1-10-10 | Châtaignier | 208 | 0,0 | 0,0 | 0,0 | 98 |
+| FF2-51-51 | Pin maritime | 116 | 0,0 | 0,0 | 0,0 | 95 |
+| FF31 | Mixte | 112 | 0,0 | 0,0 | 0,0 | 94 |
+| FF32 | Mixte | 129 | 0,0 | 0,0 | 0,0 | 91 |
 
-« % continu » est la part de cellules à FSG \< 0,5 m : le sous-étage
-rejoint les houppiers, rien n’arrête un feu de surface en route vers la
-cime.
-
-**Deux classes séparent vraiment, et ce sont les deux mêmes.**
-`FF2-81-81` (pins autres que maritime, 25 % de cellules continues) et
-`FO2` (forêt ouverte de conifères, 46 %) portent 8,5 et 6,5 m de vide
-sous les houppiers, contre 85 à 98 % de cellules continues dans toutes
-les autres classes. Le point commun n’est pas l’essence : c’est que ces
-deux classes-là décrivent une **structure** — l’ouverture, l’élagage
-naturel d’une pineraie. Partout où la nomenclature parle de composition,
-elle ne dit presque rien de la verticale.
+**Neuf classes sur onze ont une hauteur de base des houppiers médiane de
+zéro.** Sur l’ensemble des cellules forestières, **84 % ont un CBH
+exactement nul** : les houppiers touchent le sol, et la discontinuité
+qui arrêterait un feu de surface n’existe pas.
 
 ### Ce que la classe explique, et ce qu’elle n’explique pas
 
-Part de variance des métriques LiDAR expliquée par la classe seule, sur
-les 2 885 cellules des classes ci-dessus :
+Il faut poser la question proprement, et les premières versions de cet
+article ne le faisaient pas. Elles mélangeaient des jeux de classes
+différents d’un échantillon à l’autre et comptaient *hors BD Forêt*
+comme une classe — alors qu’elle est l’absence de classe, et qu’elle
+sépare forêt et non-forêt, ce qui est facile. Les R² publiés étaient
+gonflés par ce mélange.
 
-| Métrique | BD Forêt v2 | ESA WorldCover | les deux ensemble |
-|----|----|----|----|
-| Couvert | **0,65** | 0,04 | 0,65 |
-| CFL — charge de houppier | **0,55** | 0,04 | 0,55 |
-| Hauteur | 0,45 | 0,04 | 0,45 |
-| CBH — base des houppiers | 0,25 | 0,00 | 0,25 |
-| FSG — discontinuité verticale | 0,20 | 0,00 | 0,20 |
-| **CBD max — densité apparente** | **0,20** | 0,01 | 0,20 |
+Le test honnête est le contraste **entre deux classes**, à jeu constant.
 
-Il y a un **gradient**, et il va dans le sens qu’on redoutait. La BD
-Forêt explique bien ce qu’elle décrit — le couvert, la charge de
-houppier qui en découle. Elle explique deux à trois fois moins bien la
-structure verticale. Et elle explique le moins **la densité apparente de
-houppier**, qui est précisément la variable dont dépend le passage en
-cime.
+**Entre essences, à structure comparable :**
 
-Élargir l’échantillon n’a pas comblé l’écart, il l’a creusé : sur les
-douze premières fenêtres le couvert était à 0,73 et la densité apparente
-à 0,26 ; sur trente-deux, 0,65 et 0,20. Plus on regarde de massif, moins
-la classe suffit.
+| Contraste                            | n     | CBH       | FSG       | CBD   |
+|--------------------------------------|-------|-----------|-----------|-------|
+| Feuillus vs Chênes sempervirents     | 1 991 | **0,015** | **0,016** | 0,004 |
+| Feuillus vs Châtaignier              | 1 116 | 0,003     | 0,008     | 0,013 |
+| Pin maritime vs Chênes sempervirents | 1 199 | 0,003     | 0,008     | 0,000 |
 
-L’écart ne se comble pas non plus dans la classe. Chez les chênes
-sempervirents, 520 cellules d’un seul et même code, la charge de
-houppier va de **0,05 à 1,98 kg/m²** — un rapport de quarante à
-l’intérieur d’une classe que la base traite comme homogène.
+**Zéro.** Pas « peu » : savoir qu’un peuplement est du chêne vert plutôt
+que du feuillu divers ou du châtaignier ne dit **rien** de la hauteur de
+base des houppiers ni de la continuité verticale. L’écart-type du CBH à
+l’intérieur d’une classe égale l’écart-type total.
+
+**Entre les deux classes qui séparent, et les autres :**
+
+| Contraste                                   | n     | CBH   | FSG   | CBD   |
+|---------------------------------------------|-------|-------|-------|-------|
+| Pin maritime vs **Pin autre**               | 239   | 0,391 | 0,410 | 0,312 |
+| Feuillus vs **FO2 conifères ouvert**        | 1 022 | 0,260 | 0,307 | 0,145 |
+| FO1 feuillus ouvert vs **FO2**              | 397   | 0,304 | 0,340 | 0,281 |
+| Chênes sempervirents vs FO1 feuillus ouvert | 1 366 | 0,005 | 0,006 | 0,034 |
+
+C’est la dernière ligne qui interdit la lecture facile. On voudrait
+conclure que la nomenclature porte la structure quand elle parle de
+forme du peuplement et pas quand elle parle d’essence — mais **fermé
+contre ouvert ne sépare rien chez les feuillus** (0,005), et **le pin
+maritime, résineux, se comporte comme un feuillu** (CBH médian nul, 95 %
+de cellules continues).
+
+Ce qui sépare n’est donc ni l’essence ni l’ouverture, mais **deux codes
+particuliers** — `FF2-81-81` et `FO2` — qui se trouvent décrire les
+peuplements où les arbres s’élaguent naturellement par le bas. Le reste
+de la nomenclature, sur ce massif, ne distingue rien de la verticale.
+
+Sur les onze classes prises ensemble, le R² global reflète mécaniquement
+ces deux codes-là :
+
+| Métrique                          | BD Forêt v2 | ESA WorldCover |
+|-----------------------------------|-------------|----------------|
+| Couvert                           | 0,596       | 0,007          |
+| CFL — charge de houppier          | 0,501       | 0,005          |
+| Hauteur                           | 0,353       | 0,003          |
+| **CBD max — densité apparente**   | **0,177**   | 0,004          |
+| **CBH — base des houppiers**      | **0,163**   | 0,002          |
+| **FSG — discontinuité verticale** | **0,137**   | 0,002          |
+
+Et l’écart ne se comble pas à l’intérieur d’une classe : chez les chênes
+sempervirents, **1 083 cellules d’un seul et même code**, la charge de
+houppier va de **0 à 2,08 kg/m²**.
 
 ### Faut-il aller chercher ailleurs ?
 
-La question mérite d’être posée franchement, et la troisième colonne du
-tableau y répond : **ajouter WorldCover à la BD Forêt ne fait rien
-gagner**, à la troisième décimale près sur les six métriques. Sur ce
-massif WorldCover classe 73 % des cellules en « couvert arboré » : une
-nomenclature presque constante n’explique presque rien.
+WorldCover n’explique rien — de 0,002 à 0,007 sur les six métriques. Sur
+ce massif elle classe **75 % des cellules en « couvert arboré »**, et
+une nomenclature presque constante n’explique presque rien.
 
-Elle ne rattrape pas non plus ce que la BD Forêt ne couvre pas. Les 637
-cellules sans polygone — 20 % — sont réparties par WorldCover en cinq
-classes. Le LiDAR mesure la même chose dans toutes :
+Elle ne rattrape pas non plus ce que la BD Forêt ne couvre pas. Les 955
+cellules sans polygone sont réparties en cinq classes WorldCover, et le
+LiDAR mesure la même chose dans toutes :
 
 | Classe WorldCover | n   | Couvert | CFL  | Hauteur |
 |-------------------|-----|---------|------|---------|
-| Tree cover        | 340 | 0,06    | 0,09 | 7,5     |
-| Shrubland         | 127 | 0,01    | 0,08 | 5,5     |
-| Grassland         | 96  | 0,10    | 0,13 | 9,5     |
-| Built-up          | 41  | 0,00    | 0,08 | 2,5     |
-| Cropland          | 33  | 0,21    | 0,17 | 11,5    |
+| Tree cover        | 614 | 0,08    | 0,09 | 7,5     |
+| Shrubland         | 171 | 0,10    | 0,12 | 9,5     |
+| Grassland         | 96  | 0,06    | 0,11 | 8,0     |
+| Built-up          | 41  | 0,23    | 0,20 | 10,5    |
+| Cropland          | 33  | 0,00    | 0,08 | 2,5     |
 
-**Cinq étiquettes pour une seule réalité structurelle** — couvert de
-0,00 à 0,21, charge de houppier de 0,08 à 0,17. Et un « couvert arboré »
-à 0,06 de couvert mesuré n’est pas du couvert arboré. La BD Forêt a
-raison de ne rien mettre là : ce n’est pas de la forêt.
+Un « couvert arboré » à 0,08 de couvert mesuré n’est pas du couvert
+arboré.
 
 La conclusion est donc l’inverse d’un appel à plus de sources
-catégorielles. Aucune n’apportera ce qui manque, parce que ce qui manque
-n’est pas une étiquette plus fine — c’est une **mesure**. Une classe,
-quelle que soit sa nomenclature, dit ce qu’il y a ; elle ne dit pas
-combien il y en a ni à quelle hauteur. Les deux sources continues du
-paquet répondent chacune à une moitié de la question : FORMS donne la
-hauteur de canopée partout en France, sans atteindre le sous-étage ; le
-LiDAR HD donne le sous-étage, là où il a volé. Élargir la couverture
-LiDAR est le seul geste qui déplace le chiffre de 0,20.
+catégorielles. Ce qui manque n’est pas une étiquette plus fine — c’est
+une **mesure**. Une classe dit ce qu’il y a ; elle ne dit pas à quelle
+hauteur. Et c’est précisément ce que consomment les seuils de
+\[fev_crown_fire()\] : le CBH décide si un feu de surface monte en cime,
+la CBD s’il s’y maintient. Les déduire de la classe reviendrait à
+travailler avec un R² de 0,16 ; les mesurer est la seule voie.
 
 ### Ce qu’il faut retenir de la portée
 
-Trente-deux fenêtres de 250 m font 2 km² sur un seul massif, une seule
+Quarante-huit fenêtres de 250 m font 3 km² sur un seul massif, une seule
 campagne LiDAR (2025), et l’attribution de classe se fait au centre de
 cellule. C’est une illustration chiffrée de la limite annoncée en tête
-d’article, pas une validation. Les proportions ci-dessus valent pour les
-Maures et n’ont pas été vérifiées ailleurs. Elles reposent sur 32 dalles
-des 462 exploitables : la tendance observée entre douze et trente-deux
-fenêtres invite à ne pas les tenir pour stabilisées.
+d’article, pas une validation, et elle vaut pour les Maures.
+
+Le critère d’arrêt est écrit plutôt qu’appliqué en silence : la
+décomposition est refaite toutes les huit dalles, et la campagne
+continue tant que les R² bougent. Entre douze et quarante-huit fenêtres
+ils n’ont pas cessé de descendre.
 
 ## Greffe sur le registre catégoriel
 
@@ -648,7 +661,12 @@ meteo <- fev_data(fev_fwi_from_weather(meteo_tab, index = "FWI",
                                        crs_work = 2154))
 danger_pct <- fev_fwi_percentile(meteo, ref_period = c(2019, 2021))
 
-dernier <- fev_data(danger_pct)[[terra::nlyr(fev_data(danger_pct))]]
+# Le jour de l'incendie, pas la dernière couche de la série. Cet article a
+# longtemps cartographié `nlyr(...)`, c'est-à-dire le 31 décembre 2021 : un jour
+# d'hiver à FWI médian 0,9, présenté sous une page qui raconte le 16 août à 84,3.
+jour_feu <- which(as.Date(terra::time(fev_data(danger_pct))) ==
+                    as.Date("2021-08-16"))
+dernier <- fev_data(danger_pct)[[jour_feu]]
 dispo <- fev_fuel_availability(fuel, weights = fev_fuel_weights(quiet = TRUE))
 pile <- fev_align(danger = dernier, disponibilite = fev_data(dispo),
                   exposition = fev_data(expo))
@@ -670,9 +688,18 @@ plot(st_geometry(carres), add = TRUE, border = "white", lwd = 2)
 ![](maures_files/figure-html/plot-risk-1.png)
 
 Le jaune est le maquis continu, les taches sombres les trouées — le
-risque moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors,
-un facteur 6,5. Les périmètres rouges sont les onze incendies, les deux
-carrés blancs les placettes LiDAR.
+risque moyen y vaut **0,68 sur combustible brûlable contre 0,05 en
+dehors, un facteur 13,7**. Les périmètres rouges sont les onze
+incendies, les deux carrés blancs les placettes LiDAR.
+
+Ces chiffres étaient 0,32 et 6,5 dans les versions précédentes de cet
+article, et l’écart n’est pas une amélioration de méthode : **la carte
+publiée était celle du 31 décembre 2021**. `dernier` prenait la dernière
+couche de la série plutôt que le jour de l’incendie, et un jour d’hiver
+à FWI médian 0,9 produisait une carte qui paraissait plausible parce que
+la normalisation en percentile reclasse ce qu’on lui donne, si bas
+soit-il. Rien ne le signalait : ni la carte, ni la provenance, qui
+enregistrait fidèlement une date que personne ne regardait.
 
 **Il n’y a plus de cadre blanc**, et c’est l’argument `trim = study` de
 l’appel ci-dessus qui l’a supprimé. Le combustible ayant été construit
@@ -687,6 +714,100 @@ calcule chaque cellule de bord sur la portion d’anneau qui a des
 données, ce qui sous-estime l’exposition d’environ 30 % — mesuré ici
 0,32 contre 0,46 — et le fait **invisiblement**. Un trou blanc valait
 mieux que ce chiffre-là ; une emprise tamponnée vaut mieux que les deux.
+
+### Lequel des deux termes fait la carte ?
+
+Un indice composite peut être dominé par une seule de ses composantes
+sans que rien ne le montre : la carte reste plausible, les couleurs
+restent contrastées. La question se tranche en corrélant le résultat à
+chacun de ses termes.
+
+``` r
+
+vals <- function(x) as.numeric(terra::values(fev_data(x))[, 1])
+D <- vals(danger); V <- vals(vuln); R <- vals(risque)
+ok <- stats::complete.cases(cbind(D, V, R))
+round(c(danger = stats::cor(R[ok], D[ok]),
+        vulnerabilite = stats::cor(R[ok], V[ok]),
+        sd_danger = stats::sd(D[ok])), 3)
+#>        danger vulnerabilite     sd_danger 
+#>         0.890         0.839         0.321
+```
+
+Les deux termes pèsent, et le danger un peu plus. **Ce n’était pas le
+cas quand cet article cartographiait le 31 décembre** : le danger
+corrélait alors 0,542 et la vulnérabilité 0,995. Autrement dit la carte
+publiée était sa propre couche d’exposition, repeinte — et le diagnostic
+qui l’aurait montré tient en trois lignes de code.
+
+Quatre chaînes mesurées sur ce massif, toutes le 16 août 2021 :
+
+| Chaîne | écart-type danger | cor(R, danger) | cor(R, vuln) |
+|----|----|----|----|
+| **percentile, celle de cet article** | 0,308 | **0,879** | 0,833 |
+| FWI brut, `normalise = "minmax"` | 0,237 | 0,699 | 0,769 |
+| FWI descendu en échelle, `minmax` | 0,249 | 0,801 | 0,827 |
+| FWI descendu en échelle, percentile | 0,003 | 0,479 | 1,000 |
+
+Deux enseignements, et le second n’était pas attendu.
+
+**Le percentile n’aplatit pas le danger, il le structure.** Chaque
+maille de la réanalyse a sa propre climatologie ; classer aujourd’hui
+contre elle fait ressortir les endroits où ce jour-là est le plus
+exceptionnel, et cette variation est de l’information sur le climat
+local, pas un artefact.
+
+**Descendre le FWI en échelle par le relief dégrade la chaîne au
+percentile**, et la raison est structurelle : le gradient adiabatique
+est une transformation **monotone** de la série d’une zone. Décaler
+toute une série d’un même offset ne change presque pas le rang d’un jour
+à l’intérieur d’elle-même. Chaque zone héritant d’une histoire
+déterministe de sa maille parente, toutes classent le 16 août au même
+rang, et le contraste spatial disparaît — l’écart-type tombe à 0,003.
+
+La descente d’échelle sert donc la chaîne au FWI brut, où elle fait
+passer la corrélation au danger de 0,699 à 0,801, et dessert celle au
+percentile. Ce n’est pas un défaut de l’une ou de l’autre : ce sont deux
+questions différentes. *« Où est-ce le pire aujourd’hui »* veut un FWI
+brut descendu en échelle ; *« où aujourd’hui est-il le plus inhabituel
+»* veut un percentile, et n’a rien à faire d’une correction monotone.
+
+### Le relief, quand on veut la première question
+
+Non exécuté ici — le modèle de terrain se télécharge, et une vignette ne
+doit pas dépendre d’un service distant :
+
+``` r
+
+dem <- fev_fetch_dem(zone)
+cv <- fev_curvature(fev_data(dem), length_scale = 500)
+z <- fev_topo_zones(fev_data(dem), n_elev = 8, stations = meteo_tab)
+w <- fev_downscale_weather(meteo_tab, z, wind = "curvature", curvature = cv,
+                           rain = "fitted")
+danger_fin <- fev_fwi_zonal(w, z, dates = as.Date("2021-08-16"))
+```
+
+Mesuré sur ce massif le 2026-08-19 : 77 zones — 12 mailles de réanalyse
+croisées avec 8 bandes d’altitude —, le FWI passe de 17 à 77 valeurs
+distinctes, et le rapport d’échelle que signale
+[`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
+tombe de **141 000 cellules fines par maille grossière à 1,05**.
+
+Ce que la correction couvre, et ce qu’elle ne couvre pas :
+
+- **température** — gradient adiabatique, 3,3 K entre la zone la plus
+  basse (28 m) et la plus haute (538 m). Sur un massif culminant à 775
+  m, c’est la mesure de ce qu’on peut espérer.
+- **humidité** — en découle à point de rosée constant, jusqu’à 18 points
+  d’écart.
+- **vent** — pondération de courbure de MicroMet, multiplicateur 0,82 à
+  1,16. Seule la moitié sans direction du schéma publié : son terme de
+  pente exige une direction de vent que ce paquet ne récupère pas.
+- **pluie** — `rain = "fitted"` a **refusé de corriger**. Sur 20 points
+  couvrant 464 m de dénivelé, la régression donne R² = 0,087 et p = 0,21
+  : la réanalyse ne résout aucun effet orographique à cette échelle, et
+  un gradient ajusté là-dessus aurait été du bruit voyageant dans la
+  provenance sous les apparences d’une mesure.
 
 ### Le jour de l’incendie sort premier de 1 096
 
@@ -776,18 +897,18 @@ val$temporal$table
 #> 2                         1 to 5       0       0        0
 #> 3                            > 5      11    6927      100
 val$auc
-#> [1] 0.5468174
+#> [1] 0.5671173
 ```
 
 ``` r
 
 val$classes[, c("class", "pct_of_area", "pct_of_burnt", "ratio")]
 #>       class pct_of_area pct_of_burnt ratio
-#> 1   0 - 0.2       32.08        26.23  0.82
-#> 2 0.2 - 0.4       25.24        29.46  1.17
-#> 3 0.4 - 0.6       42.68        44.31  1.04
-#> 4 0.6 - 0.8        0.00         0.00   NaN
-#> 5   0.8 - 1        0.00         0.00   NaN
+#> 1   0 - 0.2       14.59         4.29  0.29
+#> 2 0.2 - 0.4        2.72         1.22  0.45
+#> 3 0.4 - 0.6       18.31        23.70  1.29
+#> 4 0.6 - 0.8       42.22        46.34  1.10
+#> 5   0.8 - 1       22.16        24.45  1.10
 ```
 
 Le biais temporel est le même qu’à Couchey, et pour la même raison : le

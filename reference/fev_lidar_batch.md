@@ -19,6 +19,7 @@ fev_lidar_batch(
   spread = TRUE,
   keep_las = FALSE,
   dry_run = FALSE,
+  fires = NULL,
   quiet = FALSE
 )
 ```
@@ -67,6 +68,14 @@ fev_lidar_batch(
 
   Report what would be done and return the plan without downloading
   anything.
+
+- fires:
+
+  Fire perimeters, as
+  [`fev_fetch_burnt()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.md)
+  returns them, or `NULL`. When given, the run reports which finished
+  windows fall in a burn and — the point of it — whether any fire
+  **postdates the LiDAR acquisition**.
 
 - quiet:
 

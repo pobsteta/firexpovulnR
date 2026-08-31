@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.27.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.35.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -87,6 +87,13 @@
 
         </dt>
         <dd>Validate CRS and extents at the start of a chain</dd>
+
+        <dt>
+
+          <code><a href="fev_licences.html">fev_licences()</a></code>
+
+        </dt>
+        <dd>What licences a result carries, and what follows from them</dd>
       </dl></div><div class="section level2">
       <h2 id="acquisition-et-cache">Acquisition et cache<a class="anchor" aria-label="anchor" href="#acquisition-et-cache"></a></h2>
 
@@ -145,6 +152,48 @@
 
         </dt>
         <dd>Fetch EFFIS burnt area perimeters</dd>
+
+        <dt>
+
+          <code><a href="fev_fetch_dem.html">fev_fetch_dem()</a></code>
+
+        </dt>
+        <dd>Fetch Copernicus DEM GLO-30 (30 m elevation, worldwide, no account)</dd>
+
+        <dt>
+
+          <code><a href="fev_fetch_ghsl.html">fev_fetch_ghsl()</a></code>
+
+        </dt>
+        <dd>Fetch GHS-POP resident population (100 m, worldwide, no account)</dd>
+
+        <dt>
+
+          <code><a href="fev_fetch_severity.html">fev_fetch_severity()</a></code>
+
+        </dt>
+        <dd>Burn severity (dNBR) from Sentinel-2</dd>
+
+        <dt>
+
+          <code><a href="fev_fetch_sufosat.html">fev_fetch_sufosat()</a></code>
+
+        </dt>
+        <dd>Fetch SUFOSAT forest clear-cuts (10 m, mainland France)</dd>
+
+        <dt>
+
+          <code><a href="fev_fetch_bdiff.html">fev_fetch_bdiff()</a></code>
+
+        </dt>
+        <dd>Fetch BDIFF fire records (France, 2006 onward)</dd>
+
+        <dt>
+
+          <code><a href="fev_bdiff_columns.html">fev_bdiff_columns()</a></code>
+
+        </dt>
+        <dd>Which CSV header feeds which column</dd>
 
         <dt>
 
@@ -308,6 +357,27 @@
 
         </dt>
         <dd>Effective pulse and point density of a point cloud</dd>
+
+        <dt>
+
+          <code><a href="fev_fuel_load_weight.html">fev_fuel_load_weight()</a></code>
+
+        </dt>
+        <dd>Turn a measured fuel metric into a graded availability</dd>
+
+        <dt>
+
+          <code><a href="fev_crown_fire.html">fev_crown_fire()</a></code>
+
+        </dt>
+        <dd>Van Wagner's crown fire thresholds</dd>
+
+        <dt>
+
+          <code><a href="fev_byram_intensity.html">fev_byram_intensity()</a></code>
+
+        </dt>
+        <dd>Byram's fireline intensity</dd>
       </dl></div><div class="section level2">
       <h2 id="danger-m-t-orologique">Danger météorologique<a class="anchor" aria-label="anchor" href="#danger-m-t-orologique"></a></h2>
 
@@ -373,6 +443,41 @@
 
         </dt>
         <dd>Composite fire danger</dd>
+
+        <dt>
+
+          <code><a href="fev_downscale_weather.html">fev_downscale_weather()</a></code>
+
+        </dt>
+        <dd>Correct weather to the elevation of each topographic zone</dd>
+
+        <dt>
+
+          <code><a href="fev_topo_zones.html">fev_topo_zones()</a></code>
+
+        </dt>
+        <dd>Topographic zones for downscaling</dd>
+
+        <dt>
+
+          <code><a href="fev_fwi_zonal.html">fev_fwi_zonal()</a></code>
+
+        </dt>
+        <dd>Run the FWI per zone and map it back onto the grid</dd>
+
+        <dt>
+
+          <code><a href="fev_rain_gradient.html">fev_rain_gradient()</a></code>
+
+        </dt>
+        <dd>Is there an orographic rain gradient in these points at all?</dd>
+
+        <dt>
+
+          <code><a href="fev_curvature.html">fev_curvature()</a></code>
+
+        </dt>
+        <dd>Terrain curvature on the MicroMet scale</dd>
       </dl></div><div class="section level2">
       <h2 id="exposition-et-vuln-rabilit-">Exposition et vulnérabilité<a class="anchor" aria-label="anchor" href="#exposition-et-vuln-rabilit-"></a></h2>
 
@@ -431,6 +536,27 @@
 
         </dt>
         <dd>Combine vulnerability dimensions</dd>
+
+        <dt>
+
+          <code><a href="fev_exposure_aniso.html">fev_exposure_aniso()</a></code>
+
+        </dt>
+        <dd>Exposure weighted by wind and slope</dd>
+
+        <dt>
+
+          <code><a href="fev_exposure_calibrate.html">fev_exposure_calibrate()</a></code>
+
+        </dt>
+        <dd>Fit the exposure radius to local fires</dd>
+
+        <dt>
+
+          <code><a href="fev_wui.html">fev_wui()</a></code>
+
+        </dt>
+        <dd>The wildland-urban interface</dd>
       </dl></div><div class="section level2">
       <h2 id="combinaison-risque-et-validation">Combinaison, risque et validation<a class="anchor" aria-label="anchor" href="#combinaison-risque-et-validation"></a></h2>
 

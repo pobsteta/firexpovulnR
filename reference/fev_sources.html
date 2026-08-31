@@ -11,7 +11,7 @@ something."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.27.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.35.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -55,13 +55,24 @@ something.</p>
 
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A named list with <code>endpoints</code> and <code>layers</code>.</p>
+    <p>A named list with <code>endpoints</code>, <code>layers</code>, <code>verified</code> (the date the
+rest were confirmed) and <code>unverified</code> (the endpoints that were not).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>All values were verified on 2026-08-15 by real network calls. See
-<code>specs/phase2-rapport-faisabilite.md</code> in the repository for the evidence
-behind each one.</p>
+    <p>All values were verified on 2026-08-15 by real network calls, <strong>except</strong>
+those named in <code>unverified</code>. See <code>specs/phase2-rapport-faisabilite.md</code> in the
+repository for the evidence behind each verified one.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="one-endpoint-is-not-verified">One endpoint is not verified<a class="anchor" aria-label="anchor" href="#one-endpoint-is-not-verified"></a></h2>
+
+
+<p><code>data_gouv_api</code>, the route <code><a href="fev_fetch_bdiff.html">fev_fetch_bdiff()</a></code> uses to reach BDIFF, was
+written without ever being called: the environment it was added in has no
+egress to data.gouv.fr. Listing it beside the others without saying so would
+make the whole registry mean less, so it is named in <code>unverified</code> and every
+result obtained through it carries <code>endpoint_verified = FALSE</code>.</p>
     </div>
 
     <div class="section level2">
@@ -70,6 +81,8 @@ behind each one.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "https://data.geopf.fr/wfs/ows"</span>
 <span class="r-in"><span><span class="fu">fev_sources</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">layers</span><span class="op">$</span><span class="va">bdforet_v2</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "LANDCOVER.FORESTINVENTORY.V2:formation_vegetale"</span>
+<span class="r-in"><span><span class="fu">fev_sources</span><span class="op">(</span><span class="op">)</span><span class="op">$</span><span class="va">unverified</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "data_gouv_api"</span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

@@ -1,0 +1,84 @@
+# What licences a result carries, and what follows from them
+
+Walks the provenance of a layer, stack or source and lists every licence
+it picked up along the way, with where each one was read.
+
+## Usage
+
+``` r
+fev_licences(x)
+```
+
+## Arguments
+
+- x:
+
+  A `fev_stack`, `fev_layer`, `fev_source`, or a provenance record.
+
+## Value
+
+A data frame of class `fev_licences`, one row per source: `dataset`,
+`licence`, `licence_from`. Printing it adds the combined reading.
+
+## The most open, for one dataset
+
+When a producer offers the same data under several licences, this
+package records the **most open** one. That is not optimism, it is what
+a licence is: a producer publishing under CC-BY offers it on those
+terms, and nothing obliges a user to adopt the terms of a different
+channel. Recording the most restrictive "to be safe" would forbid a use
+the producer allows, and write into the provenance a constraint nobody
+asked for.
+
+The licence recorded is the one of the **channel actually used**, and
+the version matters: CC-BY on v3.0.1 says nothing about v2.
+
+## The combination, which is not a choice
+
+A result derived from several sources must satisfy the terms of each, so
+the effective constraint is the union of their restrictions. One
+non-commercial input makes the result non-commercial. This function
+reports that; it does not decide what you may do, and it is not legal
+advice.
+
+## A licence not established stays empty
+
+Six of the package's twelve sources record `NA`, because their licence
+was never read at the producer's own page — IGN's is a JavaScript
+application that cannot be fetched, EFFIS's data policy was never
+opened, and so on. An unverified licence is not a licence, and guessing
+one would be worse than the gap: the gap is visible and a guess is not.
+
+`licence_from` is what separates a licence **read** from a licence
+**decided**. FORMS is the case: its two channels disagree and the
+contradiction has not been settled with the producer, so whatever the
+field holds is an analyst's decision and says so.
+
+## See also
+
+[`fev_provenance()`](https://pobsteta.github.io/firexpovulnR/reference/fev_provenance.md)
+for the whole record.
+
+## Examples
+
+``` r
+# The Maures extract is a local file, so its licence was never read from a
+# producer: the answer is "not established", which is the honest one and the
+# commonest.
+gpkg <- system.file("extdata", "maures.gpkg", package = "firexpovulnR")
+bdf <- sf::st_read(gpkg, "bdforet_v2", quiet = TRUE)
+src <- suppressMessages(
+  fev_fuel_source(bdf, type = "bdforet_v2", res = 100, millesime = 2014)
+)
+#> Warning: `res` = 100 m cancels the advantage of a fine source over CORINE.
+#> ℹ CORINE's native raster is 100 m. At this cell size the finer minimum mapping
+#>   unit buys nothing.
+fev_licences(src)
+#> 
+#> ── fev_licences ────────────────────────────────────────────────────────────────
+#>     dataset        licence
+#>  bdforet_v2 -- non etablie
+#> ℹ 1 licence not established, so this list is not a clearance. An unverified licence is recorded as missing rather than guessed.
+#> ℹ The package records what producers declare and reports what follows. It is not legal advice.
+#> 
+```

@@ -34,6 +34,9 @@ décalage d’échelle est porté par l’objet, pas masqué par lui.
 - [`fev_check_crs()`](https://pobsteta.github.io/firexpovulnR/reference/fev_check_crs.md)
   : Validate CRS and extents at the start of a chain
 
+- [`fev_licences()`](https://pobsteta.github.io/firexpovulnR/reference/fev_licences.md)
+  : What licences a result carries, and what follows from them
+
 ## Acquisition et cache
 
 Un client par source, chacun rendant ses métadonnées de provenance — jeu
@@ -55,6 +58,18 @@ différents ne peuvent pas se confondre.
   : Import FORMS canopy height (France, 10 m)
 - [`fev_fetch_burnt()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_burnt.md)
   : Fetch EFFIS burnt area perimeters
+- [`fev_fetch_dem()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_dem.md)
+  : Fetch Copernicus DEM GLO-30 (30 m elevation, worldwide, no account)
+- [`fev_fetch_ghsl()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_ghsl.md)
+  : Fetch GHS-POP resident population (100 m, worldwide, no account)
+- [`fev_fetch_severity()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_severity.md)
+  : Burn severity (dNBR) from Sentinel-2
+- [`fev_fetch_sufosat()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_sufosat.md)
+  : Fetch SUFOSAT forest clear-cuts (10 m, mainland France)
+- [`fev_fetch_bdiff()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fetch_bdiff.md)
+  : Fetch BDIFF fire records (France, 2006 onward)
+- [`fev_bdiff_columns()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdiff_columns.md)
+  : Which CSV header feeds which column
 - [`fev_bdforet_millesime()`](https://pobsteta.github.io/firexpovulnR/reference/fev_bdforet_millesime.md)
   : BD Forêt v2 vintage, from the imagery it was photo-interpreted on
 - [`fev_lidarhd_available()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidarhd_available.md)
@@ -108,6 +123,12 @@ sont justifiées ligne par ligne et intégralement surchargeables.
   : Attach continuous fuel metrics to a categorical fuel source
 - [`fev_lidar_density()`](https://pobsteta.github.io/firexpovulnR/reference/fev_lidar_density.md)
   : Effective pulse and point density of a point cloud
+- [`fev_fuel_load_weight()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fuel_load_weight.md)
+  : Turn a measured fuel metric into a graded availability
+- [`fev_crown_fire()`](https://pobsteta.github.io/firexpovulnR/reference/fev_crown_fire.md)
+  : Van Wagner's crown fire thresholds
+- [`fev_byram_intensity()`](https://pobsteta.github.io/firexpovulnR/reference/fev_byram_intensity.md)
+  : Byram's fireline intensity
 
 ## Danger météorologique
 
@@ -133,6 +154,16 @@ s’obtient sans aucun jeton via
   : Classify fire danger into named classes
 - [`fev_danger_index()`](https://pobsteta.github.io/firexpovulnR/reference/fev_danger_index.md)
   : Composite fire danger
+- [`fev_downscale_weather()`](https://pobsteta.github.io/firexpovulnR/reference/fev_downscale_weather.md)
+  : Correct weather to the elevation of each topographic zone
+- [`fev_topo_zones()`](https://pobsteta.github.io/firexpovulnR/reference/fev_topo_zones.md)
+  : Topographic zones for downscaling
+- [`fev_fwi_zonal()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fwi_zonal.md)
+  : Run the FWI per zone and map it back onto the grid
+- [`fev_rain_gradient()`](https://pobsteta.github.io/firexpovulnR/reference/fev_rain_gradient.md)
+  : Is there an orographic rain gradient in these points at all?
+- [`fev_curvature()`](https://pobsteta.github.io/firexpovulnR/reference/fev_curvature.md)
+  : Terrain curvature on the MicroMet scale
 
 ## Exposition et vulnérabilité
 
@@ -154,6 +185,12 @@ d’enjeux. Aucune source d’enjeux n’est imposée.
   : Normalise a layer of assets to a 0-1 vulnerability
 - [`fev_vuln_stack()`](https://pobsteta.github.io/firexpovulnR/reference/fev_vuln_stack.md)
   : Combine vulnerability dimensions
+- [`fev_exposure_aniso()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_aniso.md)
+  : Exposure weighted by wind and slope
+- [`fev_exposure_calibrate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure_calibrate.md)
+  : Fit the exposure radius to local fires
+- [`fev_wui()`](https://pobsteta.github.io/firexpovulnR/reference/fev_wui.md)
+  : The wildland-urban interface
 
 ## Combinaison, risque et validation
 

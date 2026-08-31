@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.27.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.35.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,387 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.35.0" id="firexpovulnr-0350-2026-08-31">firexpovulnR 0.35.0 (2026-08-31)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0350-2026-08-31"></a></h2>
+<div class="section level4">
+<h4 id="le-terme-dallumage-que-la-chaîne-navait-jamais-eu-0-35-0">Le terme d’allumage, que la chaîne n’avait jamais eu<a class="anchor" aria-label="anchor" href="#le-terme-dallumage-que-la-cha%C3%AEne-navait-jamais-eu-0-35-0"></a></h4>
+<p>L’aléa a deux termes : la probabilité qu’un feu <strong>se déclenche</strong> et qu’il <strong>se propage</strong>. Le paquet modélisait le second avec soin — combustible, exposition focale, FWI percentilé, relief — et n’avait rien du tout pour le premier. <code><a href="../reference/fev_danger_index.html">fev_danger_index()</a></code> combinait trois composantes de propagation et zéro composante d’allumage. Ce n’était pas un manque de donnée, c’était un trou dans la méthode.</p>
+<p><code><a href="../reference/fev_fetch_bdiff.html">fev_fetch_bdiff()</a></code> lit la <strong>Base de Données sur les Incendies de Forêts en France</strong> : un enregistrement par feu déclaré depuis 2006, avec la commune de départ, la date, la surface parcourue ventilée par type de végétation et la cause quand elle est connue. Prométhée y a été fusionnée début 2023, il n’y a donc plus qu’une base.</p>
+<p>Deux propriétés justifient un connecteur plutôt qu’une note de vignette.</p>
+<p><strong>Aucun seuil de surface.</strong> Une fiche est saisie quelle que soit la taille du feu. EFFIS, qui est de la télédétection, voit à partir d’une trentaine d’hectares. Sur un territoire à risque émergent — la Bourgogne-Franche-Comté est le cas d’école — <code><a href="../reference/fev_fetch_burnt.html">fev_fetch_burnt()</a></code> rend une poignée d’événements et l’AUC calculée dessus ne veut rien dire, là où la BDIFF en rend des centaines. C’est la différence entre une validation impossible et une validation faisable.</p>
+<p><strong>Les surfaces sont ventilées par type de végétation.</strong> Rien d’autre dans le paquet ne distingue un feu agricole d’un feu de forêt, et ce ne sont pas le même phénomène.</p>
+</div>
+<div class="section level4">
+<h4 id="ce-que-la-source-ne-sait-pas-dit-à-chaque-appel-0-35-0">Ce que la source ne sait pas, dit à chaque appel<a class="anchor" aria-label="anchor" href="#ce-que-la-source-ne-sait-pas-dit-%C3%A0-chaque-appel-0-35-0"></a></h4>
+<p>La saisie est <strong>déclarative</strong> et la BDIFF indique elle-même que l’exhaustivité n’est pas garantie. Le biais est très probablement <strong>structuré dans l’espace</strong> : les départements ne saisissent pas tous aussi complètement. Pour une carte d’occurrence c’est pire qu’un bruit, parce que ça ressemble à du signal. <strong>Une commune sans feu enregistré n’est pas une commune sans feu.</strong> Averti une fois par session, inscrit dans la provenance à chaque appel.</p>
+<p>La géolocalisation est la <strong>commune de départ</strong>, pas un contour. Avec <code>communes</code>, le résultat est un <code>sf</code> dont la géométrie est un polygone communal : un feu de 3 ha porte la forme des 40 km² de sa commune. On en tire une densité communale d’occurrence ; on n’en tire pas un raster d’occurrence à 50 m, et tout ce qui y ressemblerait serait un artefact de la jointure.</p>
+<p>Enfin la consolidation a un an de retard — les fiches de l’année Y sont validées de décembre Y à avril Y+1 — donc l’année en cours est provisoire. La fonction compare ce qu’on lui demande à ce qui peut être consolidé aujourd’hui et le dit avec les années.</p>
+</div>
+<div class="section level4">
+<h4 id="une-seule-des-deux-voies-daccès-est-vérifiée-0-35-0">Une seule des deux voies d’accès est vérifiée<a class="anchor" aria-label="anchor" href="#une-seule-des-deux-voies-dacc%C3%A8s-est-v%C3%A9rifi%C3%A9e-0-35-0"></a></h4>
+<p><code>file</code> lit un export CSV de l’interface BDIFF. C’est la voie testée.</p>
+<p>Sans <code>file</code>, la fonction résout le jeu sur <strong>data.gouv.fr</strong> via son API publique. La BDIFF ne publie aucune API : son interface de recherche prend des paramètres d’URL et serait donc scriptable, mais scraper un formulaire n’est pas un contrat — ça casse à la première refonte et rien ne permettrait de distinguer une mise en page changée d’un résultat vide.</p>
+<p><strong>Cette voie distante n’a jamais été exercée contre le service réel.</strong> Tous les points d’accès de <code><a href="../reference/fev_sources.html">fev_sources()</a></code> ont été confirmés par un appel le 2026-08-15 ; celui-ci ne l’a pas été, faute de sortie réseau vers data.gouv.fr depuis l’environnement où il a été écrit. Il est nommé dans <code>fev_sources()$unverified</code>, tout résultat qui en vient porte <code>endpoint_verified = FALSE</code>, et la fonction avertit une fois par session. Le taire aurait vidé de son sens le registre entier.</p>
+</div>
+<div class="section level4">
+<h4 id="les-en-têtes-sont-une-table-pas-une-constante-0-35-0">Les en-têtes sont une table, pas une constante<a class="anchor" aria-label="anchor" href="#les-en-t%C3%AAtes-sont-une-table-pas-une-constante-0-35-0"></a></h4>
+<p><code><a href="../reference/fev_bdiff_columns.html">fev_bdiff_columns()</a></code> porte la correspondance entre les en-têtes publiés et les colonnes rendues, avec des candidats documentés et intégralement surchargeables — comme toute table importée dans ce paquet. Quand une colonne requise ne peut pas être appariée, l’erreur <strong>liste les en-têtes réellement présents</strong> : la correction tient dans un argument, sans ouvrir le fichier.</p>
+</div>
+<div class="section level4">
+<h4 id="trois-pièges-mesurés-en-écrivant-ce-connecteur-0-35-0">Trois pièges mesurés en écrivant ce connecteur<a class="anchor" aria-label="anchor" href="#trois-pi%C3%A8ges-mesur%C3%A9s-en-%C3%A9crivant-ce-connecteur-0-35-0"></a></h4>
+<p>Aucun des trois n’échoue bruyamment, ce qui est la raison de les nommer.</p>
+<p><code>read.csv(fileEncoding = "UTF-8")</code> sous locale C <strong>ne lève pas d’erreur</strong> sur un octet accentué : il abandonne le reste de la connexion et rend un tableau avec un en-tête et <strong>zéro ligne</strong>. Les octets sont donc convertis explicitement ici, et l’encodage retenu part dans la provenance.</p>
+<p><code>formatC(x, width = 5, flag = "0")</code> sur une entrée <strong>caractère</strong> ignore le drapeau zéro et complète avec des <strong>espaces</strong> : <code>"1004"</code> devenait <code>" 1004"</code>. Ça n’apparie rien, et ça n’apparie rien des deux côtés de la jointure communale à la fois — c’est ainsi qu’un tel bug survit à un essai rapide.</p>
+<p>Le repli habituel pour comparer des en-têtes accentués est piégé trois fois : <code>iconv(to = "ASCII//TRANSLIT")</code> rend <code>premi?re</code>, <code><a href="https://rdrr.io/r/base/chartr.html" class="external-link">chartr()</a></code> traite l’UTF-8 comme des octets et échoue, et une table nommée <code>c("\u00e8" = "e")</code> est pire que les deux parce qu’elle a l’air de marcher — sous locale non-UTF-8, R transforme l’échappement en le texte <code>&lt;U+00E8&gt;</code> <strong>à l’analyse syntaxique</strong>, et la table n’apparie plus rien. La correspondance est donc indexée par point de code entier, ce qui garde aussi le fichier en ASCII pur.</p>
+</div>
+<div class="section level4">
+<h4 id="corrections-0-35-0">Corrections<a class="anchor" aria-label="anchor" href="#corrections-0-35-0"></a></h4>
+<p>Le site de référence ne se construisait plus depuis le 19 août : <code>pkgdown</code> refuse un <code>_pkgdown.yml</code> dont l’index omet un topic exporté, et seize manquaient — <code>fev_wui</code>, <code>fev_licences</code>, <code>fev_crown_fire</code>, les quatre <code>fev_fetch_*</code> de la phase 11, tout le bloc de descente d’échelle. Chacun est rangé selon son fichier source, pas au hasard. Les quatre exports qui ne figuraient pas non plus dans l’index — <code>fev_fuel_categorical</code>, <code>fev_fuel_continuous</code>, <code>fev_source_info</code>, <code>fev_stack_read</code> — n’avaient rien à y faire : ce sont des alias de topics déjà listés, et c’est ce qui explique l’écart entre vingt exports et seize topics.</p>
+<p><code><a href="../reference/fev_cache_info.html">fev_cache_info()</a></code> ne listait que les entrées <code>gpkg</code> et <code>tif</code>. Les sources tabulaires — Open-Meteo, et maintenant la BDIFF — se mettent en cache en <code>rds</code> : elles étaient donc invisibles à l’inventaire, et par conséquent hors d’atteinte de <code><a href="../reference/fev_cache_clear.html">fev_cache_clear()</a></code>, qui travaille sur cette table.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.34.0" id="firexpovulnr-0340-2026-08-21">firexpovulnR 0.34.0 (2026-08-21)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0340-2026-08-21"></a></h2>
+<div class="section level4">
+<h4 id="les-r²-publiés-étaient-des-artefacts-de-méthode-0-34-0">Les R² publiés étaient des artefacts de méthode<a class="anchor" aria-label="anchor" href="#les-r%C2%B2-publi%C3%A9s-%C3%A9taient-des-artefacts-de-m%C3%A9thode-0-34-0"></a></h4>
+<p>L’article des Maures annonçait 0,34 pour le FSG et 0,26 pour la densité apparente. <strong>Ces chiffres étaient faux</strong>, et pas par imprécision : par une faute de construction du test.</p>
+<p>Deux erreurs se cumulaient. Les trois points de mesure — 12, 32 puis 40 fenêtres — <strong>n’appliquaient pas le même seuil d’inclusion</strong> des classes, or un facteur qui gagne des niveaux explique mécaniquement plus de variance. Et <em>hors BD Forêt</em> était comptée <strong>comme une classe</strong>, alors qu’elle est l’absence de classe : elle sépare forêt et non-forêt, ce qui est facile, et gonflait tous les R².</p>
+<p>Refait à jeu de classes constant sur <strong>48 fenêtres, 4 645 cellules</strong>, en contrastant deux classes à la fois :</p>
+<table class="table"><thead><tr><th>Contraste d’essence</th>
+<th>CBH</th>
+<th>FSG</th>
+<th>CBD</th>
+</tr></thead><tbody><tr><td>Feuillus vs Chênes sempervirents</td>
+<td><strong>0,015</strong></td>
+<td>0,016</td>
+<td>0,004</td>
+</tr><tr><td>Feuillus vs Châtaignier</td>
+<td>0,003</td>
+<td>0,008</td>
+<td>0,013</td>
+</tr><tr><td>Pin maritime vs Chênes sempervirents</td>
+<td>0,003</td>
+<td>0,008</td>
+<td>0,000</td>
+</tr></tbody></table><p><strong>Zéro, pas « peu ».</strong> L’écart-type du CBH à l’intérieur d’une classe égale l’écart-type total, et <strong>84 % des cellules forestières ont un CBH exactement nul</strong>.</p>
+</div>
+<div class="section level4">
+<h4 id="et-la-lecture-proposée-à-fenêtres-ne-survit-pas-non-plus-0-34-0">Et la lecture proposée à 32 fenêtres ne survit pas non plus<a class="anchor" aria-label="anchor" href="#et-la-lecture-propos%C3%A9e-%C3%A0-fen%C3%AAtres-ne-survit-pas-non-plus-0-34-0"></a></h4>
+<p>La 0.27.0 concluait que la nomenclature porte la structure quand elle décrit une forme et pas quand elle décrit une essence. Deux résultats l’interdisent : <em>chêne sempervirent fermé</em> contre <em>feuillu ouvert</em> donne <strong>0,005</strong>, et le <strong>pin maritime, résineux, a un CBH médian nul</strong> comme les feuillus, avec 95 % de cellules continues.</p>
+<p>Ce qui sépare n’est ni l’essence ni l’ouverture mais <strong>deux codes particuliers</strong> — <code>FF2-81-81</code> (pin autre) et <code>FO2</code> (conifères ouvert) —, les seuls dont les arbres s’élaguent naturellement par le bas. Neuf classes sur onze ont un CBH médian de zéro, et le R² global de 0,163 est porté presque entièrement par ces deux codes.</p>
+</div>
+<div class="section level4">
+<h4 id="sept-chunks-perdus-et-un-test-qui-ne-pouvait-pas-le-voir-0-34-0">Sept chunks perdus, et un test qui ne pouvait pas le voir<a class="anchor" aria-label="anchor" href="#sept-chunks-perdus-et-un-test-qui-ne-pouvait-pas-le-voir-0-34-0"></a></h4>
+<p>En réécrivant la section, le remplacement a été borné entre deux titres qui ne se suivaient pas dans le document, emportant tout ce qui séparait les deux : la section « Greffe sur le registre catégoriel », les chunks <code>risk</code>, <code>plot-risk</code> et <code>contrib</code>, et toute la chaîne du risque composite. <strong>Sept chunks sur trente-quatre.</strong></p>
+<p>Le contrôle n’a rien vu parce que <code><a href="https://rdrr.io/pkg/knitr/man/knit.html" class="external-link">knitr::knit()</a></code> <strong>évalue dans l’environnement appelant</strong>, et que la session portait déjà <code>meteo</code>, <code>danger</code> et <code>risque</code>, hérités d’essais antérieurs. La vignette compilait en s’appuyant sur des objets que le document ne définissait plus. C’est le <code>R CMD check</code> qui l’a trouvé, dans une session vierge.</p>
+<p>Vérifié désormais avec <code>Rscript --vanilla</code> et <code>envir = new.env()</code>, ce qui reproduit les conditions du check plutôt que celles du développeur.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.33.1" id="firexpovulnr-0331-2026-08-21">firexpovulnR 0.33.1 (2026-08-21)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0331-2026-08-21"></a></h2>
+<div class="section level4">
+<h4 id="le-contrôle-dintersection-est-exposé-dans-le-script-de-campagne-0-33-1">Le contrôle d’intersection est exposé dans le script de campagne<a class="anchor" aria-label="anchor" href="#le-contr%C3%B4le-dintersection-est-expos%C3%A9-dans-le-script-de-campagne-0-33-1"></a></h4>
+<p><code>fev_lidar_batch(fires = ...)</code> existait depuis la 0.33.0 mais restait inaccessible depuis <code>inst/scripts/batch_lidar.R</code>, c’est-à-dire depuis la seule voie par laquelle la campagne tourne réellement. Une option <code>--fires=NOM</code> la branche sur une couche du gpkg.</p>
+<p>Le brief de phase 12 demandait de vérifier l’intersection <strong>après chaque session</strong>, pour ne pas découvrir un an plus tard qu’un feu postérieur au vol recoupait une fenêtre. Une fonction que le script n’appelle pas ne le fait pas.</p>
+<p>Sur les Maures, le compte rendu dit désormais à chaque lancement :</p>
+<pre><code>6 finished windows fall in a burn.
+i All of them burnt before the 2025-05 flight, so they measure what grew
+  back, not what burnt.</code></pre>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.33.0" id="firexpovulnr-0330-2026-08-21">firexpovulnR 0.33.0 (2026-08-21)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0330-2026-08-21"></a></h2>
+<p>Phase 12, pour ce qui pouvait l’être. Le brief en annonçait quatre points : deux sont clos, un est avancé jusqu’à la limite de ce qu’un bureau permet, et le quatrième reste bloqué par le calendrier — c’est écrit plutôt que masqué.</p>
+<div class="section level4">
+<h4 id="un-champ-licence-et-surtout-un-champ-licence_from-0-33-0">Un champ <code>licence</code>, et surtout un champ <code>licence_from</code>
+<a class="anchor" aria-label="anchor" href="#un-champ-licence-et-surtout-un-champ-licence_from-0-33-0"></a></h4>
+<p>La licence vivait en texte libre dans <code>provider</code>. Deux constats de la semaine y ont mis fin : FORMS-T est annoncé CC-BY-NC sur THEIA et <code>cc-by-4.0</code> dans les métadonnées Zenodo ; <strong>SUFOSAT porte trois réponses pour la même donnée</strong> selon l’endroit où on la demande — 403 sur le bucket du catalogue STAC, CC-BY-NC sur la version supersédée, CC-BY 4.0 sur la courante. Une licence n’est pas un attribut du jeu mais du <strong>chemin d’acquisition</strong>.</p>
+<p>Le champ en porte donc deux : <code>licence</code>, et <code>licence_from</code> qui dit <strong>où elle a été lue</strong> — ou qu’elle a été décidée. C’est la distinction entre une licence lue et une licence supposée, et une chaîne de caractères ne la permettait pas.</p>
+<p>Sur les douze sources : <strong>six portent une licence vérifiée chez le producteur, six portent <code>NA</code></strong>. Rien n’a été deviné — la page produit de l’IGN est une application JavaScript illisible automatiquement, la politique de données EFFIS n’a pas été ouverte. Un trou visible vaut mieux qu’une supposition invisible.</p>
+<p><code><a href="../reference/fev_licences.html">fev_licences()</a></code> liste, et applique deux règles qui n’en sont pas une seule :</p>
+<ul><li>
+<strong>un jeu offert sous plusieurs licences</strong> → retenir la plus <strong>ouverte</strong> ;</li>
+<li>
+<strong>plusieurs jeux combinés</strong> → le résultat doit satisfaire les termes de chacun, donc une seule entrée non commerciale suffit à le rendre tel.</li>
+</ul><p>La première est un choix que le paquet fait, la seconde une conséquence qu’il <strong>rapporte</strong>. Ce n’est pas un conseil juridique et la fonction le dit.</p>
+</div>
+<div class="section level4">
+<h4 id="byram-et-van-wagner--le-pont-qui-manquait-depuis-la-phase-0-33-0">Byram et Van Wagner : le pont qui manquait depuis la phase 6<a class="anchor" aria-label="anchor" href="#byram-et-van-wagner--le-pont-qui-manquait-depuis-la-phase-0-33-0"></a></h4>
+<p><code><a href="../reference/fev_risk.html">fev_risk()</a></code> sort un nombre entre 0 et 1, et <strong>aucune courbe de dommage publiée ne prend un indice sans dimension</strong> — elles prennent des kW/m. C’est pourquoi rien ne pouvait se brancher dessus.</p>
+<p><code><a href="../reference/fev_byram_intensity.html">fev_byram_intensity()</a></code> fournit l’intensité à partir d’une charge de combustible et d’une vitesse de propagation. La charge, <code><a href="../reference/fev_fuel_lidar.html">fev_fuel_lidar()</a></code> la mesure en kg/m² depuis la phase 8.</p>
+<p><code><a href="../reference/fev_crown_fire.html">fev_crown_fire()</a></code> applique les deux critères de Van Wagner, qui consomment exactement ce que la campagne mesure : le <strong>CBH</strong> décide si un feu de surface monte, la <strong>CBD</strong> s’il s’y maintient.</p>
+<p>Formulations lues dans le PDF de Scott et Reinhardt (2001, RMRS-RP-29), pas dans un résumé — et vérifiées par <strong>les exemples chiffrés du papier</strong>, ce qui vaut mieux qu’une relecture d’équation :</p>
+<table class="table"><thead><tr><th>Exemple du papier</th>
+<th>Attendu</th>
+<th>Obtenu</th>
+</tr></thead><tbody><tr><td>CBH 3 m, FMC 100 %</td>
+<td>875 kW/m</td>
+<td><strong>875,2</strong></td>
+</tr><tr><td>CBD 0,2 kg/m³</td>
+<td>15,0 m/min</td>
+<td><strong>15,0</strong></td>
+</tr></tbody></table><p>C’est ce qui a départagé les deux écritures de l’équation 11 qui circulent, différant par la place de l’exposant 1,5 : une seule rend 875. Relevé au passage, une incohérence dans la source elle-même — la légende de sa figure 5 donne le flux massique critique en <code>kg m-2 min-1</code> là où son texte dit <code>sec-1</code>, et c’est le texte qui est juste.</p>
+<p>Appliqué aux mesures des Maures, l’écart est l’argument même de la campagne :</p>
+<table class="table"><thead><tr><th>CBH</th>
+<th>CBD</th>
+<th>Passage en cime</th>
+<th>Cime active</th>
+</tr></thead><tbody><tr><td>0,00 m</td>
+<td>0,07</td>
+<td><strong>0 kW/m</strong></td>
+<td>42,9 m/min</td>
+</tr><tr><td>2,33 m</td>
+<td>0,18</td>
+<td>599 kW/m</td>
+<td>16,7 m/min</td>
+</tr><tr><td>8,50 m</td>
+<td>0,21</td>
+<td>4 174 kW/m</td>
+<td>14,3 m/min</td>
+</tr></tbody></table><p>Une cellule à CBH nul passe en cime à n’importe quelle intensité.</p>
+</div>
+<div class="section level4">
+<h4 id="le-contrôle-qui-évite-de-manquer-loccasion-0-33-0">Le contrôle qui évite de manquer l’occasion<a class="anchor" aria-label="anchor" href="#le-contr%C3%B4le-qui-%C3%A9vite-de-manquer-loccasion-0-33-0"></a></h4>
+<p><code>fev_lidar_batch(fires = ...)</code> répond à la seule question qui décide du test structure → sévérité : les fenêtres terminées tombent-elles dans un feu, et ce feu est-il <strong>postérieur au vol</strong> ? Sur les Maures, six fenêtres dans un feu et aucune exploitable — le LiDAR date de mai 2025, les feux de 2021 et 2024, donc elles mesurent ce qui a repoussé. Affiché aussi en essai à blanc.</p>
+</div>
+<div class="section level4">
+<h4 id="ce-qui-nest-pas-fait-et-pourquoi-0-33-0">Ce qui n’est pas fait, et pourquoi<a class="anchor" aria-label="anchor" href="#ce-qui-nest-pas-fait-et-pourquoi-0-33-0"></a></h4>
+<p><strong>La fonction de dommage.</strong> Un seuil dit si un feu de cime est possible, pas ce qu’il détruit. Le calage demande des placettes de mortalité, et le brief refuse d’importer une courbe nord-américaine pour l’appliquer au chêne-liège — dont la particularité est que l’arbre survit quand le liège est détruit.</p>
+<p><strong>La campagne</strong>, 430 dalles restantes : de l’exécution, pas du développement.</p>
+<p><strong>Le test CBH → sévérité</strong> attend un feu postérieur à mai 2025. Aucune quantité de code ne lève une contrainte de calendrier.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.32.0" id="firexpovulnr-0320-2026-08-20">firexpovulnR 0.32.0 (2026-08-20)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0320-2026-08-20"></a></h2>
+<div class="section level4">
+<h4 id="sufosat--une-date-de-perturbation-par-pixel-enfin-0-32-0">SUFOSAT : une date de perturbation par pixel, enfin<a class="anchor" aria-label="anchor" href="#sufosat--une-date-de-perturbation-par-pixel-enfin-0-32-0"></a></h4>
+<p><code><a href="../reference/fev_fetch_sufosat.html">fev_fetch_sufosat()</a></code> lit la carte nationale des coupes rases produite par radar Sentinel-1, à 10 m, et la décode en année et jour de détection. C’est ce qui manquait au combustible depuis la phase 2 : la BD Forêt v2 a été bâtie entre 2007 et 2018 et ne sait rien de ce qui a été coupé ensuite. <code><a href="../reference/fev_validate.html">fev_validate()</a></code> pouvait chiffrer ce décalage, jamais le corriger.</p>
+<p>Accès libre malgré les apparences. Le produit est catalogué sur le STAC de THEIA, où <strong>ses assets répondent 403</strong> ; la même donnée est déposée sur Zenodo sous <strong>CC-BY 4.0</strong>, 336 Mo, sans compte. Et la version supersédée était CC-BY-NC quand la courante ne l’est pas : même fichier, trois réponses différentes sur le droit de le lire selon l’endroit où on le demande.</p>
+</div>
+<div class="section level4">
+<h4 id="il-ne-distingue-pas-un-incendie-dune-coupe-et-cest-mesuré-0-32-0">Il ne distingue pas un incendie d’une coupe, et c’est mesuré<a class="anchor" aria-label="anchor" href="#il-ne-distingue-pas-un-incendie-dune-coupe-et-cest-mesur%C3%A9-0-32-0"></a></h4>
+<p>Le radar voit la végétation disparaître, pas ce qui l’a fait disparaître. Sur l’emprise des Maures :</p>
+<table class="table"><thead><tr><th>Année</th>
+<th>Détecté</th>
+<th>Dans un périmètre d’incendie</th>
+</tr></thead><tbody><tr><td>2018-2020</td>
+<td>10 à 46 ha</td>
+<td>24 à 29 %</td>
+</tr><tr><td><strong>2021</strong></td>
+<td><strong>2 626 ha</strong></td>
+<td><strong>97 %</strong></td>
+</tr><tr><td><strong>2022</strong></td>
+<td><strong>669 ha</strong></td>
+<td><strong>90 %</strong></td>
+</tr><tr><td>2024</td>
+<td>140 ha</td>
+<td>1 %</td>
+</tr></tbody></table><p>Jour médian de détection en 2021 dans le périmètre : le <strong>246e, 3 septembre</strong>, quinze jours après la fin du sinistre — le délai de revisite et de confirmation de la méthode.</p>
+<p><code>fires</code> n’est donc pas un raffinement optionnel : sans lui, une correction de combustible enregistrerait un incendie comme une exploitation. Or les deux ne laissent pas le même combustible — une coupe emporte le peuplement, un feu sévère le laisse mort et debout. L’appel sans périmètres n’échoue pas mais <strong>avertit</strong>, la carte brute restant une chose légitime à vouloir.</p>
+<p>Sur les Maures : 3 314 ha retirés, 258 ha conservés, soit 1 à 73 ha par an — ce qui ressemble enfin à de la sylviculture.</p>
+</div>
+<div class="section level4">
+<h4 id="ce-que-la-même-propriété-fait-gagner-0-32-0">Ce que la même propriété fait gagner<a class="anchor" aria-label="anchor" href="#ce-que-la-m%C3%AAme-propri%C3%A9t%C3%A9-fait-gagner-0-32-0"></a></h4>
+<p>Les <strong>599 ha détectés dans le périmètre de 2021 au cours de 2022</strong> sont, eux, de vraies coupes : la récupération sanitaire après incendie. C’est un changement de combustible daté que rien d’autre dans ce paquet ne peut voir, et il touche directement la question de la valeur perdue — le bois brûlé qui part en exploitation n’est plus du combustible et n’est plus une perte sèche.</p>
+<p><code>fires</code> masque toutes les années, donc il faut ne passer que celles qu’on veut retirer si l’on tient à garder cette coupe-là. C’est documenté plutôt que deviné.</p>
+</div>
+<div class="section level4">
+<h4 id="deux-réserves-reprises-à-chaque-appel-0-32-0">Deux réserves reprises à chaque appel<a class="anchor" aria-label="anchor" href="#deux-r%C3%A9serves-reprises-%C3%A0-chaque-appel-0-32-0"></a></h4>
+<p>Le <strong>rappel est de 80,9 %</strong> : une coupe sur cinq est manquée, donc une absence de détection n’est pas une preuve d’absence de coupe. Et Zenodo ignorant les requêtes par plage — vérifié —, le fichier national se télécharge entier, une fois, avec le contrôle de taille et la purge d’un fichier tronqué introduits en 0.26.1.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.31.0" id="firexpovulnr-0310-2026-08-19">firexpovulnR 0.31.0 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0310-2026-08-19"></a></h2>
+<div class="section level4">
+<h4 id="la-sévérité-la-couche-que-le-paquet-navait-jamais-eue-0-31-0">La sévérité, la couche que le paquet n’avait jamais eue<a class="anchor" aria-label="anchor" href="#la-s%C3%A9v%C3%A9rit%C3%A9-la-couche-que-le-paquet-navait-jamais-eue-0-31-0"></a></h4>
+<p><code><a href="../reference/fev_fetch_severity.html">fev_fetch_severity()</a></code> calcule le dNBR Sentinel-2 avant/après sur un périmètre de feu. <code><a href="../reference/fev_validate.html">fev_validate()</a></code> n’a jamais connu que brûlé contre non brûlé — un résultat de <strong>l’aléa</strong>, qui dit où le feu est allé et non avec quelle force. C’est pourquoi il peut valider le combustible, le danger et l’exposition, et rien de la moitié vulnérabilité.</p>
+<p>Sur le Cannet-des-Maures, deux tuiles mosaïquées, <strong>663 000 cellules, couverture 100 %</strong> :</p>
+<table class="table"><thead><tr><th></th>
+<th>dNBR médian</th>
+</tr></thead><tbody><tr><td>dans le périmètre</td>
+<td><strong>0,576</strong></td>
+</tr><tr><td><strong>hors périmètre</strong></td>
+<td><strong>0,000</strong></td>
+</tr></tbody></table><p>Répartition : 4,9 % non brûlé — les îlots épargnés —, 12,9 % faible, 17,6 % modéré bas, 22,7 % modéré haut, <strong>41,9 % sévère</strong>.</p>
+</div>
+<div class="section level4">
+<h4 id="les-portails-français-ne-servent-pas-larchive-quils-annoncent-0-31-0">Les portails français ne servent pas l’archive qu’ils annoncent<a class="anchor" aria-label="anchor" href="#les-portails-fran%C3%A7ais-ne-servent-pas-larchive-quils-annoncent-0-31-0"></a></h4>
+<p>Les deux catalogues STAC ont été énumérés le 2026-08-19. Sur les Maures, GEODES ne sert THEIA L2A que depuis <strong>2025</strong>, L3A depuis 2024, PEPS L1C depuis 2023 — alors que les collections <strong>annoncent 2015 à 2026</strong>. C’est l’étendue nominale du produit, pas ce qui est détenu. Rien n’atteint le feu de 2021.</p>
+<p>Le miroir Sentinel-2 L2A d’Element 84 sur AWS, lui, est complet depuis 2015, sans compte, et en COG — donc lisible par fenêtre. Aucune dépendance nouvelle : la recherche passe en GET et <code>yaml</code>, déjà importé, lit le JSON qui en est un sous-ensemble.</p>
+</div>
+<div class="section level4">
+<h4 id="trois-façons-dobtenir-une-carte-plausible-et-un-chiffre-faux-0-31-0">Trois façons d’obtenir une carte plausible et un chiffre faux<a class="anchor" aria-label="anchor" href="#trois-fa%C3%A7ons-dobtenir-une-carte-plausible-et-un-chiffre-faux-0-31-0"></a></h4>
+<p>Aucune des trois n’a provoqué d’erreur. Chacune rendait une carte de sévérité qu’un lecteur aurait acceptée.</p>
+<ol style="list-style-type: decimal"><li>
+<strong>Le feu brûle encore.</strong> La marge comptée depuis le <em>début</em> a choisi une image du 19 août 2021 — trois jours après l’allumage et, d’après EFFIS, <strong>deux heures avant la fin du sinistre</strong>. La majeure partie du périmètre n’avait pas brûlé. La marge se compte désormais depuis la fin, lue dans <code>FIREDATE</code> et <code>FINALDATE</code> quand elles sont là.</li>
+<li>
+<strong>La scène n’atteint pas la zone.</strong> La candidate la moins nuageuse était un bord de fauchée couvrant <strong>1 % de l’emprise</strong>, publiée à <strong>0,0 % de nuages</strong>. La couverture nuageuse ne dit rien de la couverture spatiale.</li>
+<li>
+<strong>Le contrôle de couverture mesurait la mauvaise chose.</strong> Il évaluait la fraction valide du raster <em>rendu</em> et non de l’emprise <em>demandée</em> — or <code>crop</code> rétrécit le résultat. Une scène portant <strong>46,6 %</strong> du feu affichait 100 %. Le Cannet-des-Maures chevauche la limite de la tuile 31TGH : chaque passe est mosaïquée, chaque tuile projetée sur une grille construite d’avance, et la couverture se mesure contre l’emprise.</li>
+</ol><p>Le contrôle — hors du périmètre, la différence doit revenir à zéro — n’est plus un conseil dans la documentation mais le <strong>critère de sélection</strong> de la scène d’avant : chaque candidate est différenciée puis notée dessus.</p>
+</div>
+<div class="section level4">
+<h4 id="une-note-consigne-ce-qui-a-été-essayé-et-na-pas-marché-0-31-0">Une note consigne ce qui a été essayé et n’a pas marché<a class="anchor" aria-label="anchor" href="#une-note-consigne-ce-qui-a-%C3%A9t%C3%A9-essay%C3%A9-et-na-pas-march%C3%A9-0-31-0"></a></h4>
+<p><code>specs/note-sources-2026-08-20.md</code>. Une demi-journée d’essais qui ne laissent aucune trace dans le code, et que quelqu’un referait sans elle :</p>
+<ul><li>les <strong>quatre produits forêt de THEIA</strong> — SUFOSAT, FORMS-T, FORMSpoT, GeoGEDI — sont catalogués publiquement en STAC et leurs assets répondent <strong>403</strong> sur trois buckets distincts. Les clés S3 essayées donnent <code>InvalidAccessKeyId</code>, vérifié hors GDAL avec une signature SigV4 écrite à la main ;</li>
+<li>
+<strong>GEODES et THEIA sont des archives glissantes</strong> : rien avant 2023-2025 sur les Maures, quand les collections annoncent 2015. L’étendue temporelle d’une collection STAC est celle du produit, pas du stock ;</li>
+<li>la <strong>requête bornée sur COPC distant fonctionne et n’apporte rien</strong> — pas plus rapide que le téléchargement complet, et non déterministe à neuf points près. Le gain annoncé d’un facteur cinquante portait sur les octets, qui n’ont jamais été la contrainte : l’inversion l’est.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="ce-que-la-campagne-lidar-ne-pourra-pas-tester-0-31-0">Ce que la campagne LiDAR ne pourra pas tester<a class="anchor" aria-label="anchor" href="#ce-que-la-campagne-lidar-ne-pourra-pas-tester-0-31-0"></a></h4>
+<p>5 fenêtres sur 32 recoupent les feux de 2021, soit 27,5 ha. Mais le LiDAR HD a été acquis le <strong>1er mai 2025</strong>, quatre ans après : prédire la sévérité de 2021 à partir d’une structure mesurée en 2025 serait prédire une cause par son effet. Le test CBH → sévérité attendra un feu postérieur à l’acquisition.</p>
+<p>Ces 440 cellules disent en revanche où en est le combustible quatre ans après : hauteur à 0,76 de la valeur hors feu, mais <strong>hauteur des buissons à 0,07</strong> et charge de houppier à <strong>0,14</strong>. Les tiges sont debout et ne portent presque rien.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.30.0" id="firexpovulnr-0300-2026-08-19">firexpovulnR 0.30.0 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0300-2026-08-19"></a></h2>
+<div class="section level4">
+<h4 id="la-carte-de-risque-publiée-était-celle-du-décembre-0-30-0">La carte de risque publiée était celle du 31 décembre<a class="anchor" aria-label="anchor" href="#la-carte-de-risque-publi%C3%A9e-%C3%A9tait-celle-du-d%C3%A9cembre-0-30-0"></a></h4>
+<p>Trouvé en voulant changer la normalisation de la vignette des Maures, et bien plus grave que ce que je cherchais. <code>dernier</code> prenait la <strong>dernière couche</strong> de la série :</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dernier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">[[</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">nlyr</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span></code></pre></div>
+<p>La carte publiée était donc celle du <strong>31 décembre 2021</strong>, FWI médian <strong>0,9</strong>, sous une page qui raconte l’incendie du 16 août 2021, FWI médian <strong>84,3</strong>.</p>
+<p>Rien ne pouvait le signaler. La normalisation en percentile reclasse ce qu’on lui donne, si bas soit-il, donc la carte restait contrastée et plausible ; et la provenance enregistrait fidèlement une date que personne ne regardait. Les chiffres de l’article passent de 0,32 et facteur 6,5 à <strong>0,68 et facteur 13,7</strong>.</p>
+</div>
+<div class="section level4">
+<h4 id="ce-défaut-invalidait-le-diagnostic-de-la-0-30-0">Ce défaut invalidait le diagnostic de la 0.29.0<a class="anchor" aria-label="anchor" href="#ce-d%C3%A9faut-invalidait-le-diagnostic-de-la-0-30-0"></a></h4>
+<p>La corrélation de 0,995 entre le composite et sa couche de vulnérabilité, qui a motivé toute la descente d’échelle, était mesurée sur ce jour d’hiver. Sur le 16 août, les quatre chaînes donnent :</p>
+<table class="table"><thead><tr><th>Chaîne</th>
+<th>écart-type danger</th>
+<th>cor(R, danger)</th>
+<th>cor(R, vuln)</th>
+</tr></thead><tbody><tr><td><strong>grossière + percentile</strong></td>
+<td>0,308</td>
+<td><strong>0,879</strong></td>
+<td>0,833</td>
+</tr><tr><td>grossière + FWI brut minmax</td>
+<td>0,237</td>
+<td>0,699</td>
+<td>0,769</td>
+</tr><tr><td>descendue + FWI brut minmax</td>
+<td>0,249</td>
+<td>0,801</td>
+<td>0,827</td>
+</tr><tr><td>descendue + percentile</td>
+<td>0,003</td>
+<td>0,479</td>
+<td>1,000</td>
+</tr></tbody></table><p><strong>Le percentile n’aplatit pas le danger, il le structure</strong>, et la vignette le garde. La 0.29.0 recommandait <code>minmax</code> sur la foi d’une mesure contaminée ; la documentation est corrigée.</p>
+<p>La raison pour laquelle la descente d’échelle dégrade la chaîne au percentile est structurelle : un gradient adiabatique est une transformation <strong>monotone</strong>, et décaler une série entière ne change presque pas le rang d’un jour à l’intérieur d’elle-même. Chaque zone héritant d’une histoire déterministe de sa maille parente, toutes classent le 16 août au même rang. Ce que la chaîne grossière possède — des climatologies réellement distinctes d’une maille à l’autre — est de l’information sur le climat local, et la 0.29.0 la qualifiait d’artefact à tort.</p>
+<p>Les deux chaînes répondent à deux questions : <em>« où est-ce le pire aujourd’hui »</em> veut un FWI brut descendu en échelle, <em>« où aujourd’hui est-il le plus inhabituel »</em> veut un percentile et n’a que faire d’une correction monotone.</p>
+</div>
+<div class="section level4">
+<h4 id="le-vent-et-la-pluie-les-deux-que-la-laissait-passer-0-30-0">Le vent et la pluie, les deux que la 0.29.0 laissait passer<a class="anchor" aria-label="anchor" href="#le-vent-et-la-pluie-les-deux-que-la-laissait-passer-0-30-0"></a></h4>
+<p><code><a href="../reference/fev_curvature.html">fev_curvature()</a></code> implémente la pondération de terrain de MicroMet (Liston &amp; Elder 2006). Formulation <strong>vérifiée sur une implémentation indépendante</strong> et non citée de mémoire, la page de l’éditeur étant payante. Seule la moitié sans direction est applicable : le terme de pente exige une direction de vent que ce paquet ne récupère pas. Sur les Maures, multiplicateur 0,82 à 1,16.</p>
+<p><code><a href="../reference/fev_rain_gradient.html">fev_rain_gradient()</a></code> ajuste le gradient orographique <strong>sur les points de la réanalyse eux-mêmes</strong> plutôt que d’importer les coefficients mensuels de MicroMet, dérivés de l’ouest américain. Sur les Maures, 20 points couvrant 464 m : <strong>R² = 0,087, p = 0,21</strong>, et la correction est <strong>refusée</strong>. Ce n’est pas un échec mais le comportement voulu — un gradient ajusté sur ce bruit aurait voyagé dans la provenance sous les apparences d’une mesure.</p>
+</div>
+<div class="section level4">
+<h4 id="la-vignette-dit-maintenant-quel-terme-fait-la-carte-0-30-0">La vignette dit maintenant quel terme fait la carte<a class="anchor" aria-label="anchor" href="#la-vignette-dit-maintenant-quel-terme-fait-la-carte-0-30-0"></a></h4>
+<p>Trois lignes de code qui auraient montré le défaut ci-dessus dès sa première publication, et le tableau des quatre chaînes. Un indice composite peut être dominé par une seule de ses composantes sans que rien ne le montre : la carte reste plausible, les couleurs restent contrastées.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.29.0" id="firexpovulnr-0290-2026-08-19">firexpovulnR 0.29.0 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0290-2026-08-19"></a></h2>
+<div class="section level4">
+<h4 id="le-terme-danger-descend-en-échelle-et-la-mesure-déplace-la-conclusion-0-29-0">Le terme danger descend en échelle, et la mesure déplace la conclusion<a class="anchor" aria-label="anchor" href="#le-terme-danger-descend-en-%C3%A9chelle-et-la-mesure-d%C3%A9place-la-conclusion-0-29-0"></a></h4>
+<p><code><a href="../reference/fev_topo_zones.html">fev_topo_zones()</a></code>, <code><a href="../reference/fev_downscale_weather.html">fev_downscale_weather()</a></code> et <code><a href="../reference/fev_fwi_zonal.html">fev_fwi_zonal()</a></code> corrigent la météo par le relief avant que cffdrs ne tourne. C’est la contrainte qui décide toute la conception : FFMC, DMC et DC sont <strong>cumulatifs et non linéaires</strong>, donc corriger un FWI après coup corrige un nombre qui n’a jamais été calculé sur la météo corrigée.</p>
+<p>Ce qui est corrigé, et ce qui ne l’est délibérément pas :</p>
+<table class="table"><colgroup><col width="50%"><col width="50%"></colgroup><tbody><tr><td>température</td>
+<td>oui — gradient adiabatique, la seule correction avec une constante de manuel</td>
+</tr><tr><td>humidité</td>
+<td>oui — en découle à point de rosée constant, thermodynamique et non relation ajustée</td>
+</tr><tr><td><strong>vent</strong></td>
+<td>
+<strong>non</strong> — l’exposition topographique est réelle et sans calibration défendable ici. ISI garde le signal grossier.</td>
+</tr><tr><td><strong>pluie</strong></td>
+<td>
+<strong>non</strong> — l’effet orographique est réel et demande un gradient local que personne n’a. DMC et DC gardent le signal grossier.</td>
+</tr></tbody></table></div>
+<div class="section level4">
+<h4 id="regrouper-par-altitude-seule-aplatissait-le-champ-0-29-0">Regrouper par altitude seule aplatissait le champ<a class="anchor" aria-label="anchor" href="#regrouper-par-altitude-seule-aplatissait-le-champ-0-29-0"></a></h4>
+<p>Première version : bandes d’altitude uniquement. Sur les Maures, <strong>8 valeurs distinctes contre 17 pour la chaîne grossière</strong> — la descente d’échelle avait <em>réduit</em> la variation, en remplaçant la variation horizontale des 20 points ERA5 par la variation verticale des 8 bandes au lieu de les cumuler.</p>
+<p>Les zones croisent désormais les bandes avec le <strong>territoire de chaque point</strong> : 77 zones sur les Maures, et le rapport d’échelle de <code><a href="../reference/fev_align.html">fev_align()</a></code> passe de 141 000 cellules fines par maille grossière à <strong>1,05</strong>. Des zones construites sans points restent possibles et avertissent.</p>
+</div>
+<div class="section level4">
+<h4 id="ce-nétait-pas-la-résolution-cétait-la-normalisation-0-29-0">Ce n’était pas la résolution, c’était la normalisation<a class="anchor" aria-label="anchor" href="#ce-n%C3%A9tait-pas-la-r%C3%A9solution-c%C3%A9tait-la-normalisation-0-29-0"></a></h4>
+<p>Décomposition du composite sur 597 840 cellules, 16 août 2021 :</p>
+<table class="table"><thead><tr><th>Chaîne</th>
+<th>écart-type danger</th>
+<th>cor(R, danger)</th>
+<th>cor(R, vuln)</th>
+</tr></thead><tbody><tr><td>grossière + percentile</td>
+<td>0,032</td>
+<td>0,542</td>
+<td><strong>0,995</strong></td>
+</tr><tr><td>descendue + percentile</td>
+<td>0,0006</td>
+<td>0,380</td>
+<td><strong>1,000</strong></td>
+</tr><tr><td>grossière + FWI brut</td>
+<td>0,237</td>
+<td>0,699</td>
+<td>0,769</td>
+</tr><tr><td><strong>descendue + FWI brut</strong></td>
+<td><strong>0,265</strong></td>
+<td><strong>0,807</strong></td>
+<td>0,808</td>
+</tr></tbody></table><p>Les deux premières lignes disent que la descente d’échelle rend le composite <strong>pire</strong>. La cause n’est pas la descente d’échelle.</p>
+<p><code><a href="../reference/fev_fwi_percentile.html">fev_fwi_percentile()</a></code> classe chaque cellule contre <strong>sa propre</strong> histoire : c’est une normalisation temporelle, qui supprime le contraste spatial par construction. Un endroit toujours chaud et un endroit toujours frais ressortent tous deux près de 1 un jour extrême. Le peu de variation spatiale qui y survivait dans la chaîne grossière était un <strong>artefact</strong> — des mailles ERA5 d’histoires différentes de part et d’autre de leurs frontières — et donner à chaque zone une série cohérente le supprime aussi.</p>
+<p>Sur le FWI brut la descente d’échelle fait ce qu’on attendait : <code>cor(R, danger)</code> de 0,699 à <strong>0,807</strong>, et le composite cesse d’être sa propre couche d’exposition. L’interaction est documentée avec ce tableau et avertit une fois par session.</p>
+<p><strong>La vignette des Maures utilise <code>normalise = "percentile"</code></strong> : l’exemple publié produit donc une carte de risque qui est sa carte d’exposition. Le percentile n’est pas fautif — il répond à <em>« à quel point aujourd’hui est-il inhabituel ici »</em> — mais ce n’est pas <em>« où est-ce le pire aujourd’hui »</em>, et c’est la seconde question que le composite prétend cartographier. La vignette n’est pas modifiée ici : changer la normalisation change les résultats publiés.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.28.0" id="firexpovulnr-0280-2026-08-19">firexpovulnR 0.28.0 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0280-2026-08-19"></a></h2>
+<p>Phase 11 : les quatre manques relevés en relisant les modules exposition et vulnérabilité. Spec dans <code>specs/brief-phase11-exposition-vulnerabilite.md</code>, écrite avant le code.</p>
+<div class="section level4">
+<h4 id="le-rayon-dexposition-sajuste-enfin-sur-les-feux-locaux-0-28-0">Le rayon d’exposition s’ajuste enfin sur les feux locaux<a class="anchor" aria-label="anchor" href="#le-rayon-dexposition-sajuste-enfin-sur-les-feux-locaux-0-28-0"></a></h4>
+<p><code><a href="../reference/fev_exposure_calibrate.html">fev_exposure_calibrate()</a></code> balaie les rayons et note chacun à l’AUC contre les feux observés. Tout existait déjà — <code>fev_auc()</code>, <code><a href="../reference/fev_fetch_burnt.html">fev_fetch_burnt()</a></code>, le contrôle de biais temporel ; il manquait le câblage. Sur les Maures :</p>
+<table class="table"><thead><tr><th>Rayon</th>
+<th>75</th>
+<th>150</th>
+<th>300</th>
+<th><strong>500</strong></th>
+<th>800</th>
+<th>1200</th>
+<th>2000</th>
+</tr></thead><tbody><tr><td>AUC</td>
+<td><strong>0,573</strong></td>
+<td>0,563</td>
+<td>0,534</td>
+<td><strong>0,496</strong></td>
+<td>0,443</td>
+<td>0,383</td>
+<td>0,279</td>
+</tr></tbody></table><p><strong>Le défaut canadien de 500 m fait exactement le hasard sur ce massif.</strong> Le résultat est un <em>ajustement</em>, jamais une validation : rien n’est mis de côté, et la fonction le dit à chaque appel comme dans la provenance.</p>
+<p>Deux gardes trouvés en testant, pas en concevant :</p>
+<ul><li>
+<strong>Une AUC de 0,500 issue d’un score constant est refusée.</strong> Une source couvrant les seules formations boisées vaut 1 dans ses polygones et <code>NA</code> dehors, jamais 0 : tout anneau qui répond répond plein. L’AUC vaut alors exactement 0,5, ce qui se lit « aucun pouvoir discriminant » et signifie « aucune mesure » — et 0,5 est un nombre parfaitement publiable.</li>
+<li>
+<strong>Un optimum en bord de balayage est signalé comme tel.</strong> Sur les Maures l’AUC décroît jusqu’à 75 m, le plus petit rayon que la résolution autorise : le meilleur rayon nommable est le plus petit essayé, et le vrai peut être en dessous, hors de portée tant que la grille n’est pas plus fine.</li>
+</ul></div>
+<div class="section level4">
+<h4 id="des-enjeux-et-linterface-habitat-forêt-0-28-0">Des enjeux, et l’interface habitat-forêt<a class="anchor" aria-label="anchor" href="#des-enjeux-et-linterface-habitat-for%C3%AAt-0-28-0"></a></h4>
+<p><code><a href="../reference/fev_fetch_ghsl.html">fev_fetch_ghsl()</a></code> — GHS-POP, 100 m, mondial, sans compte. La vulnérabilité avait été le seul module sans acquisition depuis la phase 6.</p>
+<p>La grille de tuilage a été <strong>mesurée sur deux tuiles</strong>, pas lue : les tuiles font 1 000 000 m de côté en Mollweide et l’origine en x porte un décalage constant de −41 000 m qu’aucune fiche produit n’énonce. Si le millésime change, le code échoue bruyamment au lieu de deviner.</p>
+<p><strong>Reprojeter un décompte en bilinéaire inventait 5 % d’habitants</strong> : 35 039 résidents des Maures devenaient 36 783. <code>method = "sum"</code> conserve le total à 0,00 %. Une dérive de 5 % à chaque reprojection est le genre d’erreur qui survit jusqu’à la publication parce que le nombre reste plausible.</p>
+<p><code><a href="../reference/fev_wui.html">fev_wui()</a></code> calcule l’interface que le brief, la table WorldCover et <code><a href="../reference/fev_risk.html">fev_risk()</a></code> désignaient tous les trois sans que rien ne la produise. Définition par <strong>proximité</strong>, pas par densité de logements — c’est ce que les entrées supportent réellement, et la documentation dit ce que cela coûte.</p>
+</div>
+<div class="section level4">
+<h4 id="lexposition-devient-anisotrope-sans-cesser-dêtre-vérifiable-0-28-0">L’exposition devient anisotrope, sans cesser d’être vérifiable<a class="anchor" aria-label="anchor" href="#lexposition-devient-anisotrope-sans-cesser-d%C3%AAtre-v%C3%A9rifiable-0-28-0"></a></h4>
+<p><code><a href="../reference/fev_exposure_aniso.html">fev_exposure_aniso()</a></code> découpe l’anneau en secteurs et les recombine avec des poids de vent et de pente. <strong>L’invariant qui tient la construction : sans vent ni pente, on retrouve <code><a href="../reference/fev_exposure.html">fev_exposure()</a></code> à 5,5 × 10⁻¹⁶ près</strong>, à 4, 8 et 16 secteurs — testé. Les secteurs ne contiennent pas le même nombre de cellules, donc les pondérer également aurait produit en silence une autre métrique.</p>
+<p>Vérifié dans les deux sens : vent d’ouest 0,383 → 0,818, vent d’est → 0,045 ; pente descendant vers le combustible 0,383 → 0,750, l’inverse → 0,084. Le terrain plat ne reçoit aucune anisotropie quelle que soit la concentration, parce que le multiplicateur est <code>tan(pente)</code> — structurel, pas une règle ajoutée pour le cas plat.</p>
+<p>Ce n’est <strong>pas la métrique publiée</strong> : Beverly la définit isotrope, Khan l’a validée isotrope. Hors défaut, sans validation propre, et les deux concentrations sont des jugements d’analyse inscrits dans la provenance, comme les poids de <code><a href="../reference/fev_vuln_stack.html">fev_vuln_stack()</a></code>.</p>
+<p><code><a href="../reference/fev_fetch_dem.html">fev_fetch_dem()</a></code> importe le Copernicus DEM GLO-30 pour l’alimenter — un modèle de <strong>surface</strong>, donc sous couvert fermé la pente est celle de la canopée.</p>
+</div>
+<div class="section level4">
+<h4 id="le-combustible-mesuré-entre-enfin-dans-lexposition-0-28-0">Le combustible mesuré entre enfin dans l’exposition<a class="anchor" aria-label="anchor" href="#le-combustible-mesur%C3%A9-entre-enfin-dans-lexposition-0-28-0"></a></h4>
+<p><code><a href="../reference/fev_fuel_load_weight.html">fev_fuel_load_weight()</a></code> transforme une métrique continue du registre LiDAR en couche de disponibilité, consommée par le chemin gradué qui existait depuis la phase 6. Le plus petit ajout des quatre : les deux moitiés étaient là, rien ne les joignait.</p>
+<p>Ce qui le rend nécessaire est mesuré : dans la seule classe FF1G06-06, 520 cellules, la charge de houppier va de 0,05 à 1,98 kg/m². Un masque binaire les compte à l’identique.</p>
+<p><code>NA</code> reste <code>NA</code> : une campagne couvrant 2 km² des Maures ne doit pas étendre son autorité sur les 300 autres.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.27.0" id="firexpovulnr-0270-2026-08-19">firexpovulnR 0.27.0 (2026-08-19)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0270-2026-08-19"></a></h2>
 <div class="section level4">
@@ -127,7 +508,7 @@
 <div class="section level4">
 <h4 id="huit-dalles-inversées-puis-jetées-sur-une-extension-de-fichier-0-25-1">Huit dalles inversées puis jetées, sur une extension de fichier<a class="anchor" aria-label="anchor" href="#huit-dalles-invers%C3%A9es-puis-jet%C3%A9es-sur-une-extension-de-fichier-0-25-1"></a></h4>
 <p>Défaut trouvé en lançant la campagne, pas en la testant. <code><a href="../reference/fev_lidar_batch.html">fev_lidar_batch()</a></code> écrivait chaque raster sous un nom temporaire avant de le renommer — la précaution est bonne, une écriture interrompue ne doit jamais passer pour une dalle finie — mais le nom était construit ainsi :</p>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">tmp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="va">dest</span>, <span class="st">".part"</span><span class="op">)</span>   <span class="co"># ..._fuel.tif.part</span></span></code></pre></div>
 <p><code><a href="https://rspatial.github.io/terra/reference/writeRaster.html" class="external-link">terra::writeRaster()</a></code> déduit son pilote de l’extension, et sur <code>.part</code> il refuse net : <em>« cannot guess file type from filename »</em>. Chaque dalle était donc téléchargée, fenêtrée, inversée pendant deux minutes — <strong>puis jetée à la dernière ligne</strong>. Le pire endroit possible pour échouer : tout le coût payé, rien de gardé.</p>
 <p>Le suffixe passe <strong>avant</strong> l’extension : <code>_fuel.part.tif</code>. Le pilote redevient déductible, et la reprise ne peut pas s’y tromper puisqu’elle teste <code>_fuel.tif</code> au nom exact.</p>
@@ -184,8 +565,8 @@
 <div class="section level4">
 <h4 id="un-script-prêt-à-lancer-0-24-0">Un script prêt à lancer<a class="anchor" aria-label="anchor" href="#un-script-pr%C3%AAt-%C3%A0-lancer-0-24-0"></a></h4>
 <p><code>inst/scripts/batch_lidar.R</code>, exécutable, avec <code>--dry-run</code> pour voir le plan avant d’engager quoi que ce soit :</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--dry-run</span></span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--max</span><span class="op">=</span>8</span></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--dry-run</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">Rscript</span> batch_lidar.R maures.gpkg out/lidar <span class="at">--window</span><span class="op">=</span>250 <span class="at">--max</span><span class="op">=</span>8</span></code></pre></div>
 <p>Relancer la même commande le lendemain reprend où l’on s’était arrêté.</p>
 </div>
 </div>
@@ -214,7 +595,7 @@
 <code>fev_exposure(trim = )</code> — le cadre blanc de 500 m disparaît<a class="anchor" aria-label="anchor" href="#fev_exposuretrim----le-cadre-blanc-de-m-dispara%C3%AEt-0-22-0"></a></h4>
 <p>L’anneau extérieur d’un résultat focal n’est pas une mesure : c’est la fenêtre qui déborde du bord de la donnée. Avec <code>na_rm = FALSE</code> il revient vide, et c’est le cadre blanc de toutes les cartes d’exposition publiées jusqu’ici.</p>
 <p>Le paquet donnait déjà la moitié du remède, dans le message <code>fev_extent_too_small</code> : calculer sur plus grand qu’on ne publie. <code>trim</code> fournit l’autre moitié.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_source.html">fev_fuel_source</a></span><span class="op">(</span><span class="va">bdforet</span>, aoi <span class="op">=</span> <span class="fu">sf</span><span class="fu">::</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/geos_unary.html" class="external-link">st_buffer</a></span><span class="op">(</span><span class="va">study</span>, <span class="fl">500</span><span class="op">)</span>, <span class="va">...</span><span class="op">)</span></span>
 <span><span class="va">expo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_exposure.html">fev_exposure</a></span><span class="op">(</span><span class="va">fuel</span>, radius <span class="op">=</span> <span class="fl">500</span>, trim <span class="op">=</span> <span class="va">study</span><span class="op">)</span></span></code></pre></div>
 <p>Mesuré sur l’emprise des Maures : <strong>9,3 % de cellules vides sans recadrage, 0,3 % avec</strong>. Le cadre est toujours calculé — il le faut, pour que l’intérieur soit juste — puis coupé au lieu d’être publié. Les valeurs conservées sont exactement celles qui avaient été calculées, un test le vérifie cellule par cellule.</p>
@@ -280,7 +661,7 @@
 <code>fev_fuel_attach()</code> garde les deux, au lieu d’en sacrifier une<a class="anchor" aria-label="anchor" href="#fev_fuel_attach-garde-les-deux-au-lieu-den-sacrifier-une-0-20-0"></a></h4>
 <p>Réponse à la conséquence livrée en 0.19.0 : WorldCover placé au-dessus prend <strong>tous</strong> les pixels, et l’essence et le taux de couvert de la BD Forêt disparaissent avec elle.</p>
 <p>La fonction accepte désormais une source <strong>catégorielle</strong> en second argument, et non plus seulement un registre continu. Ce qu’elle porte décide où elle atterrit — des métriques continues vont au registre continu, une couche de classes devient une couche nommée du registre catégoriel. Dans les deux cas elle <strong>n’arbitre aucun pixel</strong>, ce qui est toute la différence avec <code><a href="../reference/fev_fuel_merge.html">fev_fuel_merge()</a></code>.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_merge.html">fev_fuel_merge</a></span><span class="op">(</span><span class="va">bdforet</span>, <span class="va">worldcover</span><span class="op">)</span>   <span class="co"># WorldCover décide `class`</span></span>
 <span><span class="va">fuel</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_attach.html">fev_fuel_attach</a></span><span class="op">(</span><span class="va">fuel</span>, <span class="va">bdforet</span><span class="op">)</span>        <span class="co"># l'essence survit à côté</span></span></code></pre></div>
 <p>Mesuré sur les Maures : <code>class</code> reste à WorldCover au 10 m, et la couche <code>bdforet_v2</code> attachée conserve <strong>27 classes TFV sur 81,1 % des cellules cartographiées</strong> — dont le chêne vert, <code>FF1G06-06</code>, sur 1 520 475 cellules, que la nomenclature WorldCover ne sait pas exprimer.</p>

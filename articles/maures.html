@@ -20,7 +20,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.27.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.35.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -510,14 +510,15 @@ compte d’un facteur quatre.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="trente-deux-fenêtres-à-travers-le-massif-et-ce-quelles-disent-des-sources">Trente-deux fenêtres à travers le massif, et ce qu’elles disent des
-sources<a class="anchor" aria-label="anchor" href="#trente-deux-fen%C3%AAtres-%C3%A0-travers-le-massif-et-ce-quelles-disent-des-sources"></a>
+<h2 id="quarante-huit-fenêtres-à-travers-le-massif-et-ce-quelles-disent-des-sources">Quarante-huit fenêtres à travers le massif, et ce qu’elles disent
+des sources<a class="anchor" aria-label="anchor" href="#quarante-huit-fen%C3%AAtres-%C3%A0-travers-le-massif-et-ce-quelles-disent-des-sources"></a>
 </h2>
 <p>Tout ce qui précède repose sur <strong>deux placettes</strong>. Deux,
 c’est assez pour montrer qu’un écart existe ; ce n’est pas assez pour
 dire ce qu’il vaut ailleurs. La campagne décrite ici porte la même
-question sur trente-deux fenêtres réparties sur tout le massif, et elle
-change une des conclusions qu’on aurait tirées de deux.</p>
+question sur quarante-huit fenêtres réparties sur tout le massif — et la
+réponse n’est pas celle que les premières versions de cet article
+annonçaient.</p>
 <div class="section level3">
 <h3 id="comment-les-fenêtres-ont-été-choisies">Comment les fenêtres ont été choisies<a class="anchor" aria-label="anchor" href="#comment-les-fen%C3%AAtres-ont-%C3%A9t%C3%A9-choisies"></a>
 </h3>
@@ -526,271 +527,339 @@ reprise, et découpe dans chacune un carré centré de 250 m — une dalle
 entière prend des heures, huit fenêtres échantillonnent huit contextes
 pour une fraction du coût.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/fev_lidar_batch.html">fev_lidar_batch</a></span><span class="op">(</span><span class="va">zone</span>, <span class="st">"out/lidar"</span>, window <span class="op">=</span> <span class="fl">250</span>, max_tiles <span class="op">=</span> <span class="fl">8</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/fev_lidar_batch.html">fev_lidar_batch</a></span><span class="op">(</span><span class="va">zone</span>, <span class="st">"out/lidar"</span>, window <span class="op">=</span> <span class="fl">250</span>, max_tiles <span class="op">=</span> <span class="fl">8</span>, fires <span class="op">=</span> <span class="va">feux</span><span class="op">)</span></span></code></pre></div>
 <p>Deux précautions décident de ce que vaut l’échantillon, et aucune
 n’est cosmétique.</p>
 <p><strong>L’ordre.</strong> L’index des dalles est en ordre spatial.
 Prendre les huit premières donne huit voisines dans un coin du massif :
 un seul contexte échantillonné huit fois. Le défaut
 <code>spread = TRUE</code> parcourt les dalles par traversée du plus
-éloigné — chaque dalle retenue est la plus lointaine de toutes les
-précédentes. Sur les Maures, l’écart minimal entre huit dalles passe de
-1,0 à 10,0 km. La traversée est déterministe, donc une reprise poursuit
-la répartition : huit ce soir et huit demain donnent seize dalles
-réparties, pas deux grappes.</p>
+éloigné. Sur les Maures, l’écart minimal entre huit dalles passe de 1,0
+à 10,0 km. La traversée est déterministe, donc une reprise poursuit la
+répartition.</p>
 <p><strong>L’emprise.</strong> L’index retient toute dalle qui
 <em>intersecte</em> la zone d’étude. Un carré centré sur une telle dalle
 peut donc tomber entièrement en dehors. C’est arrivé, et massivement :
-sur les vingt-quatre premières fenêtres d’une campagne sur les Maures,
-<strong>treize étaient hors de la zone d’étude</strong> — inversées au
-prix fort, indiscernables des autres dans le manifeste, et décrivant un
-terrain que personne n’avait demandé. La fonction centre désormais le
-carré sur l’intersection dalle × emprise, rétrécie d’une demi-fenêtre :
-ce qui survit à ce rétrécissement est exactement l’endroit où un carré
-tient tout entier dans la zone. Sur les Maures, 43 dalles des 505 sont
-écartées pour cette raison, et elles sont annoncées, jamais retirées en
+sur les vingt-quatre premières fenêtres, <strong>treize étaient hors de
+la zone d’étude</strong> — inversées au prix fort, indiscernables des
+autres dans le manifeste. La fonction centre désormais le carré sur
+l’intersection dalle × emprise rétrécie d’une demi-fenêtre, et 43 dalles
+des 505 sont écartées pour cette raison, annoncées et non retirées en
 silence.</p>
 </div>
 <div class="section level3">
 <h3 id="la-confrontation-cellule-par-cellule">La confrontation, cellule par cellule<a class="anchor" aria-label="anchor" href="#la-confrontation-cellule-par-cellule"></a>
 </h3>
-<p>Chaque cellule de 25 m reçoit sa classe BD Forêt par son centre — la
-règle utilisée partout ailleurs dans le paquet — puis on compare, dans
-chaque classe, ce que le LiDAR a mesuré. Trente-deux fenêtres, <strong>3
-110 cellules</strong>.</p>
+<p>Chaque cellule de 25 m reçoit sa classe BD Forêt par son centre, puis
+on compare dans chaque classe ce que le LiDAR a mesuré. Quarante-huit
+fenêtres, <strong>4 645 cellules</strong>, dont 21 % sans polygone BD
+Forêt.</p>
 <div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cl</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/rasterize.html" class="external-link">rasterize</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/vect.html" class="external-link">vect</a></span><span class="op">(</span><span class="va">bdforet</span><span class="op">)</span>, <span class="va">fuel_lidar</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span>, field <span class="op">=</span> <span class="st">"code_tfv"</span><span class="op">)</span></span>
 <span><span class="va">cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rspatial.github.io/terra/reference/as.data.frame.html" class="external-link">as.data.frame</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="va">fuel_lidar</span>, <span class="va">cl</span><span class="op">)</span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
-<p>Les classes présentes sur au moins 100 cellules, médianes par classe
-:</p>
+<p>Les onze classes présentes sur au moins 100 cellules, triées par la
+hauteur de base des houppiers qu’elles portent :</p>
 <table style="width:100%;" class="table">
 <colgroup>
-<col width="11%">
-<col width="11%">
-<col width="11%">
-<col width="11%">
-<col width="11%">
-<col width="11%">
-<col width="11%">
-<col width="11%">
-<col width="11%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
 </colgroup>
 <thead><tr class="header">
 <th>Code TFV</th>
 <th>Essence</th>
 <th>n</th>
-<th>Hauteur</th>
-<th>CBH</th>
-<th>FSG</th>
-<th>Couvert</th>
-<th>CFL</th>
+<th>CBH méd.</th>
+<th>FSG méd.</th>
+<th>CBH 90ᵉ c.</th>
 <th>% continu</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td>FF1-00-00</td>
-<td>Feuillus</td>
-<td>646</td>
-<td>16,5</td>
-<td>0,0</td>
-<td>0,0</td>
-<td>0,90</td>
-<td>1,19</td>
-<td>89</td>
+<td>FF2-81-81</td>
+<td>Pin autre</td>
+<td>123</td>
+<td><strong>7,5</strong></td>
+<td><strong>3,0</strong></td>
+<td>10,5</td>
+<td><strong>26</strong></td>
 </tr>
 <tr class="even">
-<td><em>hors BD Forêt</em></td>
-<td>—</td>
-<td>637</td>
-<td>7,5</td>
-<td>0,0</td>
-<td>0,0</td>
-<td>0,05</td>
-<td>0,09</td>
-<td>75</td>
+<td>FO2</td>
+<td>Conifères (ouvert)</td>
+<td>114</td>
+<td><strong>6,5</strong></td>
+<td><strong>4,0</strong></td>
+<td>9,2</td>
+<td><strong>46</strong></td>
 </tr>
 <tr class="odd">
 <td>FF1G06-06</td>
 <td>Chênes sempervirents</td>
-<td>520</td>
-<td>10,5</td>
+<td>1083</td>
 <td>0,0</td>
 <td>0,0</td>
-<td>0,77</td>
-<td>0,92</td>
-<td>92</td>
-</tr>
-<tr class="even">
-<td>LA4</td>
-<td>Lande</td>
-<td>348</td>
-<td>6,5</td>
-<td>0,0</td>
-<td>0,0</td>
-<td>0,12</td>
-<td>0,17</td>
-<td>85</td>
-</tr>
-<tr class="odd">
-<td>FF1-10-10</td>
-<td>Châtaignier</td>
-<td>153</td>
-<td>16,5</td>
-<td>0,0</td>
-<td>0,0</td>
-<td>0,94</td>
-<td>1,56</td>
-<td>98</td>
+<td>5,3</td>
+<td>86</td>
 </tr>
 <tr class="even">
 <td>FO1</td>
 <td>Feuillus (ouvert)</td>
-<td>136</td>
-<td>7,5</td>
+<td>283</td>
 <td>0,0</td>
 <td>0,0</td>
-<td>0,20</td>
-<td>0,30</td>
-<td>93</td>
+<td>3,5</td>
+<td>86</td>
 </tr>
 <tr class="odd">
-<td>FO2</td>
-<td>Conifères (ouvert)</td>
-<td>114</td>
-<td>9,5</td>
-<td>6,5</td>
-<td><strong>4,0</strong></td>
-<td>0,14</td>
-<td>0,07</td>
-<td><strong>46</strong></td>
+<td><em>hors BD Forêt</em></td>
+<td>—</td>
+<td>955</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>3,5</td>
+<td>77</td>
 </tr>
 <tr class="even">
+<td>LA4</td>
+<td>Lande</td>
+<td>438</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>3,5</td>
+<td>84</td>
+</tr>
+<tr class="odd">
+<td>FF1-00-00</td>
+<td>Feuillus</td>
+<td>908</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>92</td>
+</tr>
+<tr class="even">
+<td>FF1-10-10</td>
+<td>Châtaignier</td>
+<td>208</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>98</td>
+</tr>
+<tr class="odd">
 <td>FF2-51-51</td>
 <td>Pin maritime</td>
-<td>111</td>
-<td>17,5</td>
+<td>116</td>
 <td>0,0</td>
 <td>0,0</td>
-<td>0,94</td>
-<td>1,11</td>
+<td>0,0</td>
 <td>95</td>
+</tr>
+<tr class="even">
+<td>FF31</td>
+<td>Mixte</td>
+<td>112</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>0,0</td>
+<td>94</td>
 </tr>
 <tr class="odd">
 <td>FF32</td>
 <td>Mixte</td>
-<td>111</td>
-<td>13,5</td>
+<td>129</td>
 <td>0,0</td>
 <td>0,0</td>
-<td>0,61</td>
-<td>0,72</td>
+<td>0,0</td>
 <td>91</td>
-</tr>
-<tr class="even">
-<td>FF2-81-81</td>
-<td>Pin autre</td>
-<td>109</td>
-<td>13,5</td>
-<td>8,5</td>
-<td><strong>3,0</strong></td>
-<td>0,71</td>
-<td>0,45</td>
-<td><strong>25</strong></td>
 </tr>
 </tbody>
 </table>
-<p>« % continu » est la part de cellules à FSG &lt; 0,5 m : le
-sous-étage rejoint les houppiers, rien n’arrête un feu de surface en
-route vers la cime.</p>
-<p><strong>Deux classes séparent vraiment, et ce sont les deux
-mêmes.</strong> <code>FF2-81-81</code> (pins autres que maritime, 25 %
-de cellules continues) et <code>FO2</code> (forêt ouverte de conifères,
-46 %) portent 8,5 et 6,5 m de vide sous les houppiers, contre 85 à 98 %
-de cellules continues dans toutes les autres classes. Le point commun
-n’est pas l’essence : c’est que ces deux classes-là décrivent une
-<strong>structure</strong> — l’ouverture, l’élagage naturel d’une
-pineraie. Partout où la nomenclature parle de composition, elle ne dit
-presque rien de la verticale.</p>
+<p><strong>Neuf classes sur onze ont une hauteur de base des houppiers
+médiane de zéro.</strong> Sur l’ensemble des cellules forestières,
+<strong>84 % ont un CBH exactement nul</strong> : les houppiers touchent
+le sol, et la discontinuité qui arrêterait un feu de surface n’existe
+pas.</p>
 </div>
 <div class="section level3">
 <h3 id="ce-que-la-classe-explique-et-ce-quelle-nexplique-pas">Ce que la classe explique, et ce qu’elle n’explique pas<a class="anchor" aria-label="anchor" href="#ce-que-la-classe-explique-et-ce-quelle-nexplique-pas"></a>
 </h3>
-<p>Part de variance des métriques LiDAR expliquée par la classe seule,
-sur les 2 885 cellules des classes ci-dessus :</p>
+<p>Il faut poser la question proprement, et les premières versions de
+cet article ne le faisaient pas. Elles mélangeaient des jeux de classes
+différents d’un échantillon à l’autre et comptaient <em>hors BD
+Forêt</em> comme une classe — alors qu’elle est l’absence de classe, et
+qu’elle sépare forêt et non-forêt, ce qui est facile. Les R² publiés
+étaient gonflés par ce mélange.</p>
+<p>Le test honnête est le contraste <strong>entre deux classes</strong>,
+à jeu constant.</p>
+<p><strong>Entre essences, à structure comparable :</strong></p>
+<table class="table">
+<colgroup>
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+</colgroup>
+<thead><tr class="header">
+<th>Contraste</th>
+<th>n</th>
+<th>CBH</th>
+<th>FSG</th>
+<th>CBD</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Feuillus vs Chênes sempervirents</td>
+<td>1 991</td>
+<td><strong>0,015</strong></td>
+<td><strong>0,016</strong></td>
+<td>0,004</td>
+</tr>
+<tr class="even">
+<td>Feuillus vs Châtaignier</td>
+<td>1 116</td>
+<td>0,003</td>
+<td>0,008</td>
+<td>0,013</td>
+</tr>
+<tr class="odd">
+<td>Pin maritime vs Chênes sempervirents</td>
+<td>1 199</td>
+<td>0,003</td>
+<td>0,008</td>
+<td>0,000</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Zéro.</strong> Pas « peu » : savoir qu’un peuplement est du
+chêne vert plutôt que du feuillu divers ou du châtaignier ne dit
+<strong>rien</strong> de la hauteur de base des houppiers ni de la
+continuité verticale. L’écart-type du CBH à l’intérieur d’une classe
+égale l’écart-type total.</p>
+<p><strong>Entre les deux classes qui séparent, et les autres
+:</strong></p>
+<table class="table">
+<colgroup>
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+<col width="20%">
+</colgroup>
+<thead><tr class="header">
+<th>Contraste</th>
+<th>n</th>
+<th>CBH</th>
+<th>FSG</th>
+<th>CBD</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>Pin maritime vs <strong>Pin autre</strong>
+</td>
+<td>239</td>
+<td>0,391</td>
+<td>0,410</td>
+<td>0,312</td>
+</tr>
+<tr class="even">
+<td>Feuillus vs <strong>FO2 conifères ouvert</strong>
+</td>
+<td>1 022</td>
+<td>0,260</td>
+<td>0,307</td>
+<td>0,145</td>
+</tr>
+<tr class="odd">
+<td>FO1 feuillus ouvert vs <strong>FO2</strong>
+</td>
+<td>397</td>
+<td>0,304</td>
+<td>0,340</td>
+<td>0,281</td>
+</tr>
+<tr class="even">
+<td>Chênes sempervirents vs FO1 feuillus ouvert</td>
+<td>1 366</td>
+<td>0,005</td>
+<td>0,006</td>
+<td>0,034</td>
+</tr>
+</tbody>
+</table>
+<p>C’est la dernière ligne qui interdit la lecture facile. On voudrait
+conclure que la nomenclature porte la structure quand elle parle de
+forme du peuplement et pas quand elle parle d’essence — mais
+<strong>fermé contre ouvert ne sépare rien chez les feuillus</strong>
+(0,005), et <strong>le pin maritime, résineux, se comporte comme un
+feuillu</strong> (CBH médian nul, 95 % de cellules continues).</p>
+<p>Ce qui sépare n’est donc ni l’essence ni l’ouverture, mais
+<strong>deux codes particuliers</strong> — <code>FF2-81-81</code> et
+<code>FO2</code> — qui se trouvent décrire les peuplements où les arbres
+s’élaguent naturellement par le bas. Le reste de la nomenclature, sur ce
+massif, ne distingue rien de la verticale.</p>
+<p>Sur les onze classes prises ensemble, le R² global reflète
+mécaniquement ces deux codes-là :</p>
 <table class="table">
 <thead><tr class="header">
 <th>Métrique</th>
 <th>BD Forêt v2</th>
 <th>ESA WorldCover</th>
-<th>les deux ensemble</th>
 </tr></thead>
 <tbody>
 <tr class="odd">
 <td>Couvert</td>
-<td><strong>0,65</strong></td>
-<td>0,04</td>
-<td>0,65</td>
+<td>0,596</td>
+<td>0,007</td>
 </tr>
 <tr class="even">
 <td>CFL — charge de houppier</td>
-<td><strong>0,55</strong></td>
-<td>0,04</td>
-<td>0,55</td>
+<td>0,501</td>
+<td>0,005</td>
 </tr>
 <tr class="odd">
 <td>Hauteur</td>
-<td>0,45</td>
-<td>0,04</td>
-<td>0,45</td>
-</tr>
-<tr class="even">
-<td>CBH — base des houppiers</td>
-<td>0,25</td>
-<td>0,00</td>
-<td>0,25</td>
-</tr>
-<tr class="odd">
-<td>FSG — discontinuité verticale</td>
-<td>0,20</td>
-<td>0,00</td>
-<td>0,20</td>
+<td>0,353</td>
+<td>0,003</td>
 </tr>
 <tr class="even">
 <td><strong>CBD max — densité apparente</strong></td>
-<td><strong>0,20</strong></td>
-<td>0,01</td>
-<td>0,20</td>
+<td><strong>0,177</strong></td>
+<td>0,004</td>
+</tr>
+<tr class="odd">
+<td><strong>CBH — base des houppiers</strong></td>
+<td><strong>0,163</strong></td>
+<td>0,002</td>
+</tr>
+<tr class="even">
+<td><strong>FSG — discontinuité verticale</strong></td>
+<td><strong>0,137</strong></td>
+<td>0,002</td>
 </tr>
 </tbody>
 </table>
-<p>Il y a un <strong>gradient</strong>, et il va dans le sens qu’on
-redoutait. La BD Forêt explique bien ce qu’elle décrit — le couvert, la
-charge de houppier qui en découle. Elle explique deux à trois fois moins
-bien la structure verticale. Et elle explique le moins <strong>la
-densité apparente de houppier</strong>, qui est précisément la variable
-dont dépend le passage en cime.</p>
-<p>Élargir l’échantillon n’a pas comblé l’écart, il l’a creusé : sur les
-douze premières fenêtres le couvert était à 0,73 et la densité apparente
-à 0,26 ; sur trente-deux, 0,65 et 0,20. Plus on regarde de massif, moins
-la classe suffit.</p>
-<p>L’écart ne se comble pas non plus dans la classe. Chez les chênes
-sempervirents, 520 cellules d’un seul et même code, la charge de
-houppier va de <strong>0,05 à 1,98 kg/m²</strong> — un rapport de
-quarante à l’intérieur d’une classe que la base traite comme
-homogène.</p>
+<p>Et l’écart ne se comble pas à l’intérieur d’une classe : chez les
+chênes sempervirents, <strong>1 083 cellules d’un seul et même
+code</strong>, la charge de houppier va de <strong>0 à 2,08
+kg/m²</strong>.</p>
 </div>
 <div class="section level3">
 <h3 id="faut-il-aller-chercher-ailleurs">Faut-il aller chercher ailleurs ?<a class="anchor" aria-label="anchor" href="#faut-il-aller-chercher-ailleurs"></a>
 </h3>
-<p>La question mérite d’être posée franchement, et la troisième colonne
-du tableau y répond : <strong>ajouter WorldCover à la BD Forêt ne fait
-rien gagner</strong>, à la troisième décimale près sur les six
-métriques. Sur ce massif WorldCover classe 73 % des cellules en «
-couvert arboré » : une nomenclature presque constante n’explique presque
+<p>WorldCover n’explique rien — de 0,002 à 0,007 sur les six métriques.
+Sur ce massif elle classe <strong>75 % des cellules en « couvert arboré
+»</strong>, et une nomenclature presque constante n’explique presque
 rien.</p>
 <p>Elle ne rattrape pas non plus ce que la BD Forêt ne couvre pas. Les
-637 cellules sans polygone — 20 % — sont réparties par WorldCover en
-cinq classes. Le LiDAR mesure la même chose dans toutes :</p>
+955 cellules sans polygone sont réparties en cinq classes WorldCover, et
+le LiDAR mesure la même chose dans toutes :</p>
 <table class="table">
 <thead><tr class="header">
 <th>Classe WorldCover</th>
@@ -802,67 +871,62 @@ cinq classes. Le LiDAR mesure la même chose dans toutes :</p>
 <tbody>
 <tr class="odd">
 <td>Tree cover</td>
-<td>340</td>
-<td>0,06</td>
+<td>614</td>
+<td>0,08</td>
 <td>0,09</td>
 <td>7,5</td>
 </tr>
 <tr class="even">
 <td>Shrubland</td>
-<td>127</td>
-<td>0,01</td>
-<td>0,08</td>
-<td>5,5</td>
+<td>171</td>
+<td>0,10</td>
+<td>0,12</td>
+<td>9,5</td>
 </tr>
 <tr class="odd">
 <td>Grassland</td>
 <td>96</td>
-<td>0,10</td>
-<td>0,13</td>
-<td>9,5</td>
+<td>0,06</td>
+<td>0,11</td>
+<td>8,0</td>
 </tr>
 <tr class="even">
 <td>Built-up</td>
 <td>41</td>
-<td>0,00</td>
-<td>0,08</td>
-<td>2,5</td>
+<td>0,23</td>
+<td>0,20</td>
+<td>10,5</td>
 </tr>
 <tr class="odd">
 <td>Cropland</td>
 <td>33</td>
-<td>0,21</td>
-<td>0,17</td>
-<td>11,5</td>
+<td>0,00</td>
+<td>0,08</td>
+<td>2,5</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Cinq étiquettes pour une seule réalité structurelle</strong>
-— couvert de 0,00 à 0,21, charge de houppier de 0,08 à 0,17. Et un «
-couvert arboré » à 0,06 de couvert mesuré n’est pas du couvert arboré.
-La BD Forêt a raison de ne rien mettre là : ce n’est pas de la
-forêt.</p>
+<p>Un « couvert arboré » à 0,08 de couvert mesuré n’est pas du couvert
+arboré.</p>
 <p>La conclusion est donc l’inverse d’un appel à plus de sources
-catégorielles. Aucune n’apportera ce qui manque, parce que ce qui manque
-n’est pas une étiquette plus fine — c’est une <strong>mesure</strong>.
-Une classe, quelle que soit sa nomenclature, dit ce qu’il y a ; elle ne
-dit pas combien il y en a ni à quelle hauteur. Les deux sources
-continues du paquet répondent chacune à une moitié de la question :
-FORMS donne la hauteur de canopée partout en France, sans atteindre le
-sous-étage ; le LiDAR HD donne le sous-étage, là où il a volé. Élargir
-la couverture LiDAR est le seul geste qui déplace le chiffre de
-0,20.</p>
+catégorielles. Ce qui manque n’est pas une étiquette plus fine — c’est
+une <strong>mesure</strong>. Une classe dit ce qu’il y a ; elle ne dit
+pas à quelle hauteur. Et c’est précisément ce que consomment les seuils
+de [fev_crown_fire()] : le CBH décide si un feu de surface monte en
+cime, la CBD s’il s’y maintient. Les déduire de la classe reviendrait à
+travailler avec un R² de 0,16 ; les mesurer est la seule voie.</p>
 </div>
 <div class="section level3">
 <h3 id="ce-quil-faut-retenir-de-la-portée">Ce qu’il faut retenir de la portée<a class="anchor" aria-label="anchor" href="#ce-quil-faut-retenir-de-la-port%C3%A9e"></a>
 </h3>
-<p>Trente-deux fenêtres de 250 m font 2 km² sur un seul massif, une
+<p>Quarante-huit fenêtres de 250 m font 3 km² sur un seul massif, une
 seule campagne LiDAR (2025), et l’attribution de classe se fait au
 centre de cellule. C’est une illustration chiffrée de la limite annoncée
-en tête d’article, pas une validation. Les proportions ci-dessus valent
-pour les Maures et n’ont pas été vérifiées ailleurs. Elles reposent sur
-32 dalles des 462 exploitables : la tendance observée entre douze et
-trente-deux fenêtres invite à ne pas les tenir pour stabilisées.</p>
+en tête d’article, pas une validation, et elle vaut pour les Maures.</p>
+<p>Le critère d’arrêt est écrit plutôt qu’appliqué en silence : la
+décomposition est refaite toutes les huit dalles, et la campagne
+continue tant que les R² bougent. Entre douze et quarante-huit fenêtres
+ils n’ont pas cessé de descendre.</p>
 </div>
 </div>
 <div class="section level2">
@@ -929,7 +993,12 @@ hectares ont brûlé.</p>
 <span>                                       crs_work <span class="op">=</span> <span class="fl">2154</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">danger_pct</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fwi_percentile.html">fev_fwi_percentile</a></span><span class="op">(</span><span class="va">meteo</span>, ref_period <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2019</span>, <span class="fl">2021</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">dernier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">[[</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/dimensions.html" class="external-link">nlyr</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="co"># Le jour de l'incendie, pas la dernière couche de la série. Cet article a</span></span>
+<span><span class="co"># longtemps cartographié `nlyr(...)`, c'est-à-dire le 31 décembre 2021 : un jour</span></span>
+<span><span class="co"># d'hiver à FWI médian 0,9, présenté sous une page qui raconte le 16 août à 84,3.</span></span>
+<span><span class="va">jour_feu</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/time.html" class="external-link">time</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">)</span><span class="op">)</span> <span class="op">==</span></span>
+<span>                    <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2021-08-16"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">dernier</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">danger_pct</span><span class="op">)</span><span class="op">[[</span><span class="va">jour_feu</span><span class="op">]</span><span class="op">]</span></span>
 <span><span class="va">dispo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fuel_availability.html">fev_fuel_availability</a></span><span class="op">(</span><span class="va">fuel</span>, weights <span class="op">=</span> <span class="fu"><a href="../reference/fev_fuel_weights.html">fev_fuel_weights</a></span><span class="op">(</span>quiet <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">pile</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_align.html">fev_align</a></span><span class="op">(</span>danger <span class="op">=</span> <span class="va">dernier</span>, disponibilite <span class="op">=</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">dispo</span><span class="op">)</span>,</span>
 <span>                  exposition <span class="op">=</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">expo</span><span class="op">)</span><span class="op">)</span></span>
@@ -945,9 +1014,18 @@ hectares ont brûlé.</p>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_geometry.html" class="external-link">st_geometry</a></span><span class="op">(</span><span class="va">carres</span><span class="op">)</span>, add <span class="op">=</span> <span class="cn">TRUE</span>, border <span class="op">=</span> <span class="st">"white"</span>, lwd <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></code></pre></div>
 <p><img src="maures_files/figure-html/plot-risk-1.png" class="r-plt" alt="" width="672"></p>
 <p>Le jaune est le maquis continu, les taches sombres les trouées — le
-risque moyen y vaut 0,32 sur combustible brûlable contre 0,05 en dehors,
-un facteur 6,5. Les périmètres rouges sont les onze incendies, les deux
-carrés blancs les placettes LiDAR.</p>
+risque moyen y vaut <strong>0,68 sur combustible brûlable contre 0,05 en
+dehors, un facteur 13,7</strong>. Les périmètres rouges sont les onze
+incendies, les deux carrés blancs les placettes LiDAR.</p>
+<p>Ces chiffres étaient 0,32 et 6,5 dans les versions précédentes de cet
+article, et l’écart n’est pas une amélioration de méthode : <strong>la
+carte publiée était celle du 31 décembre 2021</strong>.
+<code>dernier</code> prenait la dernière couche de la série plutôt que
+le jour de l’incendie, et un jour d’hiver à FWI médian 0,9 produisait
+une carte qui paraissait plausible parce que la normalisation en
+percentile reclasse ce qu’on lui donne, si bas soit-il. Rien ne le
+signalait : ni la carte, ni la provenance, qui enregistrait fidèlement
+une date que personne ne regardait.</p>
 <p><strong>Il n’y a plus de cadre blanc</strong>, et c’est l’argument
 <code>trim = study</code> de l’appel ci-dessus qui l’a supprimé. Le
 combustible ayant été construit sur l’emprise tamponnée, chaque cellule
@@ -963,12 +1041,132 @@ Un trou blanc valait mieux que ce chiffre-là ; une emprise tamponnée
 vaut mieux que les deux.</p>
 </div>
 <div class="section level3">
+<h3 id="lequel-des-deux-termes-fait-la-carte">Lequel des deux termes fait la carte ?<a class="anchor" aria-label="anchor" href="#lequel-des-deux-termes-fait-la-carte"></a>
+</h3>
+<p>Un indice composite peut être dominé par une seule de ses composantes
+sans que rien ne le montre : la carte reste plausible, les couleurs
+restent contrastées. La question se tranche en corrélant le résultat à
+chacun de ses termes.</p>
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">vals</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">as.numeric</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/values.html" class="external-link">values</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span><span class="op">)</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="va">D</span> <span class="op">&lt;-</span> <span class="fu">vals</span><span class="op">(</span><span class="va">danger</span><span class="op">)</span>; <span class="va">V</span> <span class="op">&lt;-</span> <span class="fu">vals</span><span class="op">(</span><span class="va">vuln</span><span class="op">)</span>; <span class="va">R</span> <span class="op">&lt;-</span> <span class="fu">vals</span><span class="op">(</span><span class="va">risque</span><span class="op">)</span></span>
+<span><span class="va">ok</span> <span class="op">&lt;-</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/complete.cases.html" class="external-link">complete.cases</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">D</span>, <span class="va">V</span>, <span class="va">R</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>danger <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="va">R</span><span class="op">[</span><span class="va">ok</span><span class="op">]</span>, <span class="va">D</span><span class="op">[</span><span class="va">ok</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>        vulnerabilite <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="va">R</span><span class="op">[</span><span class="va">ok</span><span class="op">]</span>, <span class="va">V</span><span class="op">[</span><span class="va">ok</span><span class="op">]</span><span class="op">)</span>,</span>
+<span>        sd_danger <span class="op">=</span> <span class="fu">stats</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/r/stats/sd.html" class="external-link">sd</a></span><span class="op">(</span><span class="va">D</span><span class="op">[</span><span class="va">ok</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt;        danger vulnerabilite     sd_danger </span></span>
+<span><span class="co">#&gt;         0.890         0.839         0.321</span></span></code></pre></div>
+<p>Les deux termes pèsent, et le danger un peu plus. <strong>Ce n’était
+pas le cas quand cet article cartographiait le 31 décembre</strong> : le
+danger corrélait alors 0,542 et la vulnérabilité 0,995. Autrement dit la
+carte publiée était sa propre couche d’exposition, repeinte — et le
+diagnostic qui l’aurait montré tient en trois lignes de code.</p>
+<p>Quatre chaînes mesurées sur ce massif, toutes le 16 août 2021 :</p>
+<table class="table">
+<thead><tr class="header">
+<th>Chaîne</th>
+<th>écart-type danger</th>
+<th>cor(R, danger)</th>
+<th>cor(R, vuln)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><strong>percentile, celle de cet article</strong></td>
+<td>0,308</td>
+<td><strong>0,879</strong></td>
+<td>0,833</td>
+</tr>
+<tr class="even">
+<td>FWI brut, <code>normalise = "minmax"</code>
+</td>
+<td>0,237</td>
+<td>0,699</td>
+<td>0,769</td>
+</tr>
+<tr class="odd">
+<td>FWI descendu en échelle, <code>minmax</code>
+</td>
+<td>0,249</td>
+<td>0,801</td>
+<td>0,827</td>
+</tr>
+<tr class="even">
+<td>FWI descendu en échelle, percentile</td>
+<td>0,003</td>
+<td>0,479</td>
+<td>1,000</td>
+</tr>
+</tbody>
+</table>
+<p>Deux enseignements, et le second n’était pas attendu.</p>
+<p><strong>Le percentile n’aplatit pas le danger, il le
+structure.</strong> Chaque maille de la réanalyse a sa propre
+climatologie ; classer aujourd’hui contre elle fait ressortir les
+endroits où ce jour-là est le plus exceptionnel, et cette variation est
+de l’information sur le climat local, pas un artefact.</p>
+<p><strong>Descendre le FWI en échelle par le relief dégrade la chaîne
+au percentile</strong>, et la raison est structurelle : le gradient
+adiabatique est une transformation <strong>monotone</strong> de la série
+d’une zone. Décaler toute une série d’un même offset ne change presque
+pas le rang d’un jour à l’intérieur d’elle-même. Chaque zone héritant
+d’une histoire déterministe de sa maille parente, toutes classent le 16
+août au même rang, et le contraste spatial disparaît — l’écart-type
+tombe à 0,003.</p>
+<p>La descente d’échelle sert donc la chaîne au FWI brut, où elle fait
+passer la corrélation au danger de 0,699 à 0,801, et dessert celle au
+percentile. Ce n’est pas un défaut de l’une ou de l’autre : ce sont deux
+questions différentes. <em>« Où est-ce le pire aujourd’hui »</em> veut
+un FWI brut descendu en échelle ; <em>« où aujourd’hui est-il le plus
+inhabituel »</em> veut un percentile, et n’a rien à faire d’une
+correction monotone.</p>
+</div>
+<div class="section level3">
+<h3 id="le-relief-quand-on-veut-la-première-question">Le relief, quand on veut la première question<a class="anchor" aria-label="anchor" href="#le-relief-quand-on-veut-la-premi%C3%A8re-question"></a>
+</h3>
+<p>Non exécuté ici — le modèle de terrain se télécharge, et une vignette
+ne doit pas dépendre d’un service distant :</p>
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dem</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fetch_dem.html">fev_fetch_dem</a></span><span class="op">(</span><span class="va">zone</span><span class="op">)</span></span>
+<span><span class="va">cv</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_curvature.html">fev_curvature</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">dem</span><span class="op">)</span>, length_scale <span class="op">=</span> <span class="fl">500</span><span class="op">)</span></span>
+<span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_topo_zones.html">fev_topo_zones</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="va">dem</span><span class="op">)</span>, n_elev <span class="op">=</span> <span class="fl">8</span>, stations <span class="op">=</span> <span class="va">meteo_tab</span><span class="op">)</span></span>
+<span><span class="va">w</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_downscale_weather.html">fev_downscale_weather</a></span><span class="op">(</span><span class="va">meteo_tab</span>, <span class="va">z</span>, wind <span class="op">=</span> <span class="st">"curvature"</span>, curvature <span class="op">=</span> <span class="va">cv</span>,</span>
+<span>                           rain <span class="op">=</span> <span class="st">"fitted"</span><span class="op">)</span></span>
+<span><span class="va">danger_fin</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_fwi_zonal.html">fev_fwi_zonal</a></span><span class="op">(</span><span class="va">w</span>, <span class="va">z</span>, dates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2021-08-16"</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<p>Mesuré sur ce massif le 2026-08-19 : 77 zones — 12 mailles de
+réanalyse croisées avec 8 bandes d’altitude —, le FWI passe de 17 à 77
+valeurs distinctes, et le rapport d’échelle que signale
+<code><a href="../reference/fev_align.html">fev_align()</a></code> tombe de <strong>141 000 cellules fines par
+maille grossière à 1,05</strong>.</p>
+<p>Ce que la correction couvre, et ce qu’elle ne couvre pas :</p>
+<ul>
+<li>
+<strong>température</strong> — gradient adiabatique, 3,3 K entre la
+zone la plus basse (28 m) et la plus haute (538 m). Sur un massif
+culminant à 775 m, c’est la mesure de ce qu’on peut espérer.</li>
+<li>
+<strong>humidité</strong> — en découle à point de rosée constant,
+jusqu’à 18 points d’écart.</li>
+<li>
+<strong>vent</strong> — pondération de courbure de MicroMet,
+multiplicateur 0,82 à 1,16. Seule la moitié sans direction du schéma
+publié : son terme de pente exige une direction de vent que ce paquet ne
+récupère pas.</li>
+<li>
+<strong>pluie</strong> — <code>rain = "fitted"</code> a
+<strong>refusé de corriger</strong>. Sur 20 points couvrant 464 m de
+dénivelé, la régression donne R² = 0,087 et p = 0,21 : la réanalyse ne
+résout aucun effet orographique à cette échelle, et un gradient ajusté
+là-dessus aurait été du bruit voyageant dans la provenance sous les
+apparences d’une mesure.</li>
+</ul>
+</div>
+<div class="section level3">
 <h3 id="le-jour-de-lincendie-sort-premier-de-1-096">Le jour de l’incendie sort premier de 1 096<a class="anchor" aria-label="anchor" href="#le-jour-de-lincendie-sort-premier-de-1-096"></a>
 </h3>
 <p>C’est la vérification que Couchey ne pouvait pas offrir avec un seul
 feu, et que ni l’une ni l’autre ne pouvait offrir avec une série
 inventée :</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">med</span> <span class="op">&lt;-</span> <span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/global.html" class="external-link">global</a></span><span class="op">(</span><span class="va">meteo</span>, <span class="fu">stats</span><span class="fu">::</span><span class="va"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span>, na.rm <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span></span>
 <span><span class="va">dates</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/time.html" class="external-link">time</a></span><span class="op">(</span><span class="va">meteo</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>date <span class="op">=</span> <span class="va">dates</span><span class="op">[</span><span class="fu"><a href="https://rdrr.io/r/base/order.html" class="external-link">order</a></span><span class="op">(</span><span class="op">-</span><span class="va">med</span><span class="op">)</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span>,</span>
@@ -981,7 +1179,7 @@ inventée :</p>
 Aucune donnée de feu n’entre dans le calcul : le FWI ne connaît que la
 température, l’humidité, le vent et la pluie servis par la
 réanalyse.</p>
-<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par</a></span><span class="op">(</span>mar <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">2</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/plot.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">dates</span>, <span class="va">med</span>, type <span class="op">=</span> <span class="st">"l"</span>, col <span class="op">=</span> <span class="st">"grey40"</span>, xlab <span class="op">=</span> <span class="st">""</span>, ylab <span class="op">=</span> <span class="st">"FWI médian"</span>,</span>
 <span>     main <span class="op">=</span> <span class="st">"FWI médian sur le massif, 2019-2021"</span><span class="op">)</span></span>
@@ -999,7 +1197,7 @@ heures par jour, et la conséquence est mesurable ici — 10 % de jours de
 pluie au lieu de 39 %, et un DC de 1 949 le 16 août au lieu de 619.</p>
 <p>Le second est ce qui rend le premier difficile à voir. Le facteur de
 durée du FWI sature :</p>
-<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fD</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">bui</span><span class="op">)</span> <span class="fl">1000</span> <span class="op">/</span> <span class="op">(</span><span class="fl">25</span> <span class="op">+</span> <span class="fl">108.64</span> <span class="op">*</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="fl">0.023</span> <span class="op">*</span> <span class="va">bui</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>BUI_150 <span class="op">=</span> <span class="fl">150</span>, BUI_200 <span class="op">=</span> <span class="fl">200</span>, BUI_300 <span class="op">=</span> <span class="fl">300</span>, BUI_600 <span class="op">=</span> <span class="fl">600</span><span class="op">)</span>, <span class="va">fD</span><span class="op">)</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="co">#&gt; BUI_150 BUI_200 BUI_300 BUI_600 </span></span>
@@ -1009,7 +1207,7 @@ presque aveugle à la sécheresse supplémentaire : un DC dérivé au double
 de sa valeur physique <strong>ne fait pas paraître le FWI faux</strong>.
 Il faut regarder le DC et le BUI directement, ce que
 <code>fev_fwi_from_weather(index = "DC")</code> permet.</p>
-<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"DMC"</span>, <span class="st">"DC"</span>, <span class="st">"BUI"</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">ix</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">r</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_data.html">fev_data</a></span><span class="op">(</span><span class="fu"><a href="../reference/fev_fwi_from_weather.html">fev_fwi_from_weather</a></span><span class="op">(</span><span class="va">meteo_tab</span>, index <span class="op">=</span> <span class="va">ix</span>, crs_work <span class="op">=</span> <span class="fl">2154</span><span class="op">)</span><span class="op">)</span></span>
 <span>  <span class="fu"><a href="https://rspatial.github.io/terra/reference/math-generics.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/summarize-generics.html" class="external-link">median</a></span><span class="op">(</span><span class="fu">terra</span><span class="fu">::</span><span class="fu"><a href="https://rspatial.github.io/terra/reference/values.html" class="external-link">values</a></span><span class="op">(</span><span class="va">r</span><span class="op">[[</span><span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">dates</span> <span class="op">==</span> <span class="fu"><a href="https://rdrr.io/r/base/as.Date.html" class="external-link">as.Date</a></span><span class="op">(</span><span class="st">"2021-08-16"</span><span class="op">)</span><span class="op">)</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>,</span>
@@ -1027,7 +1225,7 @@ Il faut regarder le DC et le BUI directement, ce que
 profonde et plausible. C’est ce qu’on veut lire : une valeur qu’on peut
 confronter à la littérature, pas un nombre qui a seulement l’air
 grand.</p>
-<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fev_validate.html">fev_validate</a></span><span class="op">(</span><span class="va">risque</span>, <span class="va">feux</span>, millesime <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">mil</span><span class="op">$</span><span class="va">year</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">temporal</span><span class="op">$</span><span class="va">table</span></span>
 <span><span class="co">#&gt;                        lag_years n_fires area_ha pct_area</span></span>
@@ -1035,15 +1233,15 @@ grand.</p>
 <span><span class="co">#&gt; 2                         1 to 5       0       0        0</span></span>
 <span><span class="co">#&gt; 3                            &gt; 5      11    6927      100</span></span>
 <span><span class="va">val</span><span class="op">$</span><span class="va">auc</span></span>
-<span><span class="co">#&gt; [1] 0.5468174</span></span></code></pre></div>
-<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<span><span class="co">#&gt; [1] 0.5671173</span></span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">val</span><span class="op">$</span><span class="va">classes</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"class"</span>, <span class="st">"pct_of_area"</span>, <span class="st">"pct_of_burnt"</span>, <span class="st">"ratio"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;       class pct_of_area pct_of_burnt ratio</span></span>
-<span><span class="co">#&gt; 1   0 - 0.2       32.08        26.23  0.82</span></span>
-<span><span class="co">#&gt; 2 0.2 - 0.4       25.24        29.46  1.17</span></span>
-<span><span class="co">#&gt; 3 0.4 - 0.6       42.68        44.31  1.04</span></span>
-<span><span class="co">#&gt; 4 0.6 - 0.8        0.00         0.00   NaN</span></span>
-<span><span class="co">#&gt; 5   0.8 - 1        0.00         0.00   NaN</span></span></code></pre></div>
+<span><span class="co">#&gt; 1   0 - 0.2       14.59         4.29  0.29</span></span>
+<span><span class="co">#&gt; 2 0.2 - 0.4        2.72         1.22  0.45</span></span>
+<span><span class="co">#&gt; 3 0.4 - 0.6       18.31        23.70  1.29</span></span>
+<span><span class="co">#&gt; 4 0.6 - 0.8       42.22        46.34  1.10</span></span>
+<span><span class="co">#&gt; 5   0.8 - 1       22.16        24.45  1.10</span></span></code></pre></div>
 <p>Le biais temporel est le même qu’à Couchey, et pour la même raison :
 le combustible est de 2008, les feux vont de 2017 à 2026. Onze incendies
 valent mieux qu’un, mais ils ont tous brûlé au moins neuf ans après la

@@ -13,7 +13,7 @@ again — it picks up where it stopped."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.27.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.35.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -62,6 +62,7 @@ again — it picks up where it stopped.</p>
 <span>  spread <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  keep_las <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  dry_run <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  fires <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  quiet <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -110,6 +111,12 @@ departmental run would fill a disk.</p></dd>
 <dt id="arg-dry-run">dry_run<a class="anchor" aria-label="anchor" href="#arg-dry-run"></a></dt>
 <dd><p>Report what would be done and return the plan without
 downloading anything.</p></dd>
+
+
+<dt id="arg-fires">fires<a class="anchor" aria-label="anchor" href="#arg-fires"></a></dt>
+<dd><p>Fire perimeters, as <code><a href="fev_fetch_burnt.html">fev_fetch_burnt()</a></code> returns them, or <code>NULL</code>.
+When given, the run reports which finished windows fall in a burn and —
+the point of it — whether any fire <strong>postdates the LiDAR acquisition</strong>.</p></dd>
 
 
 <dt id="arg-quiet">quiet<a class="anchor" aria-label="anchor" href="#arg-quiet"></a></dt>
