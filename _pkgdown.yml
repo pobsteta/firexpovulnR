@@ -38,6 +38,7 @@ reference:
     - fev_provenance
     - fev_data
     - fev_check_crs
+    - fev_licences
 
   - title: "Acquisition et cache"
     desc: >
@@ -53,6 +54,10 @@ reference:
     - fev_worldcover_tiles
     - fev_fetch_forms
     - fev_fetch_burnt
+    - fev_fetch_dem
+    - fev_fetch_ghsl
+    - fev_fetch_severity
+    - fev_fetch_sufosat
     - fev_fetch_bdiff
     - fev_bdiff_columns
     - fev_bdforet_millesime
@@ -84,6 +89,9 @@ reference:
     - fev_lidar_batch
     - fev_fuel_attach
     - fev_lidar_density
+    - fev_fuel_load_weight
+    - fev_crown_fire
+    - fev_byram_intensity
 
   - title: "Danger météorologique"
     desc: >
@@ -100,6 +108,11 @@ reference:
     - fev_fwi_classes
     - fev_danger_class
     - fev_danger_index
+    - fev_downscale_weather
+    - fev_topo_zones
+    - fev_fwi_zonal
+    - fev_rain_gradient
+    - fev_curvature
 
   - title: "Exposition et vulnérabilité"
     desc: >
@@ -114,6 +127,9 @@ reference:
     - fev_directional_defaults
     - fev_vuln_layer
     - fev_vuln_stack
+    - fev_exposure_aniso
+    - fev_exposure_calibrate
+    - fev_wui
 
   - title: "Combinaison, risque et validation"
     desc: >

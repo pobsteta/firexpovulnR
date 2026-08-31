@@ -96,7 +96,17 @@ l'échappement en le texte `<U+00E8>` **à l'analyse syntaxique**, et la table
 n'apparie plus rien. La correspondance est donc indexée par point de code
 entier, ce qui garde aussi le fichier en ASCII pur.
 
-### Correction
+### Corrections
+
+Le site de référence ne se construisait plus depuis le 19 août : `pkgdown`
+refuse un `_pkgdown.yml` dont l'index omet un topic exporté, et seize
+manquaient — `fev_wui`, `fev_licences`, `fev_crown_fire`, les quatre
+`fev_fetch_*` de la phase 11, tout le bloc de descente d'échelle. Chacun est
+rangé selon son fichier source, pas au hasard. Les quatre exports qui ne
+figuraient pas non plus dans l'index — `fev_fuel_categorical`,
+`fev_fuel_continuous`, `fev_source_info`, `fev_stack_read` — n'avaient rien à y
+faire : ce sont des alias de topics déjà listés, et c'est ce qui explique
+l'écart entre vingt exports et seize topics.
 
 `fev_cache_info()` ne listait que les entrées `gpkg` et `tif`. Les sources
 tabulaires — Open-Meteo, et maintenant la BDIFF — se mettent en cache en `rds` :
