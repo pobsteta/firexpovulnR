@@ -53,6 +53,8 @@ reference:
     - fev_worldcover_tiles
     - fev_fetch_forms
     - fev_fetch_burnt
+    - fev_fetch_bdiff
+    - fev_bdiff_columns
     - fev_bdforet_millesime
     - fev_lidarhd_available
     - fev_fetch_lidarhd

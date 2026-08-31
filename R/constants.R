@@ -37,7 +37,19 @@
   # unit the FWI system wants) and precipitation (mm); 1991 available, so a WMO
   # 30-year normal is reachable; multi-point requests return a JSON array, one
   # object per point.
-  open_meteo = "https://archive-api.open-meteo.com/v1/archive"
+  open_meteo = "https://archive-api.open-meteo.com/v1/archive",
+
+  # data.gouv.fr catalogue API, the route to BDIFF. BDIFF publishes no API of
+  # its own: its search interface takes URL parameters and is therefore
+  # scriptable, but scraping a form is not a contract and there would be no way
+  # to tell a changed layout from an empty result.
+  #
+  # UNLIKE EVERY OTHER ENDPOINT IN THIS LIST, this one was NOT verified by a
+  # real call -- the environment it was written in cannot reach data.gouv.fr.
+  # fev_sources() reports it separately for that reason, and
+  # fev_fetch_bdiff() records endpoint_verified = FALSE on every result it
+  # produces through this route.
+  data_gouv_api = "https://www.data.gouv.fr/api/1/"
 )
 
 # WFS layer names, verified by DescribeFeatureType on 2026-08-15.
@@ -233,19 +245,29 @@
 #' inspected without reading the source, and overridden when a provider moves
 #' something.
 #'
-#' All values were verified on 2026-08-15 by real network calls. See
-#' `specs/phase2-rapport-faisabilite.md` in the repository for the evidence
-#' behind each one.
+#' All values were verified on 2026-08-15 by real network calls, **except**
+#' those named in `unverified`. See `specs/phase2-rapport-faisabilite.md` in the
+#' repository for the evidence behind each verified one.
 #'
-#' @return A named list with `endpoints` and `layers`.
+#' @section One endpoint is not verified:
+#' `data_gouv_api`, the route [fev_fetch_bdiff()] uses to reach BDIFF, was
+#' written without ever being called: the environment it was added in has no
+#' egress to data.gouv.fr. Listing it beside the others without saying so would
+#' make the whole registry mean less, so it is named in `unverified` and every
+#' result obtained through it carries `endpoint_verified = FALSE`.
+#'
+#' @return A named list with `endpoints`, `layers`, `verified` (the date the
+#'   rest were confirmed) and `unverified` (the endpoints that were not).
 #'
 #' @examples
 #' fev_sources()$endpoints$ign_wfs
 #' fev_sources()$layers$bdforet_v2
+#' fev_sources()$unverified
 #'
 #' @export
 fev_sources <- function() {
-  list(endpoints = .FEV_ENDPOINTS, layers = .FEV_LAYERS, verified = "2026-08-15")
+  list(endpoints = .FEV_ENDPOINTS, layers = .FEV_LAYERS,
+       verified = "2026-08-15", unverified = .FEV_UNVERIFIED_ENDPOINTS)
 }
 
 # Scientific thresholds -------------------------------------------------------
@@ -584,6 +606,82 @@ fev_fuel_weights <- function(weights = NULL, quiet = FALSE) {
 # service does not serve it. Anything earlier requires the EFFIS data request
 # form. Used to warn with a number rather than a vague caveat.
 .FEV_EFFIS_MIN_YEAR <- 2016L
+
+# Endpoints in .FEV_ENDPOINTS that were NOT confirmed by a real call. Kept as
+# data rather than as a comment so that fev_sources() can report it and a test
+# can assert it -- a caveat that only lives in a comment is one nobody reads.
+.FEV_UNVERIFIED_ENDPOINTS <- c("data_gouv_api")
+
+# Folding accented letters onto their ASCII base, keyed by Unicode code point.
+#
+# Needed to compare CSV headers -- "Date de premiere alerte" as published,
+# accents and all -- without depending on the session locale. Every obvious
+# route is locale-dependent and CI runs under C:
+#
+#   iconv(to = "ASCII//TRANSLIT")  returns "premi?re"
+#   chartr("\u00e8", "e", x)       errors, "'old' is longer than 'new'": it
+#                                  treats a UTF-8 string as bytes
+#   c("\u00e8" = "e")              is worse than either, because it looks like
+#                                  it works: under a non-UTF-8 locale R turns
+#                                  the escape into the seven-character text
+#                                  <U+00E8> at PARSE time, so the table silently
+#                                  matches nothing
+#
+# Keying on the integer code point sidesteps all three, and keeps this file
+# pure ASCII into the bargain. Letters only: everything else non-alphanumeric
+# is collapsed to an underscore by the caller.
+.FEV_ACCENT_FOLD <- c(
+  "224" = "a", "225" = "a", "226" = "a", "227" = "a", "228" = "a", "229" = "a",
+  "231" = "c", "232" = "e", "233" = "e", "234" = "e", "235" = "e", "236" = "i",
+  "237" = "i", "238" = "i", "239" = "i", "241" = "n", "242" = "o", "243" = "o",
+  "244" = "o", "245" = "o", "246" = "o", "249" = "u", "250" = "u", "251" = "u",
+  "252" = "u", "253" = "y", "255" = "y",
+  "192" = "A", "193" = "A", "194" = "A", "195" = "A", "196" = "A", "197" = "A",
+  "199" = "C", "200" = "E", "201" = "E", "202" = "E", "203" = "E", "204" = "I",
+  "205" = "I", "206" = "I", "207" = "I", "209" = "N", "210" = "O", "211" = "O",
+  "212" = "O", "213" = "O", "214" = "O", "217" = "U", "218" = "U", "219" = "U",
+  "220" = "U", "221" = "Y",
+  "198" = "AE", "223" = "ss", "230" = "ae", "338" = "OE", "339" = "oe"
+)
+
+# BDIFF -----------------------------------------------------------------------
+
+# data.gouv.fr slug of the BDIFF dataset. Read from the published dataset URL on
+# 2026-08-31; the dataset itself was not downloaded (no egress).
+.FEV_BDIFF_DATAGOUV_SLUG <-
+  "base-de-donnees-sur-les-incendies-de-forets-en-france-bdiff"
+
+# BDIFF centralises the whole country from 2006. Mediterranean departments
+# reach further back through the Promethee records merged into it in early 2023,
+# so this is the national floor, not an absolute one. Used to warn with a number
+# rather than a vague caveat, exactly as .FEV_EFFIS_MIN_YEAR is.
+.FEV_BDIFF_MIN_YEAR <- 2006L
+
+# Fiches for campaign year Y are validated by the deconcentrated services
+# between December Y and April Y+1, then published and passed to EFFIS. So year
+# Y becomes consolidated during month 5 of Y+1, and anything after that is
+# provisional. Read from the BDIFF help pages on 2026-08-31.
+.FEV_BDIFF_CONSOLIDATION_MONTH <- 5L
+
+# Date formats an export can carry. The BDIFF interface serves ISO; the slash
+# variants cover a file that has been through a spreadsheet, which is how most
+# of them arrive.
+.FEV_BDIFF_DATE_FORMATS <- c("%Y-%m-%d", "%d/%m/%Y", "%Y/%m/%d", "%d-%m-%Y")
+
+# Plausibility bounds for the area columns, in the units the file declares.
+# Not thresholds on the science -- a guard against the one silent error that
+# scales every area by 10 000. A median declared fire is of the order of a
+# hectare, i.e. ~1e4 m2: a median below 50 cannot be square metres, and one
+# above 5000 cannot be hectares. Deliberately loose; they exist to catch a unit
+# swap, not to judge a distribution.
+.FEV_BDIFF_AREA_SANITY <- list(m2_min = 50, ha_max = 5000)
+
+# Column names that carry an INSEE commune code in the layers people actually
+# have: ADMIN EXPRESS uses INSEE_COM, the IGN WFS and most open-data extracts
+# use code_insee, and a hand-built layer uses whatever its author chose.
+# Compared after the same normalisation the CSV headers get.
+.FEV_BDIFF_COMMUNE_KEYS <- c("insee_com", "code_insee", "insee", "code_commune",
+                             "com_code", "codgeo", "code")
 
 # The IGN WFS expects BBOX easting-first for EPSG:2154, contrary to what WFS
 # 2.0 prescribes for projected CRS. Requesting the "correct" northing-first

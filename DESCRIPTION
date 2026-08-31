@@ -1,6 +1,6 @@
 Package: firexpovulnR
 Title: Fire Danger, Exposure and Vulnerability Assessment for European Forests
-Version: 0.34.0
+Version: 0.35.0
 Authors@R:
     person("Pascal", "Obstétar", email = "pascal.obstetar@gmail.com",
            role = c("aut", "cre"))

@@ -7,7 +7,8 @@
 fev_sources()
 }
 \value{
-A named list with \code{endpoints} and \code{layers}.
+A named list with \code{endpoints}, \code{layers}, \code{verified} (the date the
+rest were confirmed) and \code{unverified} (the endpoints that were not).
 }
 \description{
 Returns the endpoints and layer names the package contacts, so they can be
@@ -15,12 +16,22 @@ inspected without reading the source, and overridden when a provider moves
 something.
 }
 \details{
-All values were verified on 2026-08-15 by real network calls. See
-\code{specs/phase2-rapport-faisabilite.md} in the repository for the evidence
-behind each one.
+All values were verified on 2026-08-15 by real network calls, \strong{except}
+those named in \code{unverified}. See \code{specs/phase2-rapport-faisabilite.md} in the
+repository for the evidence behind each verified one.
 }
+\section{One endpoint is not verified}{
+
+\code{data_gouv_api}, the route \code{\link[=fev_fetch_bdiff]{fev_fetch_bdiff()}} uses to reach BDIFF, was
+written without ever being called: the environment it was added in has no
+egress to data.gouv.fr. Listing it beside the others without saying so would
+make the whole registry mean less, so it is named in \code{unverified} and every
+result obtained through it carries \code{endpoint_verified = FALSE}.
+}
+
 \examples{
 fev_sources()$endpoints$ign_wfs
 fev_sources()$layers$bdforet_v2
+fev_sources()$unverified
 
 }
