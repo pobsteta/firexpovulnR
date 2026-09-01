@@ -1,5 +1,152 @@
 # Changelog
 
+## firexpovulnR 0.37.0 (2026-09-01)
+
+#### Un taux par unité de sol, ou par unité de sol qui peut brûler
+
+[`fev_fire_occurrence()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fire_occurrence.md)
+divisait par la surface de la commune. C’est le choix évident, et il
+répond à une question que personne ne pose : une commune urbanisée aux
+neuf dixièmes a peu de feux parce qu’elle a peu à brûler, et son taux
+sort bas pour une raison qui n’est pas une faible propension à
+l’allumage.
+
+`denominator = "fuel"` divise par la **surface brûlable**. C’est la
+question forestière — à quelle fréquence un feu part par unité de sol
+capable d’en porter un — et c’est celle qui compare honnêtement une
+commune du Morvan et une commune périurbaine. Mesuré sur un cas où une
+commune n’est boisée qu’au quart, le taux passe de 2,5 à 10 : quatre
+fois plus exposée par unité de combustible que ne le laissait croire son
+taux surfacique.
+
+Le combustible passe par `fev_exposure_input()`, la réduction qu’utilise
+déjà
+[`fev_exposure()`](https://pobsteta.github.io/firexpovulnR/reference/fev_exposure.md),
+pour que les deux fonctions entendent la même chose par « brûlable ».
+Une couche de disponibilité graduée est sommée telle quelle, ce qui fait
+du diviseur une surface brûlable **équivalente** plutôt qu’un compte
+d’hectares — la bonne généralisation, et une chose à savoir en lisant le
+nombre. Le combustible garde sa propre grille : c’est une somme zonale,
+pas un rééchantillonnage, et
+[`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
+reste la seule fonction du paquet autorisée à changer une grille.
+
+#### Deux conséquences rapportées plutôt que lissées
+
+Une commune sans sol brûlable reçoit `NA`, pas zéro : un taux par unité
+de surface brûlable n’est pas défini là où il n’y en a pas, et zéro se
+lirait « aucun feu ici », ce qui est une affirmation différente et
+fausse. Et si une telle commune a malgré tout enregistré un feu, la
+contradiction est nommée — elle pointe un écart de millésime, ou un feu
+qui n’était pas en forêt.
+
+Le combustible est un **instantané**, les feux une **période**. La BD
+Forêt v2 a été construite entre 2007 et 2018 ; un relevé 2006–2025
+l’enjambe des deux côtés. Le diviseur décrit donc la forêt à un moment
+pendant que le numérateur compte sur deux décennies. Le millésime part
+dans la provenance, et un combustible daté hors de la fenêtre des feux
+avertit — la discipline que
+[`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)
+applique déjà à son propre biais temporel.
+
+`measure = "count"` n’a pas de dénominateur et le dit, au lieu
+d’accepter l’argument sans effet.
+
+## firexpovulnR 0.36.0 (2026-08-31)
+
+#### Les enregistrements deviennent une couche, sans gagner de précision au passage
+
+La 0.35.0 a apporté les enregistrements de la BDIFF ; elle n’en faisait
+rien.
+[`fev_fire_occurrence()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fire_occurrence.md)
+les transforme en couche sur la grille de travail : combien de départs
+déclarés par unité de surface et par an. C’est le terme d’allumage, et
+il entre dans
+[`fev_danger_index()`](https://pobsteta.github.io/firexpovulnR/reference/fev_danger_index.md)
+ou
+[`fev_risk()`](https://pobsteta.github.io/firexpovulnR/reference/fev_risk.md)
+comme une dimension nommée de plus.
+
+Trois mesures, qui ne répondent pas à la même question. `"rate"` compte
+les départs par 100 km² et par an. `"count"` rend le nombre brut sur la
+période. `"burnt_rate"` compte les hectares parcourus par 100 km² et par
+an, donc pondère par la taille au lieu de traiter tous les feux à
+égalité.
+
+#### Le point dur : la résolution est communale, quoi qu’affiche la maille
+
+La BDIFF géolocalise à la **commune de départ**. Toutes les cellules
+d’une commune reçoivent donc la même valeur, et la carte a la maille du
+`template` avec le contenu informatif d’une commune — médiane française
+autour de 15 km², soit ~4 km de diamètre équivalent. Sur une grille à 25
+m, le rapport approche 170.
+
+C’est le même marché que le paquet refuse déjà de cacher quand il
+descend un FWI de 25 km sur une grille décamétrique. La fonction calcule
+ce rapport, le dit avec les chiffres à chaque appel, et l’inscrit dans
+la provenance.
+
+Il n’y a **délibérément aucune option de lissage ni de noyau**. Étaler
+un comptage communal selon une décroissance de distance fabriquerait une
+structure infra-communale qu’aucune source ne soutient, et la carte
+porterait alors une précision que personne ne pourrait retracer. Pour
+une carte plus lisse, il faut agréger la grille, pas interpoler les
+valeurs. `output = "communes"` rend d’ailleurs le `sf` communal, qui
+porte la même information sans la fausse netteté.
+
+#### Absent n’est pas zéro, et seul l’analyste peut trancher
+
+`fires` ne contient que les communes qui ont déclaré quelque chose. Rien
+ne distingue une commune qui n’a pas brûlé d’une commune qui n’a pas
+saisi.
+
+Sans `communes`, seules les communes présentes reçoivent une valeur et
+le reste de la grille est `NA` — honnête, et rarement ce qu’attend une
+combinaison de risque. Avec `communes`, toute commune de cette couche
+absente des enregistrements devient **0**. C’est une affirmation sur la
+couverture de l’extraction, pas une constatation : elle part dans la
+provenance sous `zeros_assumed_from`, parce que l’exhaustivité
+déclarative de la BDIFF fait qu’un zéro veut dire « rien n’a été saisi
+», jamais « rien n’a brûlé ».
+
+#### Le dénominateur décide de ce que valent les chiffres
+
+Un taux a besoin d’une période, et ce doit être la période **observée**,
+pas l’étendue des feux présents dans l’extraction : une commune avec un
+feu en 2010 dans une demande 2006–2025 vaut 1/20 par an, pas 1/1.
+
+`period` est donc lu dans cet ordre : l’argument, puis le
+`period_requested` de l’enregistrement `fev_source`, puis — avec un
+avertissement — l’étendue des dates elles-mêmes, qui est une borne
+inférieure de la fenêtre réelle et gonfle donc tous les taux.
+
+#### Un piège trouvé en poursuivant une ligne non couverte
+
+`measure = "burnt_rate"` somme les surfaces avec `na.rm = TRUE` — ce qui
+est juste quand quelques enregistrements n’ont pas de taille, et
+catastrophique quand aucun n’en a : la somme vaut alors 0 pour chaque
+commune, et le résultat est une carte **uniformément nulle** étiquetée «
+ha brûlés par 100 km² et par an ». Un lecteur y voit *rien n’a brûlé* là
+où il faut lire *aucune surface n’a été fournie*.
+
+C’est refusé net désormais. Quelques valeurs manquantes seulement font
+l’objet d’un avertissement chiffré, et leur nombre part dans la
+provenance sous `n_fires_without_area` : elles comptent pour zéro
+hectare, donc elles minorent le taux. `"count"` et `"rate"` n’ont pas
+besoin de taille et ne sont pas concernés.
+
+Le bug n’a été trouvé ni par les tests ni à la relecture, mais en allant
+voir pourquoi une ligne restait non couverte.
+
+#### Corrections
+
+`fev_bdiff_commune_key()` annonçait la colonne INSEE retenue sans
+regarder `quiet`, si bien qu’un appel silencieux ne l’était pas tout à
+fait.
+
+[`fev_fire_occurrence()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fire_occurrence.md)
+annonçait « Dropped 0 fires » quand `min_area_ha` ne retirait rien.
+
 ## firexpovulnR 0.35.0 (2026-08-31)
 
 #### Le terme d’allumage, que la chaîne n’avait jamais eu

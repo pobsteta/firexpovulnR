@@ -203,6 +203,8 @@ page.
 
 - [`fev_align()`](https://pobsteta.github.io/firexpovulnR/reference/fev_align.md)
   : Put layers on a common grid, explicitly
+- [`fev_fire_occurrence()`](https://pobsteta.github.io/firexpovulnR/reference/fev_fire_occurrence.md)
+  : Fire occurrence from declared records
 - [`fev_risk()`](https://pobsteta.github.io/firexpovulnR/reference/fev_risk.md)
   : Composite fire risk
 - [`fev_validate()`](https://pobsteta.github.io/firexpovulnR/reference/fev_validate.md)

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">firexpovulnR</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.35.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.37.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,6 +37,56 @@
       <small>Source: <a href="https://github.com/pobsteta/firexpovulnR/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.37.0" id="firexpovulnr-0370-2026-09-01">firexpovulnR 0.37.0 (2026-09-01)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0370-2026-09-01"></a></h2>
+<div class="section level4">
+<h4 id="un-taux-par-unité-de-sol-ou-par-unité-de-sol-qui-peut-brûler-0-37-0">Un taux par unité de sol, ou par unité de sol qui peut brûler<a class="anchor" aria-label="anchor" href="#un-taux-par-unit%C3%A9-de-sol-ou-par-unit%C3%A9-de-sol-qui-peut-br%C3%BBler-0-37-0"></a></h4>
+<p><code><a href="../reference/fev_fire_occurrence.html">fev_fire_occurrence()</a></code> divisait par la surface de la commune. C’est le choix évident, et il répond à une question que personne ne pose : une commune urbanisée aux neuf dixièmes a peu de feux parce qu’elle a peu à brûler, et son taux sort bas pour une raison qui n’est pas une faible propension à l’allumage.</p>
+<p><code>denominator = "fuel"</code> divise par la <strong>surface brûlable</strong>. C’est la question forestière — à quelle fréquence un feu part par unité de sol capable d’en porter un — et c’est celle qui compare honnêtement une commune du Morvan et une commune périurbaine. Mesuré sur un cas où une commune n’est boisée qu’au quart, le taux passe de 2,5 à 10 : quatre fois plus exposée par unité de combustible que ne le laissait croire son taux surfacique.</p>
+<p>Le combustible passe par <code>fev_exposure_input()</code>, la réduction qu’utilise déjà <code><a href="../reference/fev_exposure.html">fev_exposure()</a></code>, pour que les deux fonctions entendent la même chose par « brûlable ». Une couche de disponibilité graduée est sommée telle quelle, ce qui fait du diviseur une surface brûlable <strong>équivalente</strong> plutôt qu’un compte d’hectares — la bonne généralisation, et une chose à savoir en lisant le nombre. Le combustible garde sa propre grille : c’est une somme zonale, pas un rééchantillonnage, et <code><a href="../reference/fev_align.html">fev_align()</a></code> reste la seule fonction du paquet autorisée à changer une grille.</p>
+</div>
+<div class="section level4">
+<h4 id="deux-conséquences-rapportées-plutôt-que-lissées-0-37-0">Deux conséquences rapportées plutôt que lissées<a class="anchor" aria-label="anchor" href="#deux-cons%C3%A9quences-rapport%C3%A9es-plut%C3%B4t-que-liss%C3%A9es-0-37-0"></a></h4>
+<p>Une commune sans sol brûlable reçoit <code>NA</code>, pas zéro : un taux par unité de surface brûlable n’est pas défini là où il n’y en a pas, et zéro se lirait « aucun feu ici », ce qui est une affirmation différente et fausse. Et si une telle commune a malgré tout enregistré un feu, la contradiction est nommée — elle pointe un écart de millésime, ou un feu qui n’était pas en forêt.</p>
+<p>Le combustible est un <strong>instantané</strong>, les feux une <strong>période</strong>. La BD Forêt v2 a été construite entre 2007 et 2018 ; un relevé 2006–2025 l’enjambe des deux côtés. Le diviseur décrit donc la forêt à un moment pendant que le numérateur compte sur deux décennies. Le millésime part dans la provenance, et un combustible daté hors de la fenêtre des feux avertit — la discipline que <code><a href="../reference/fev_validate.html">fev_validate()</a></code> applique déjà à son propre biais temporel.</p>
+<p><code>measure = "count"</code> n’a pas de dénominateur et le dit, au lieu d’accepter l’argument sans effet.</p>
+</div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.36.0" id="firexpovulnr-0360-2026-08-31">firexpovulnR 0.36.0 (2026-08-31)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0360-2026-08-31"></a></h2>
+<div class="section level4">
+<h4 id="les-enregistrements-deviennent-une-couche-sans-gagner-de-précision-au-passage-0-36-0">Les enregistrements deviennent une couche, sans gagner de précision au passage<a class="anchor" aria-label="anchor" href="#les-enregistrements-deviennent-une-couche-sans-gagner-de-pr%C3%A9cision-au-passage-0-36-0"></a></h4>
+<p>La 0.35.0 a apporté les enregistrements de la BDIFF ; elle n’en faisait rien. <code><a href="../reference/fev_fire_occurrence.html">fev_fire_occurrence()</a></code> les transforme en couche sur la grille de travail : combien de départs déclarés par unité de surface et par an. C’est le terme d’allumage, et il entre dans <code><a href="../reference/fev_danger_index.html">fev_danger_index()</a></code> ou <code><a href="../reference/fev_risk.html">fev_risk()</a></code> comme une dimension nommée de plus.</p>
+<p>Trois mesures, qui ne répondent pas à la même question. <code>"rate"</code> compte les départs par 100 km² et par an. <code>"count"</code> rend le nombre brut sur la période. <code>"burnt_rate"</code> compte les hectares parcourus par 100 km² et par an, donc pondère par la taille au lieu de traiter tous les feux à égalité.</p>
+</div>
+<div class="section level4">
+<h4 id="le-point-dur--la-résolution-est-communale-quoi-quaffiche-la-maille-0-36-0">Le point dur : la résolution est communale, quoi qu’affiche la maille<a class="anchor" aria-label="anchor" href="#le-point-dur--la-r%C3%A9solution-est-communale-quoi-quaffiche-la-maille-0-36-0"></a></h4>
+<p>La BDIFF géolocalise à la <strong>commune de départ</strong>. Toutes les cellules d’une commune reçoivent donc la même valeur, et la carte a la maille du <code>template</code> avec le contenu informatif d’une commune — médiane française autour de 15 km², soit ~4 km de diamètre équivalent. Sur une grille à 25 m, le rapport approche 170.</p>
+<p>C’est le même marché que le paquet refuse déjà de cacher quand il descend un FWI de 25 km sur une grille décamétrique. La fonction calcule ce rapport, le dit avec les chiffres à chaque appel, et l’inscrit dans la provenance.</p>
+<p>Il n’y a <strong>délibérément aucune option de lissage ni de noyau</strong>. Étaler un comptage communal selon une décroissance de distance fabriquerait une structure infra-communale qu’aucune source ne soutient, et la carte porterait alors une précision que personne ne pourrait retracer. Pour une carte plus lisse, il faut agréger la grille, pas interpoler les valeurs. <code>output = "communes"</code> rend d’ailleurs le <code>sf</code> communal, qui porte la même information sans la fausse netteté.</p>
+</div>
+<div class="section level4">
+<h4 id="absent-nest-pas-zéro-et-seul-lanalyste-peut-trancher-0-36-0">Absent n’est pas zéro, et seul l’analyste peut trancher<a class="anchor" aria-label="anchor" href="#absent-nest-pas-z%C3%A9ro-et-seul-lanalyste-peut-trancher-0-36-0"></a></h4>
+<p><code>fires</code> ne contient que les communes qui ont déclaré quelque chose. Rien ne distingue une commune qui n’a pas brûlé d’une commune qui n’a pas saisi.</p>
+<p>Sans <code>communes</code>, seules les communes présentes reçoivent une valeur et le reste de la grille est <code>NA</code> — honnête, et rarement ce qu’attend une combinaison de risque. Avec <code>communes</code>, toute commune de cette couche absente des enregistrements devient <strong>0</strong>. C’est une affirmation sur la couverture de l’extraction, pas une constatation : elle part dans la provenance sous <code>zeros_assumed_from</code>, parce que l’exhaustivité déclarative de la BDIFF fait qu’un zéro veut dire « rien n’a été saisi », jamais « rien n’a brûlé ».</p>
+</div>
+<div class="section level4">
+<h4 id="le-dénominateur-décide-de-ce-que-valent-les-chiffres-0-36-0">Le dénominateur décide de ce que valent les chiffres<a class="anchor" aria-label="anchor" href="#le-d%C3%A9nominateur-d%C3%A9cide-de-ce-que-valent-les-chiffres-0-36-0"></a></h4>
+<p>Un taux a besoin d’une période, et ce doit être la période <strong>observée</strong>, pas l’étendue des feux présents dans l’extraction : une commune avec un feu en 2010 dans une demande 2006–2025 vaut 1/20 par an, pas 1/1.</p>
+<p><code>period</code> est donc lu dans cet ordre : l’argument, puis le <code>period_requested</code> de l’enregistrement <code>fev_source</code>, puis — avec un avertissement — l’étendue des dates elles-mêmes, qui est une borne inférieure de la fenêtre réelle et gonfle donc tous les taux.</p>
+</div>
+<div class="section level4">
+<h4 id="un-piège-trouvé-en-poursuivant-une-ligne-non-couverte-0-36-0">Un piège trouvé en poursuivant une ligne non couverte<a class="anchor" aria-label="anchor" href="#un-pi%C3%A8ge-trouv%C3%A9-en-poursuivant-une-ligne-non-couverte-0-36-0"></a></h4>
+<p><code>measure = "burnt_rate"</code> somme les surfaces avec <code>na.rm = TRUE</code> — ce qui est juste quand quelques enregistrements n’ont pas de taille, et catastrophique quand aucun n’en a : la somme vaut alors 0 pour chaque commune, et le résultat est une carte <strong>uniformément nulle</strong> étiquetée « ha brûlés par 100 km² et par an ». Un lecteur y voit <em>rien n’a brûlé</em> là où il faut lire <em>aucune surface n’a été fournie</em>.</p>
+<p>C’est refusé net désormais. Quelques valeurs manquantes seulement font l’objet d’un avertissement chiffré, et leur nombre part dans la provenance sous <code>n_fires_without_area</code> : elles comptent pour zéro hectare, donc elles minorent le taux. <code>"count"</code> et <code>"rate"</code> n’ont pas besoin de taille et ne sont pas concernés.</p>
+<p>Le bug n’a été trouvé ni par les tests ni à la relecture, mais en allant voir pourquoi une ligne restait non couverte.</p>
+</div>
+<div class="section level4">
+<h4 id="corrections-0-36-0">Corrections<a class="anchor" aria-label="anchor" href="#corrections-0-36-0"></a></h4>
+<p><code>fev_bdiff_commune_key()</code> annonçait la colonne INSEE retenue sans regarder <code>quiet</code>, si bien qu’un appel silencieux ne l’était pas tout à fait.</p>
+<p><code><a href="../reference/fev_fire_occurrence.html">fev_fire_occurrence()</a></code> annonçait « Dropped 0 fires » quand <code>min_area_ha</code> ne retirait rien.</p>
+</div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.35.0" id="firexpovulnr-0350-2026-08-31">firexpovulnR 0.35.0 (2026-08-31)<a class="anchor" aria-label="anchor" href="#firexpovulnr-0350-2026-08-31"></a></h2>
 <div class="section level4">
