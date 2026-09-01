@@ -11,6 +11,9 @@ fev_fire_occurrence(
   communes_key = NULL,
   period = NULL,
   measure = c("rate", "count", "burnt_rate"),
+  denominator = c("area", "fuel"),
+  fuel = NULL,
+  lookup = NULL,
   min_area_ha = 0,
   output = c("raster", "communes"),
   quiet = FALSE
@@ -41,6 +44,17 @@ per year, which weights by size rather than counting equally. Only
 record carries one, because summing absent areas would produce a uniform
 zero map reading as \emph{nothing burnt} rather than \emph{nothing supplied}.}
 
+\item{denominator}{What a rate is per: \code{"area"} (default) the commune's own
+area, or \code{"fuel"} its burnable area. Ignored by \code{measure = "count"}, which
+has no denominator. See the section above.}
+
+\item{fuel}{Required for \code{denominator = "fuel"}: a \code{fev_fuel_source},
+\code{fev_layer} or \code{SpatRaster}, reduced to a burnable mask exactly as
+\code{\link[=fev_exposure]{fev_exposure()}} reduces it. It keeps its own grid — this is a zonal sum,
+not a resampling.}
+
+\item{lookup}{Passed to the fuel reduction, as in \code{\link[=fev_exposure]{fev_exposure()}}.}
+
 \item{min_area_ha}{Drop fires smaller than this before counting. \code{0} keeps
 everything, which is the point of BDIFF over EFFIS; raise it to ask how
 often a fire of consequence starts here.}
@@ -55,7 +69,8 @@ sharpness.}
 \value{
 For \code{output = "raster"}, a \code{fev_layer} of role \code{"occurrence"}
 holding a \code{SpatRaster}. For \code{output = "communes"}, an \code{sf} with \code{insee},
-\code{n_fires}, \code{burnt_ha}, \code{area_km2} and \code{occurrence}.
+\code{n_fires}, \code{burnt_ha}, \code{area_km2}, \code{burnable_km2} (\code{NA} unless
+\code{denominator = "fuel"}) and \code{occurrence}.
 }
 \description{
 Turns the fire records of \code{\link[=fev_fetch_bdiff]{fev_fetch_bdiff()}} into an occurrence layer on a
@@ -114,6 +129,35 @@ So \code{period} is read, in order, from the argument, then from the
 \code{period_requested} of the \link{fev_source} record, then — with a warning — from
 the range of the fire dates themselves, which is a lower bound on the true
 observation window and therefore inflates every rate.
+}
+
+\section{Per unit of ground, or per unit of ground that can burn}{
+
+\code{denominator = "area"} divides by the commune's own area. It is the obvious
+choice and it answers a question nobody asked: a commune that is nine tenths
+built-up has few fires because it has little to burn, and its rate comes out
+low for a reason that is not a low propensity to ignite.
+
+\code{denominator = "fuel"} divides by the \strong{burnable} area instead, which is the
+forestry question — how often does a fire start per unit of ground that can
+carry one — and the one that compares a Morvan commune with a periurban one
+honestly. It needs a \code{fuel} layer, reduced through the same path
+\code{\link[=fev_exposure]{fev_exposure()}} uses, so both functions mean the same thing by "burnable".
+A graded availability layer is summed as it stands, making the divisor a
+burnable-\emph{equivalent} area rather than a count of burnable hectares.
+
+Two consequences are reported rather than smoothed over. A commune with no
+burnable ground gets \code{NA}, not zero: a rate per unit of burnable land is
+undefined where there is none — and if such a commune recorded a fire anyway,
+that contradiction is named, because it points at a vintage gap or at a fire
+that was not in the woods.
+
+And the fuel is a \strong{snapshot} while the fires are a \strong{period}. BD Forêt v2
+was built between 2007 and 2018; a 2006–2025 record spans both sides of it.
+The divisor describes the forest at one moment while the numerator counts
+over two decades. The vintage goes into the record, and a fuel dated outside
+the fire window warns — the discipline \code{\link[=fev_validate]{fev_validate()}} applies to its own
+temporal bias.
 }
 
 \examples{

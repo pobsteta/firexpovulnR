@@ -354,6 +354,145 @@ test_that("the report speaks when it is not silenced", {
   )
 })
 
+# The burnable denominator ------------------------------------------------------------
+
+# 21001 burnable on its first 500 m column only (1 of 4 km2); 21002 entirely.
+synth_fuel <- function(res = 500, first_col_only = TRUE) {
+  r <- terra::rast(terra::ext(0, 4000, 0, 2000), resolution = res,
+                   crs = "EPSG:2154")
+  terra::values(r) <- 0
+  xy <- terra::xyFromCell(r, seq_len(terra::ncell(r)))
+  if (first_col_only) r[xy[, 1] < 500] <- 1
+  r[xy[, 1] >= 2000] <- 1
+  r
+}
+
+test_that("dividing by burnable ground changes the answer, and by how much", {
+  args <- list(synth_fires(), synth_grid(), communes = synth_com(),
+               period = c(2006, 2025), output = "communes", quiet = TRUE)
+
+  by_area <- suppressWarnings(do.call(fev_fire_occurrence, args))
+  by_fuel <- suppressWarnings(do.call(
+    fev_fire_occurrence, c(args, denominator = "fuel", list(fuel = synth_fuel()))
+  ))
+
+  expect_true(all(is.na(by_area$burnable_km2)))
+  expect_equal(by_fuel$burnable_km2, c(1, 4))
+
+  # 2 fires over 4 km2 is 2.5; over the 1 km2 that can actually burn it is 10.
+  # The commune is four times more fire-prone per unit of burnable land than
+  # its area-based rate suggested -- which is the whole point.
+  expect_equal(by_area$occurrence, c(2.5, 0))
+  expect_equal(by_fuel$occurrence, c(10, 0))
+})
+
+test_that("the units say which denominator produced the number", {
+  occ <- suppressWarnings(fev_fire_occurrence(
+    synth_fires(), synth_grid(), communes = synth_com(), period = c(2006, 2025),
+    denominator = "fuel", fuel = synth_fuel(), quiet = TRUE
+  ))
+  expect_equal(occ$units, "fires per 100 km2 of burnable land per year")
+
+  step <- utils::tail(occ$provenance$steps, 1)[[1]]
+  expect_equal(step$params$denominator, "fuel")
+  expect_true(step$params$denominator_is_a_snapshot)
+  expect_equal(step$params$fuel_res_m, 500)
+})
+
+test_that("no fuel layer means no fuel denominator", {
+  expect_error(
+    fev_fire_occurrence(synth_fires(), synth_grid(), communes = synth_com(),
+                        period = c(2006, 2025), denominator = "fuel",
+                        quiet = TRUE),
+    class = "fev_occ_fuel_missing"
+  )
+})
+
+test_that("a commune with nothing to burn is NA, not zero", {
+  # A rate per unit of burnable land is undefined where there is none. Zero
+  # would read as "no fires here", which is a different and wrong claim.
+  bare <- synth_fuel(first_col_only = FALSE)   # 21001 has no burnable cell
+  expect_warning(
+    fev_fire_occurrence(synth_fires(), synth_grid(), communes = synth_com(),
+                        period = c(2006, 2025), denominator = "fuel",
+                        fuel = bare, quiet = TRUE),
+    class = "fev_occ_no_fuel_communes"
+  )
+  cc <- suppressWarnings(fev_fire_occurrence(
+    synth_fires(), synth_grid(), communes = synth_com(), period = c(2006, 2025),
+    denominator = "fuel", fuel = bare, output = "communes", quiet = TRUE
+  ))
+  expect_true(is.na(cc$occurrence[1]))
+  expect_equal(cc$occurrence[2], 0)
+
+  # And the contradiction is named: 21001 recorded two fires on ground the
+  # fuel layer says cannot burn.
+  err <- tryCatch(
+    fev_fire_occurrence(synth_fires(), synth_grid(), communes = synth_com(),
+                        period = c(2006, 2025), denominator = "fuel",
+                        fuel = bare, quiet = TRUE),
+    warning = function(w) w
+  )
+  expect_match(conditionMessage(err), "recorded a fire all the same")
+})
+
+test_that("a fuel dated outside the fire window warns", {
+  # The divisor is a snapshot, the numerator a period. BD Foret v2 was built
+  # 2007-2018; a record reaching 2025 straddles it.
+  fu <- synth_fuel()
+  prov <- firexpovulnR:::fev_prov_new(crs_work = "EPSG:2154")
+  prov <- firexpovulnR:::fev_prov_add_source(
+    prov, dataset = "bdforet_v2", provider = "IGN", millesime = 1999
+  )
+  layer <- firexpovulnR:::new_fev_layer(fu, role = "burnable",
+                                        provenance = prov)
+  expect_warning(
+    fev_fire_occurrence(synth_fires(), synth_grid(), communes = synth_com(),
+                        period = c(2006, 2025), denominator = "fuel",
+                        fuel = layer, quiet = TRUE),
+    class = "fev_occ_fuel_vintage"
+  )
+  occ <- suppressWarnings(fev_fire_occurrence(
+    synth_fires(), synth_grid(), communes = synth_com(), period = c(2006, 2025),
+    denominator = "fuel", fuel = layer, quiet = TRUE
+  ))
+  expect_equal(utils::tail(occ$provenance$steps, 1)[[1]]$params$fuel_millesime,
+               1999L)
+})
+
+test_that("count has no denominator and says so rather than pretending", {
+  expect_message(
+    suppressWarnings(fev_fire_occurrence(
+      synth_fires(), synth_grid(), communes = synth_com(),
+      period = c(2006, 2025), measure = "count", denominator = "fuel",
+      fuel = synth_fuel(), quiet = TRUE
+    )),
+    "no denominator"
+  )
+})
+
+test_that("the burnable denominator is reported when not silenced", {
+  expect_message(
+    suppressWarnings(fev_fire_occurrence(
+      synth_fires(), synth_grid(), communes = synth_com(),
+      period = c(2006, 2025), denominator = "fuel", fuel = synth_fuel(),
+      quiet = FALSE
+    )),
+    "Burnable denominator"
+  )
+})
+
+test_that("a fuel layer with no CRS is refused", {
+  fu <- synth_fuel()
+  terra::crs(fu) <- ""
+  expect_error(
+    fev_fire_occurrence(synth_fires(), synth_grid(), communes = synth_com(),
+                        period = c(2006, 2025), denominator = "fuel",
+                        fuel = fu, quiet = TRUE),
+    class = "fev_error"
+  )
+})
+
 # It feeds the rest of the package ---------------------------------------------------
 
 test_that("the layer enters fev_risk as one more dimension", {
