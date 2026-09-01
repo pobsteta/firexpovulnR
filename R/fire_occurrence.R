@@ -74,6 +74,33 @@
 #' the range of the fire dates themselves, which is a lower bound on the true
 #' observation window and therefore inflates every rate.
 #'
+#' @section Per unit of ground, or per unit of ground that can burn:
+#' `denominator = "area"` divides by the commune's own area. It is the obvious
+#' choice and it answers a question nobody asked: a commune that is nine tenths
+#' built-up has few fires because it has little to burn, and its rate comes out
+#' low for a reason that is not a low propensity to ignite.
+#'
+#' `denominator = "fuel"` divides by the **burnable** area instead, which is the
+#' forestry question — how often does a fire start per unit of ground that can
+#' carry one — and the one that compares a Morvan commune with a periurban one
+#' honestly. It needs a `fuel` layer, reduced through the same path
+#' [fev_exposure()] uses, so both functions mean the same thing by "burnable".
+#' A graded availability layer is summed as it stands, making the divisor a
+#' burnable-*equivalent* area rather than a count of burnable hectares.
+#'
+#' Two consequences are reported rather than smoothed over. A commune with no
+#' burnable ground gets `NA`, not zero: a rate per unit of burnable land is
+#' undefined where there is none — and if such a commune recorded a fire anyway,
+#' that contradiction is named, because it points at a vintage gap or at a fire
+#' that was not in the woods.
+#'
+#' And the fuel is a **snapshot** while the fires are a **period**. BD Forêt v2
+#' was built between 2007 and 2018; a 2006–2025 record spans both sides of it.
+#' The divisor describes the forest at one moment while the numerator counts
+#' over two decades. The vintage goes into the record, and a fuel dated outside
+#' the fire window warns — the discipline [fev_validate()] applies to its own
+#' temporal bias.
+#'
 #' @param fires Fire records **carrying geometry**: a [fev_source] from
 #'   [fev_fetch_bdiff()] called with `communes`, or the `sf` itself. Records
 #'   without geometry are refused, with the reason.
@@ -92,6 +119,14 @@
 #'   `"burnt_rate"` needs an `area_ha` column: it is refused outright when no
 #'   record carries one, because summing absent areas would produce a uniform
 #'   zero map reading as *nothing burnt* rather than *nothing supplied*.
+#' @param denominator What a rate is per: `"area"` (default) the commune's own
+#'   area, or `"fuel"` its burnable area. Ignored by `measure = "count"`, which
+#'   has no denominator. See the section above.
+#' @param fuel Required for `denominator = "fuel"`: a `fev_fuel_source`,
+#'   `fev_layer` or `SpatRaster`, reduced to a burnable mask exactly as
+#'   [fev_exposure()] reduces it. It keeps its own grid — this is a zonal sum,
+#'   not a resampling.
+#' @param lookup Passed to the fuel reduction, as in [fev_exposure()].
 #' @param min_area_ha Drop fires smaller than this before counting. `0` keeps
 #'   everything, which is the point of BDIFF over EFFIS; raise it to ask how
 #'   often a fire of consequence starts here.
@@ -103,7 +138,8 @@
 #'
 #' @return For `output = "raster"`, a `fev_layer` of role `"occurrence"`
 #'   holding a `SpatRaster`. For `output = "communes"`, an `sf` with `insee`,
-#'   `n_fires`, `burnt_ha`, `area_km2` and `occurrence`.
+#'   `n_fires`, `burnt_ha`, `area_km2`, `burnable_km2` (`NA` unless
+#'   `denominator = "fuel"`) and `occurrence`.
 #'
 #' @seealso [fev_fetch_bdiff()] for the records, [fev_danger_index()] and
 #'   [fev_risk()] to combine this with the spread terms.
@@ -136,11 +172,20 @@ fev_fire_occurrence <- function(fires,
                                 communes_key = NULL,
                                 period = NULL,
                                 measure = c("rate", "count", "burnt_rate"),
+                                denominator = c("area", "fuel"),
+                                fuel = NULL,
+                                lookup = NULL,
                                 min_area_ha = 0,
                                 output = c("raster", "communes"),
                                 quiet = FALSE) {
   measure <- match.arg(measure)
+  denominator <- match.arg(denominator)
   output <- match.arg(output)
+
+  if (measure == "count" && !identical(denominator, "area")) {
+    fev_inform("{.code measure = \"count\"} has no denominator, so \\
+                {.arg denominator} is ignored.")
+  }
 
   grid <- fev_as_raster(template, "template")
   if (!fev_crs_usable(grid)) {
@@ -192,17 +237,23 @@ fev_fire_occurrence <- function(fires,
     ))
   }
 
+  den <- fev_occ_denominator(by_com, denominator, fuel, lookup, grid,
+                             years, quiet)
+  by_com$burnable_km2 <- den$burnable_km2
+  divisor <- den$divisor
+
   by_com$occurrence <- switch(
     measure,
     count      = by_com$n_fires,
-    rate       = by_com$n_fires / by_com$area_km2 / n_years * 100,
-    burnt_rate = by_com$burnt_ha / by_com$area_km2 / n_years * 100
+    rate       = by_com$n_fires / divisor / n_years * 100,
+    burnt_rate = by_com$burnt_ha / divisor / n_years * 100
   )
+  per <- if (denominator == "fuel") "100 km2 of burnable land" else "100 km2"
   units <- switch(
     measure,
     count      = sprintf("fires over %d-%d", years[1], years[2]),
-    rate       = "fires per 100 km2 per year",
-    burnt_rate = "ha burnt per 100 km2 per year"
+    rate       = paste("fires per", per, "per year"),
+    burnt_rate = paste("ha burnt per", per, "per year")
   )
 
   mismatch <- fev_occ_scale_report(by_com, grid, quiet)
@@ -211,7 +262,13 @@ fev_fire_occurrence <- function(fires,
     prov, fun = "fev_fire_occurrence",
     params = list(
       measure = measure,
+      denominator = denominator,
       units = units,
+      fuel_source = den$fuel_role %||% NA_character_,
+      fuel_millesime = den$millesime %||% NA,
+      fuel_res_m = den$fuel_res %||% NA,
+      n_communes_without_fuel = den$n_without %||% NA_integer_,
+      denominator_is_a_snapshot = den$snapshot %||% NA,
       period = paste(years, collapse = "-"),
       period_source = attr(years, "from"),
       n_years = n_years,
@@ -448,6 +505,108 @@ fev_occ_attach_geometry <- function(by_com, tab, communes, communes_key,
                 fire, read as zero.")
   }
   out
+}
+
+#' The denominator: all the ground, or only what can burn
+#'
+#' Per commune area is the obvious divisor and it answers a question nobody
+#' asked. A commune that is nine tenths built-up has few fires because it has
+#' little to burn, and its rate comes out low for a reason that is not a low
+#' propensity to ignite. Dividing by the BURNABLE area instead asks the
+#' forestry question -- how often does a fire start per unit of ground that can
+#' carry one -- and it is the one that compares a Morvan commune with a
+#' periurban one honestly.
+#'
+#' The fuel goes through `fev_exposure_input()`, the same reduction
+#' [fev_exposure()] uses, so both functions mean the same thing by "burnable".
+#' A graded availability layer is summed as it stands, which makes the divisor
+#' a burnable-EQUIVALENT area rather than a count of burnable hectares -- the
+#' right generalisation, and worth knowing when reading the number.
+#'
+#' Two things this cannot fix, and therefore reports:
+#'
+#' Cells are assigned whole to the commune containing their centre, so the
+#' burnable area of a commune is approximate at its edge. Immaterial for a
+#' commune of a few thousand cells, not immaterial for a small one on a coarse
+#' fuel grid.
+#'
+#' The fuel layer is a SNAPSHOT and the fires are a PERIOD. BD Foret v2 was
+#' built between 2007 and 2018; a 2006-2025 fire record spans both sides of it.
+#' The divisor therefore describes the forest at one moment while the numerator
+#' counts over two decades, and the vintage goes into the record so a reader can
+#' judge the gap -- the same discipline `fev_validate()` applies to its own
+#' temporal bias.
+#'
+#' @noRd
+fev_occ_denominator <- function(by_com, denominator, fuel, lookup, grid,
+                                years, quiet) {
+  if (denominator == "area") {
+    return(list(divisor = by_com$area_km2, burnable_km2 = NA_real_,
+                snapshot = FALSE))
+  }
+
+  if (is.null(fuel)) {
+    fev_abort(c(
+      "{.code denominator = \"fuel\"} needs a {.arg fuel} layer.",
+      i = "Pass a {.cls fev_fuel_source}, a {.cls fev_layer} or a burnable \\
+           mask; it is reduced exactly as {.fn fev_exposure} reduces it.",
+      i = "Without one there is no way to know what can burn."
+    ), class = "fev_occ_fuel_missing")
+  }
+
+  got <- fev_exposure_input(fuel, lookup)
+  r <- got$raster
+  if (!fev_crs_usable(r)) {
+    fev_abort(c(
+      "{.arg fuel} carries no usable CRS.",
+      i = "It has to be comparable with the commune polygons."
+    ))
+  }
+
+  # The fuel keeps its own grid: this is a zonal sum, not a resampling, and
+  # fev_align() stays the only function in the package that regrids anything.
+  com <- sf::st_transform(by_com, terra::crs(r))
+  cell_km2 <- prod(terra::res(r)) / 1e6
+  sums <- terra::extract(r, terra::vect(com), fun = "sum", na.rm = TRUE,
+                         ID = FALSE)
+  burnable <- as.numeric(sums[[1]]) * cell_km2
+  burnable[is.na(burnable)] <- 0
+
+  n_without <- sum(burnable <= 0)
+  if (n_without) {
+    # Undefined, not zero: a commune with nothing to burn has no fires per unit
+    # of burnable land. And one that recorded a fire anyway is a contradiction
+    # worth seeing -- a vintage gap, or a fire that was not in the woods.
+    burnt_anyway <- sum(burnable <= 0 & by_com$n_fires > 0)
+    fev_warn(c(
+      "{n_without} commune{?s} ha{?s/ve} no burnable ground in {.arg fuel}; \\
+       their rate is {.val NA}, not zero.",
+      i = "A rate per unit of burnable land is undefined where there is none.",
+      if (burnt_anyway > 0)
+        c(x = "{burnt_anyway} of them recorded a fire all the same -- check \\
+               the fuel vintage against the fire period, or whether those \\
+               fires were outside the woods.")
+    ), class = "fev_occ_no_fuel_communes")
+    burnable[burnable <= 0] <- NA_real_
+  }
+
+  millesime <- fev_provenance_millesime(got$provenance)
+  if (!is.null(millesime) && (millesime < years[1] || millesime > years[2])) {
+    fev_warn(c(
+      "The fuel is dated {millesime}; the fires span {years[1]}-{years[2]}.",
+      x = "The divisor is a snapshot outside the window it divides.",
+      i = "Recorded in the provenance. Say so if you report the rates."
+    ), class = "fev_occ_fuel_vintage")
+  }
+  if (!quiet) {
+    fev_inform("Burnable denominator: {signif(sum(burnable, na.rm = TRUE), 4)} \\
+                km2 over {nrow(by_com)} commune{?s}, from {got$role}.")
+  }
+
+  list(divisor = burnable, burnable_km2 = burnable,
+       fuel_role = got$role, millesime = millesime %||% NA,
+       fuel_res = signif(terra::res(r)[1], 6), n_without = n_without,
+       snapshot = TRUE)
 }
 
 #' Say how much finer the grid is than the observation, with numbers

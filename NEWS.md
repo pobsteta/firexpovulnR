@@ -1,3 +1,46 @@
+# firexpovulnR 0.37.0 (2026-09-01)
+
+### Un taux par unité de sol, ou par unité de sol qui peut brûler
+
+`fev_fire_occurrence()` divisait par la surface de la commune. C'est le choix
+évident, et il répond à une question que personne ne pose : une commune
+urbanisée aux neuf dixièmes a peu de feux parce qu'elle a peu à brûler, et son
+taux sort bas pour une raison qui n'est pas une faible propension à l'allumage.
+
+`denominator = "fuel"` divise par la **surface brûlable**. C'est la question
+forestière — à quelle fréquence un feu part par unité de sol capable d'en
+porter un — et c'est celle qui compare honnêtement une commune du Morvan et
+une commune périurbaine. Mesuré sur un cas où une commune n'est boisée qu'au
+quart, le taux passe de 2,5 à 10 : quatre fois plus exposée par unité de
+combustible que ne le laissait croire son taux surfacique.
+
+Le combustible passe par `fev_exposure_input()`, la réduction qu'utilise déjà
+`fev_exposure()`, pour que les deux fonctions entendent la même chose par
+« brûlable ». Une couche de disponibilité graduée est sommée telle quelle, ce
+qui fait du diviseur une surface brûlable **équivalente** plutôt qu'un compte
+d'hectares — la bonne généralisation, et une chose à savoir en lisant le
+nombre. Le combustible garde sa propre grille : c'est une somme zonale, pas un
+rééchantillonnage, et `fev_align()` reste la seule fonction du paquet
+autorisée à changer une grille.
+
+### Deux conséquences rapportées plutôt que lissées
+
+Une commune sans sol brûlable reçoit `NA`, pas zéro : un taux par unité de
+surface brûlable n'est pas défini là où il n'y en a pas, et zéro se lirait
+« aucun feu ici », ce qui est une affirmation différente et fausse. Et si une
+telle commune a malgré tout enregistré un feu, la contradiction est nommée —
+elle pointe un écart de millésime, ou un feu qui n'était pas en forêt.
+
+Le combustible est un **instantané**, les feux une **période**. La BD Forêt v2
+a été construite entre 2007 et 2018 ; un relevé 2006–2025 l'enjambe des deux
+côtés. Le diviseur décrit donc la forêt à un moment pendant que le numérateur
+compte sur deux décennies. Le millésime part dans la provenance, et un
+combustible daté hors de la fenêtre des feux avertit — la discipline que
+`fev_validate()` applique déjà à son propre biais temporel.
+
+`measure = "count"` n'a pas de dénominateur et le dit, au lieu d'accepter
+l'argument sans effet.
+
 # firexpovulnR 0.36.0 (2026-08-31)
 
 ### Les enregistrements deviennent une couche, sans gagner de précision au passage
