@@ -88,7 +88,10 @@
 #'   falls back to the data with a warning.
 #' @param measure `"rate"` (default) fires per 100 km2 per year; `"count"` the
 #'   raw number over the whole period; `"burnt_rate"` hectares burnt per 100 km2
-#'   per year, which weights by size rather than counting equally.
+#'   per year, which weights by size rather than counting equally. Only
+#'   `"burnt_rate"` needs an `area_ha` column: it is refused outright when no
+#'   record carries one, because summing absent areas would produce a uniform
+#'   zero map reading as *nothing burnt* rather than *nothing supplied*.
 #' @param min_area_ha Drop fires smaller than this before counting. `0` keeps
 #'   everything, which is the point of BDIFF over EFFIS; raise it to ask how
 #'   often a fire of consequence starts here.
@@ -166,10 +169,12 @@ fev_fire_occurrence <- function(fires,
         i = "{n_drop} record{?s} were dropped by {.arg min_area_ha}."
       ), class = "fev_empty_result")
     }
-    if (!quiet) {
+    if (n_drop && !quiet) {
       fev_inform("Dropped {n_drop} fire{?s} below {min_area_ha} ha.")
     }
   }
+
+  fev_occ_check_areas(tab, measure)
 
   years <- fev_occ_period(period, src, tab, quiet)
   n_years <- years[2] - years[1] + 1L
@@ -212,6 +217,7 @@ fev_fire_occurrence <- function(fires,
       n_years = n_years,
       min_area_ha = min_area_ha,
       n_fires = nrow(tab),
+      n_fires_without_area = sum(is.na(tab$area_ha)),
       n_communes = nrow(by_com),
       n_communes_zero = sum(by_com$n_fires == 0),
       zeros_assumed_from = if (is.null(communes)) NA_character_ else
@@ -273,6 +279,43 @@ fev_occ_records <- function(fires) {
     fev_abort("{.arg fires} holds no record.", class = "fev_empty_result")
   }
   x
+}
+
+#' Refuse a burnt-area rate computed from areas that are not there
+#'
+#' `burnt_ha` is summed with `na.rm = TRUE`, which is right when a few records
+#' lack a size and catastrophic when they all do: the sum is then 0 for every
+#' commune, and the result is a uniform zero map labelled "ha burnt per 100 km2
+#' per year". A reader takes that for "nothing burnt", when it means "no area
+#' was supplied". Counting does not care, so this only fires for the measure
+#' that does.
+#'
+#' @noRd
+fev_occ_check_areas <- function(tab, measure) {
+  if (measure != "burnt_rate") {
+    return(invisible(FALSE))
+  }
+  n_na <- sum(is.na(tab$area_ha))
+  if (n_na == nrow(tab)) {
+    fev_abort(c(
+      "{.code measure = \"burnt_rate\"} needs a burnt area, and no record \\
+       carries one.",
+      x = "Summing them would give 0 for every commune -- a uniform zero map \\
+           that reads as {.emph nothing burnt} rather than {.emph nothing \\
+           supplied}.",
+      i = "Use {.code measure = \"count\"} or {.code \"rate\"}, which do not \\
+           need a size, or supply an {.field area_ha} column."
+    ), class = "fev_occ_no_areas")
+  }
+  if (n_na) {
+    fev_warn(c(
+      "{n_na} of {nrow(tab)} record{?s} carr{?ies/y} no burnt area.",
+      x = "They count as 0 hectares, so every rate here is understated.",
+      i = "{.code measure = \"count\"} weights every fire alike and does not \\
+           have this problem."
+    ), class = "fev_occ_partial_areas")
+  }
+  invisible(TRUE)
 }
 
 #' @noRd

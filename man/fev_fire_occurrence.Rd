@@ -36,7 +36,10 @@ falls back to the data with a warning.}
 
 \item{measure}{\code{"rate"} (default) fires per 100 km2 per year; \code{"count"} the
 raw number over the whole period; \code{"burnt_rate"} hectares burnt per 100 km2
-per year, which weights by size rather than counting equally.}
+per year, which weights by size rather than counting equally. Only
+\code{"burnt_rate"} needs an \code{area_ha} column: it is refused outright when no
+record carries one, because summing absent areas would produce a uniform
+zero map reading as \emph{nothing burnt} rather than \emph{nothing supplied}.}
 
 \item{min_area_ha}{Drop fires smaller than this before counting. \code{0} keeps
 everything, which is the point of BDIFF over EFFIS; raise it to ask how
