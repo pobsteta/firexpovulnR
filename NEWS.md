@@ -1,3 +1,67 @@
+# firexpovulnR 0.36.0 (2026-08-31)
+
+### Les enregistrements deviennent une couche, sans gagner de précision au passage
+
+La 0.35.0 a apporté les enregistrements de la BDIFF ; elle n'en faisait rien.
+`fev_fire_occurrence()` les transforme en couche sur la grille de travail :
+combien de départs déclarés par unité de surface et par an. C'est le terme
+d'allumage, et il entre dans `fev_danger_index()` ou `fev_risk()` comme une
+dimension nommée de plus.
+
+Trois mesures, qui ne répondent pas à la même question. `"rate"` compte les
+départs par 100 km² et par an. `"count"` rend le nombre brut sur la période.
+`"burnt_rate"` compte les hectares parcourus par 100 km² et par an, donc pondère
+par la taille au lieu de traiter tous les feux à égalité.
+
+### Le point dur : la résolution est communale, quoi qu'affiche la maille
+
+La BDIFF géolocalise à la **commune de départ**. Toutes les cellules d'une
+commune reçoivent donc la même valeur, et la carte a la maille du `template`
+avec le contenu informatif d'une commune — médiane française autour de 15 km²,
+soit ~4 km de diamètre équivalent. Sur une grille à 25 m, le rapport approche
+170.
+
+C'est le même marché que le paquet refuse déjà de cacher quand il descend un
+FWI de 25 km sur une grille décamétrique. La fonction calcule ce rapport, le
+dit avec les chiffres à chaque appel, et l'inscrit dans la provenance.
+
+Il n'y a **délibérément aucune option de lissage ni de noyau**. Étaler un
+comptage communal selon une décroissance de distance fabriquerait une structure
+infra-communale qu'aucune source ne soutient, et la carte porterait alors une
+précision que personne ne pourrait retracer. Pour une carte plus lisse, il faut
+agréger la grille, pas interpoler les valeurs. `output = "communes"` rend
+d'ailleurs le `sf` communal, qui porte la même information sans la fausse
+netteté.
+
+### Absent n'est pas zéro, et seul l'analyste peut trancher
+
+`fires` ne contient que les communes qui ont déclaré quelque chose. Rien ne
+distingue une commune qui n'a pas brûlé d'une commune qui n'a pas saisi.
+
+Sans `communes`, seules les communes présentes reçoivent une valeur et le reste
+de la grille est `NA` — honnête, et rarement ce qu'attend une combinaison de
+risque. Avec `communes`, toute commune de cette couche absente des
+enregistrements devient **0**. C'est une affirmation sur la couverture de
+l'extraction, pas une constatation : elle part dans la provenance sous
+`zeros_assumed_from`, parce que l'exhaustivité déclarative de la BDIFF fait
+qu'un zéro veut dire « rien n'a été saisi », jamais « rien n'a brûlé ».
+
+### Le dénominateur décide de ce que valent les chiffres
+
+Un taux a besoin d'une période, et ce doit être la période **observée**, pas
+l'étendue des feux présents dans l'extraction : une commune avec un feu en 2010
+dans une demande 2006–2025 vaut 1/20 par an, pas 1/1.
+
+`period` est donc lu dans cet ordre : l'argument, puis le `period_requested` de
+l'enregistrement `fev_source`, puis — avec un avertissement — l'étendue des
+dates elles-mêmes, qui est une borne inférieure de la fenêtre réelle et gonfle
+donc tous les taux.
+
+### Correction
+
+`fev_bdiff_commune_key()` annonçait la colonne INSEE retenue sans regarder
+`quiet`, si bien qu'un appel silencieux ne l'était pas tout à fait.
+
 # firexpovulnR 0.35.0 (2026-08-31)
 
 ### Le terme d'allumage, que la chaîne n'avait jamais eu

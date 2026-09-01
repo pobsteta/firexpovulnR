@@ -139,6 +139,7 @@ reference:
       comme une réserve de bas de page.
     contents:
     - fev_align
+    - fev_fire_occurrence
     - fev_risk
     - fev_validate
 
