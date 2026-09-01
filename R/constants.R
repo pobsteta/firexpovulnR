@@ -683,6 +683,15 @@ fev_fuel_weights <- function(weights = NULL, quiet = FALSE) {
 .FEV_BDIFF_COMMUNE_KEYS <- c("insee_com", "code_insee", "insee", "code_commune",
                              "com_code", "codgeo", "code")
 
+# Above this ratio between the equivalent diameter of the median commune and
+# the cell size, fev_fire_occurrence() warns that the grid is finer than the
+# observation. 4 is deliberately low: a communal count on cells four times
+# smaller than the commune already reads as structure that is not there, and
+# the realistic case is far worse -- a 25 m cell inside a 15 km2 commune is a
+# ratio near 170. It is a reporting threshold, not a scientific one, and the
+# ratio itself goes into the provenance whether or not the warning fires.
+.FEV_OCC_SCALE_WARN <- 4
+
 # The IGN WFS expects BBOX easting-first for EPSG:2154, contrary to what WFS
 # 2.0 prescribes for projected CRS. Requesting the "correct" northing-first
 # order returns zero features with HTTP 200 -- a silent empty result, which is

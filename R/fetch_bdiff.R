@@ -955,7 +955,7 @@ fev_bdiff_attach_communes <- function(fires, communes, key, crs_work) {
 
 #' Find the INSEE code column of a commune layer
 #' @noRd
-fev_bdiff_commune_key <- function(communes, key) {
+fev_bdiff_commune_key <- function(communes, key, quiet = FALSE) {
   if (!is.null(key)) {
     if (!key %in% names(communes)) {
       fev_abort(c(
@@ -978,7 +978,9 @@ fev_bdiff_commune_key <- function(communes, key) {
     ), class = "fev_bdiff_no_commune_key")
   }
   chosen <- names(communes)[hit[1]]
-  fev_inform("Using {.field {chosen}} as the commune code in {.arg communes}.")
+  if (!quiet) {
+    fev_inform("Using {.field {chosen}} as the commune code in {.arg communes}.")
+  }
   chosen
 }
 
