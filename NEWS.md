@@ -57,10 +57,31 @@ l'enregistrement `fev_source`, puis — avec un avertissement — l'étendue des
 dates elles-mêmes, qui est une borne inférieure de la fenêtre réelle et gonfle
 donc tous les taux.
 
-### Correction
+### Un piège trouvé en poursuivant une ligne non couverte
+
+`measure = "burnt_rate"` somme les surfaces avec `na.rm = TRUE` — ce qui est
+juste quand quelques enregistrements n'ont pas de taille, et catastrophique
+quand aucun n'en a : la somme vaut alors 0 pour chaque commune, et le résultat
+est une carte **uniformément nulle** étiquetée « ha brûlés par 100 km² et par
+an ». Un lecteur y voit *rien n'a brûlé* là où il faut lire *aucune surface
+n'a été fournie*.
+
+C'est refusé net désormais. Quelques valeurs manquantes seulement font l'objet
+d'un avertissement chiffré, et leur nombre part dans la provenance sous
+`n_fires_without_area` : elles comptent pour zéro hectare, donc elles minorent
+le taux. `"count"` et `"rate"` n'ont pas besoin de taille et ne sont pas
+concernés.
+
+Le bug n'a été trouvé ni par les tests ni à la relecture, mais en allant voir
+pourquoi une ligne restait non couverte.
+
+### Corrections
 
 `fev_bdiff_commune_key()` annonçait la colonne INSEE retenue sans regarder
 `quiet`, si bien qu'un appel silencieux ne l'était pas tout à fait.
+
+`fev_fire_occurrence()` annonçait « Dropped 0 fires » quand `min_area_ha` ne
+retirait rien.
 
 # firexpovulnR 0.35.0 (2026-08-31)
 

@@ -248,6 +248,112 @@ test_that("a commune with records but absent from the layer is reported", {
   )
 })
 
+# Areas that are not there ----------------------------------------------------------
+
+test_that("burnt_rate without any area is refused, not answered with zeros", {
+  # Summing absent areas with na.rm gives 0 everywhere: a uniform zero map
+  # labelled "ha burnt", which reads as "nothing burnt" instead of "nothing
+  # supplied". Found by chasing an uncovered line, not by a failing test.
+  f <- synth_fires()
+  f$area_ha <- NULL
+
+  expect_error(
+    fev_fire_occurrence(f, synth_grid(), communes = synth_com(),
+                        period = c(2006, 2025), measure = "burnt_rate",
+                        quiet = TRUE),
+    class = "fev_occ_no_areas"
+  )
+  # count and rate do not need a size, so they still work on the same input.
+  occ <- suppressWarnings(fev_fire_occurrence(
+    f, synth_grid(), communes = synth_com(), period = c(2006, 2025),
+    measure = "count", quiet = TRUE
+  ))
+  expect_equal(sort(terra::unique(fev_data(occ))[, 1]), c(0, 2))
+})
+
+test_that("a few missing areas understate the rate, and say so", {
+  f <- synth_fires(insee = c("21001", "21001"), area_ha = c(12, NA))
+  expect_warning(
+    fev_fire_occurrence(f, synth_grid(), communes = synth_com(),
+                        period = c(2006, 2025), measure = "burnt_rate",
+                        quiet = TRUE),
+    class = "fev_occ_partial_areas"
+  )
+  occ <- suppressWarnings(fev_fire_occurrence(
+    f, synth_grid(), communes = synth_com(), period = c(2006, 2025),
+    measure = "burnt_rate", quiet = TRUE
+  ))
+  # The NA counted as zero: 12 ha, not 15.
+  expect_equal(max(terra::unique(fev_data(occ))[, 1]), 12 / 4 / 20 * 100)
+
+  step <- utils::tail(occ$provenance$steps, 1)[[1]]
+  expect_equal(step$params$n_fires_without_area, 1L)
+})
+
+# The remaining guards ---------------------------------------------------------------
+
+test_that("degenerate geometry is refused rather than divided by", {
+  # A commune of zero area would make every rate infinite.
+  flat <- sf::st_sf(
+    INSEE_COM = "21001",
+    geometry = sf::st_sfc(
+      sf::st_polygon(list(cbind(c(0, 1000, 0, 0), c(0, 0, 0, 0)))),
+      crs = 2154
+    )
+  )
+  fires <- sf::st_sf(insee = "21001", fire_year = 2010L, area_ha = 3,
+                     geometry = sf::st_geometry(flat))
+  expect_error(
+    fev_fire_occurrence(fires, synth_grid(), communes = flat,
+                        period = c(2006, 2025), quiet = TRUE),
+    class = "fev_error"
+  )
+})
+
+test_that("communes must be an sf, and empty records are refused", {
+  expect_error(
+    fev_fire_occurrence(synth_fires(), synth_grid(),
+                        communes = data.frame(INSEE_COM = "21001"),
+                        period = c(2006, 2025), quiet = TRUE),
+    class = "fev_error"
+  )
+  expect_error(
+    fev_fire_occurrence(synth_fires()[0, ], synth_grid()),
+    class = "fev_empty_result"
+  )
+})
+
+test_that("the report speaks when it is not silenced", {
+  # Not box-ticking: a cli message only builds when it is emitted, so an
+  # unexercised {} interpolation is an error nobody has seen yet. This package
+  # has already shipped one such -- a pluralisation with no quantity.
+  expect_message(
+    suppressWarnings(fev_fire_occurrence(
+      synth_fires(), synth_grid(), communes = synth_com(),
+      period = c(2006, 2025), min_area_ha = 5, quiet = FALSE
+    )),
+    "Median commune"
+  )
+  expect_message(
+    suppressWarnings(fev_fire_occurrence(
+      synth_fires(), synth_grid(), communes = synth_com(),
+      period = c(2006, 2025), min_area_ha = 5, quiet = FALSE
+    )),
+    "no declared fire"
+  )
+  # And the denominator read from the source record announces itself.
+  src <- structure(
+    list(data = synth_fires(),
+         source = list(dataset = "bdiff", period_requested = "2006-2025")),
+    class = "fev_source"
+  )
+  expect_message(
+    suppressWarnings(fev_fire_occurrence(src, synth_grid(),
+                                         communes = synth_com(), quiet = FALSE)),
+    "read from the source record"
+  )
+})
+
 # It feeds the rest of the package ---------------------------------------------------
 
 test_that("the layer enters fev_risk as one more dimension", {
